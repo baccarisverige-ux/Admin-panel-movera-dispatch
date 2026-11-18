@@ -523,7 +523,8 @@ test("offer card details, no Exclusive reasons (G4-E7), rider raise limit (G4-E4
   await tabs.getByRole("tab", { name: "Radar" }).click();
   await page.getByLabel("Hidden Radar trip comes back after").fill("5");
   // v0.18.6 (owner G4-E2/E3): the contract's rule text with the zone's limit: hand-sent offers count, Radar does not.
-  await expect(page.getByRole("region", { name: "Go offline automatically" })).toContainText("The driver goes offline after 10 missed or declined Exclusive or hand-sent offers in a row (Radar does not count).");
+  // v0.18.120 (owner 2026-11-16): only ignored Exclusive offers count; a decline never does.
+  await expect(page.getByRole("region", { name: "Go offline automatically" })).toContainText("The driver goes offline after letting 10 Exclusive offers in a row run out (hand-sent ones too). A decline never counts and does not reset the count. Radar never counts.");
   await page.getByLabel("Offline after offers not accepted").fill("1");
   await expect(page.getByLabel("Norrmalm rules").getByRole("alert")).toHaveCount(0);
   await page.getByLabel("Offline after offers not accepted").fill("150");

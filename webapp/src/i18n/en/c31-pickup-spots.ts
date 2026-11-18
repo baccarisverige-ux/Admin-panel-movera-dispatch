@@ -4,4 +4,5 @@ export const enC31PickupSpots = {
   "When the rider sets the pickup, the rider app suggests Main entrance, Side entrance and Parking around the pin, marked as approximate. Previously used and Near Home always stay. The rider app reads this.": "When the rider sets the pickup, the rider app suggests Main entrance, Side entrance and Parking around the pin, marked as approximate. Previously used and Near Home always stay. The rider app reads this.",
   "Pickup entrance chips (approximate)": "Pickup entrance chips (approximate)",
   "Off: no entrance chips; the pickup is the address only. Usual value: on.": "Off: no entrance chips; the pickup is the address only. Usual value: on.",
+  "Pickup entrance chips could not be read from the server for this zone. Reload the page and try again.": "Pickup entrance chips could not be read from the server for this zone. Reload the page and try again.",
 } as const;

@@ -16,7 +16,7 @@ import { useRidersData } from "../riders/useRidersData";
 import { RIDE_CHECK_KEY, emptyRideCheckOps, normalizeRideCheckOps, type RideCheckOps } from "../safety/rideCheck";
 import { ALERTS_KEY, alertsFromServer, computeAlerts, emptyAlertBook, normalizeAlertBook, openAlerts, splitOld, visibleTo, type AlertBook, type Facts, type OpenAlert } from "./engine";
 import { alertFacts } from "./facts";
-import { alertIncidentsRead, alertPolls, alertReadOptions } from "./reads";
+import { alertBarIncidentsRead, alertBarLoading, alertPolls, alertReadOptions } from "./reads";
 import { useRideCheckRows } from "./useOnDemand";
 
 /**
@@ -39,7 +39,8 @@ export function useAlerts() {
   // Q132 (owner W2 A): live, the bar reads only the server's alert list (+ the SOS owner and the ride-check banner's
   // book); no table is read to build alerts in the browser. Demo: the panel's own engine reads its tables as before.
   // Round 2 (SF-1): an open SOS / car-lost / ride-check alert keeps the open cases read on (Take / Solved never wait).
-  const reads = alertReadOptions({ live, canSafety, canRideCheck, found: book.found });
+  const readInput = { live, canSafety, canRideCheck, found: book.found };
+  const reads = alertReadOptions(readInput);
   const safety = useSlice<SafetyBook>("safetyOps", emptySafety(), reads.safetyOps);
   const incidentSlice = useSlice<IncidentOps>(INCIDENT_OPS_KEY, emptyIncidentOps(), reads.incidentOps);
   const incidentOps = useMemo(() => normalizeIncidentOps(incidentSlice.value), [incidentSlice.value]);
@@ -51,7 +52,8 @@ export function useAlerts() {
   const zoneSupply = useRecords("zoneSupply", undefined, reads.zoneSupply);
   const trips = useRecords("trips", undefined, reads.trips);
   // B1.26b: live, the open cases only (one small read), not every page of the case history.
-  const incidentRead = alertIncidentsRead(live, reads.incidents.enabled);
+  // SF-A X1: the warm read comes from the plan (alerts/reads.ts, tested), the same cache entry as the alert row's.
+  const incidentRead = alertBarIncidentsRead(readInput);
   const incidents = useRecords(incidentRead.list, undefined, incidentRead.options);
   const reservations = useRecords("reservations", undefined, reads.reservations);
   const payments = useRecords("payments", undefined, reads.payments);
@@ -120,8 +122,8 @@ export function useAlerts() {
     now,
     sosOwner,
     rideCheck: { checks: rideChecks, ops: rideOps, loading: rideSlice.loading, unopened, demoShift: demoShift(now, api.demo) },
-    // Round 2: the live warm read of the open cases never holds back the alert sound (only the demo engine needs it).
-    loading: slice.loading || (!live && reads.incidents.enabled && incidents.isLoading) || (reads.trips.enabled && trips.isLoading),
+    // Round 2 / SF-A X2: live, the alert list only; the warm read of the open cases never holds back the alert sound.
+    loading: alertBarLoading(readInput, { alerts: slice.loading, incidents: incidents.isLoading, trips: trips.isLoading }),
     counts: {
       critical: active.filter((alert) => alert.level === "critical").length,
       important: active.filter((alert) => alert.level === "important").length,

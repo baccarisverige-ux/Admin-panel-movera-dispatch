@@ -58,6 +58,7 @@ export function CopyToAllZones({ zoneId, zoneName, canEdit }: { zoneId: string; 
         after={tr("Same as {0}", [zoneName])}
         confirmTarget={false}
         disabled={!canEdit}
+        info={{ where: tr("Every other zone of {0}: {1}. The Standard does not change.", [trx(countryNameOf(zoneId)), zones.join(", ")]), who: tr("The drivers of those zones: their app gets these settings.") }}
         summary={<span data-testid="sure-copy"><strong>{tr("Are you sure?")}</strong> {tr("The settings of {0} will be copied into every zone of {1} and sent to their drivers. Each zone's current values are replaced. Zones affected: {2}.", [zoneName, trx(countryNameOf(zoneId)), zones.join(", ")])}{pending?.length ? <> <strong data-testid="sure-copy-pending">{tr("This zone has changes not yet sent to drivers; they will be copied and sent to all zones too.")}</strong></> : null}</span>}
       >
         {tr("Copy to all zones")}
@@ -102,6 +103,7 @@ function standardBar({ docs, zoneId, zoneName, country, countryName, canEdit }: 
         confirmTarget={false}
         value={{ docs }}
         disabled={!canEdit}
+        info={{ where: tr("{0} only: it follows the {1} Standard from now on. The Standard and the other zones do not change.", [zoneName, trx(countryName)]), who: tr("Riders and drivers of {0}: their apps get the Standard's values with the next app settings.", [zoneName]) }}
         summary={<span data-testid="sure-standard"><strong>{tr("Are you sure?")}</strong> {tr("{0} will stop using its own settings and follow the {1} Standard. Its own values will be deleted (an old copy stays in History). Zones affected: {0}.", [zoneName, trx(countryName)])}</span>}
       >
         <RotateCcw size={13} aria-hidden="true" /> {tr("Go back to Standard")}

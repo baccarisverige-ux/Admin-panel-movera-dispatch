@@ -15,6 +15,7 @@ import {
 } from "../config/chatSettings";
 import { NumberField } from "./NumberField";
 import { tr, trn } from "../i18n";
+import { SettingInfo } from "../ui/SettingInfo";
 
 /**
  * v0.18.56 §78 (G9 part 2, owner Q79–Q85 2026-11-10, rule 16): Admin › Pricing › Tips & limits per country › Chat
@@ -24,21 +25,27 @@ const LANG_LABEL: Record<ChatLang, string> = { sv: "Svenska", fr: "Français", e
 
 type Props = { shown: ChatSettings; saved: ChatSettings; canEdit: boolean; onChange: (chat: ChatSettings) => void };
 
-function Toggle({ label, testId, on, disabled, onChange }: { label: string; testId: string; on: boolean; disabled: boolean; onChange: (on: boolean) => void }) {
+function Toggle({ label, testId, on, disabled, onChange, info }: { label: string; testId: string; on: boolean; disabled: boolean; onChange: (on: boolean) => void; info?: string }) {
   return (
+    <span className="setting-info-line">
     <label className="mini-switch">
+      {/* info-skip: the switch itself; each use passes its info id */}
       <input type="checkbox" aria-label={label} data-testid={testId} checked={on} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
       <span aria-hidden="true"><i /></span>
       {label}: {on ? tr("On") : tr("Off")}
     </label>
+    {info ? <SettingInfo id={info} label={label} /> : null}
+    </span>
   );
 }
 
-function Texts({ label, text, max, disabled, testId, onChange }: { label: string; text: ChatText; max: number; disabled: boolean; testId: string; onChange: (text: ChatText) => void }) {
+function Texts({ label, text, max, disabled, testId, onChange, info }: { label: string; text: ChatText; max: number; disabled: boolean; testId: string; onChange: (text: ChatText) => void; info?: string }) {
   return (
     <div className="rd-form-grid" role="group" aria-label={label}>
+      {info ? <SettingInfo id={info} label={label} /> : null}
       {CHAT_LANGS.map((lang) => (
         <label key={lang} className="field"><span>{LANG_LABEL[lang]}</span>
+          {/* info-skip: one language of the text; the group's i explains it */}
           <input aria-label={`${label} (${LANG_LABEL[lang]})`} data-testid={`${testId}-${lang}`} value={text[lang]} maxLength={max} disabled={disabled} onChange={(event) => onChange({ ...text, [lang]: event.target.value })} />
         </label>
       ))}
@@ -57,32 +64,34 @@ export function ChatSettingsCard({ shown, saved, canEdit, onChange }: Props) {
           <small>{tr("The trip chat between rider and driver in this country. Nobody sees a phone number. Messages of a trip with a safety case stay with the case.")}</small>
         </div>
         {CHAT_FIELDS.map((field) => (
-          <label key={field.key} className="field"><span>{tr(field.label)}</span><NumberField label={tr(field.label)} value={shown[field.key]} step={1} min={CHAT_RANGES[field.key][0]} max={CHAT_RANGES[field.key][1]} disabled={!canEdit} changed={shown[field.key] !== saved[field.key]} onChange={(value) => set({ [field.key]: value })} /></label>
+          <label key={field.key} className="field"><span>{tr(field.label)}</span><NumberField info={`tips.chat.${field.key}`} label={tr(field.label)} value={shown[field.key]} step={1} min={CHAT_RANGES[field.key][0]} max={CHAT_RANGES[field.key][1]} disabled={!canEdit} changed={shown[field.key] !== saved[field.key]} onChange={(value) => set({ [field.key]: value })} /></label>
         ))}
-        <Toggle label={tr("Sound on a new message")} testId="chat-sound" on={shown.sound} disabled={!canEdit} onChange={(sound) => set({ sound })} />
+        <Toggle info="tips.chat.sound" label={tr("Sound on a new message")} testId="chat-sound" on={shown.sound} disabled={!canEdit} onChange={(sound) => set({ sound })} />
         <label className="check-row">{tr("Folded trip sheet opens by itself")}{" "}
           <select data-testid="chat-sheet-auto-open" value={shown.sheetAutoOpen} disabled={!canEdit} onChange={(event) => set({ sheetAutoOpen: event.target.value === "off" ? "off" : "new_message" })}>
             <option value="new_message">{chatAutoOpenText("new_message")}</option>
             <option value="off">{chatAutoOpenText("off")}</option>
-          </select>
+          </select><SettingInfo id="tips.chat.sheetAutoOpen" />
         </label>
-        <Toggle label={tr("Read new messages aloud (driver, start value)")} testId="chat-read-aloud" on={shown.readAloudDefault} disabled={!canEdit} onChange={(readAloudDefault) => set({ readAloudDefault })} />
-        <Toggle label={tr("Translate link under messages")} testId="chat-translation" on={shown.translation} disabled={!canEdit} onChange={(translation) => set({ translation })} />
+        <Toggle info="tips.chat.readAloudDefault" label={tr("Read new messages aloud (driver, start value)")} testId="chat-read-aloud" on={shown.readAloudDefault} disabled={!canEdit} onChange={(readAloudDefault) => set({ readAloudDefault })} />
+        <Toggle info="tips.chat.translation" label={tr("Translate link under messages")} testId="chat-translation" on={shown.translation} disabled={!canEdit} onChange={(translation) => set({ translation })} />
         <small className="dx-note">{tr("The link translates into the reader's own app language, with \"See original\" under a translated message. Until a translation service is set on the server the apps show \"Translation coming soon\".")}</small>
-        <Toggle label={tr("Translate messages automatically")} testId="chat-auto-translate" on={shown.translation && shown.autoTranslate} disabled={!canEdit || !shown.translation} onChange={(autoTranslate) => set({ autoTranslate })} />
+        <Toggle info="tips.chat.autoTranslate" label={tr("Translate messages automatically")} testId="chat-auto-translate" on={shown.translation && shown.autoTranslate} disabled={!canEdit || !shown.translation} onChange={(autoTranslate) => set({ autoTranslate })} />
         <small className="dx-note">{tr("Messages arrive translated into the receiver's language. \"See original\" shows the text as it was written.")}</small>
-        <Toggle label={tr("Quick replies")} testId="chat-quick-replies-on" on={shown.quickRepliesOn} disabled={!canEdit} onChange={(quickRepliesOn) => set({ quickRepliesOn })} />
+        <Toggle info="tips.chat.quickRepliesOn" label={tr("Quick replies")} testId="chat-quick-replies-on" on={shown.quickRepliesOn} disabled={!canEdit} onChange={(quickRepliesOn) => set({ quickRepliesOn })} />
         {(["driver", "rider"] as const).map((side) => {
           const list = shown.quickReplies[side];
           const title = side === "driver" ? tr("Quick replies the driver sees") : tr("Quick replies the rider sees");
           return (
             <section key={side} className="cx-list" aria-label={title} data-testid={`chat-quick-replies-${side}`}>
-              <strong>{title}</strong>
+              <strong>{title}<SettingInfo id="tips.chat.quickReplies" label={title} /></strong>
               <small>{tr("Up to {0} replies, each 1 to {1} characters in every language. A tap sends it in the reader's language.", [QUICK_REPLIES_MAX, QUICK_REPLY_TEXT_MAX])}</small>
               <ol>
                 {list.map((item, index) => (
                   <li key={index}>
+                    {/* info-skip: the id of one quick reply; the list title i explains it */}
                     <label className="field"><span>{tr("Id")}</span><input aria-label={tr("Quick reply {0} id", [index + 1])} value={item.id} disabled={!canEdit || !shown.quickRepliesOn} onChange={(event) => setSide(side, list.map((old, i) => (i === index ? { ...old, id: event.target.value.trim() } : old)))} /></label>
+                    {/* info-skip: the text of one quick reply; the list title i explains it */}
                     <Texts label={tr("Quick reply {0}", [index + 1])} testId={`chat-qr-${side}-${index}`} text={item.text} max={QUICK_REPLY_TEXT_MAX} disabled={!canEdit || !shown.quickRepliesOn} onChange={(text) => setSide(side, list.map((old, i) => (i === index ? { ...old, text } : old)))} />
                     <button type="button" data-command="admin.pricing.edit" className="dash-btn ghost small" aria-label={tr("Remove quick reply {0}", [index + 1])} disabled={!canEdit || !shown.quickRepliesOn} onClick={() => setSide(side, list.filter((_, i) => i !== index))}><Trash2 size={13} aria-hidden="true" /></button>
                   </li>
@@ -92,9 +101,9 @@ export function ChatSettingsCard({ shown, saved, canEdit, onChange }: Props) {
             </section>
           );
         })}
-        <Toggle label={tr("Automatic \"I've arrived\" message")} testId="chat-auto-arrived" on={shown.autoArrived.on} disabled={!canEdit} onChange={(on) => set({ autoArrived: { ...shown.autoArrived, on } })} />
+        <Toggle info="tips.chat.autoArrived" label={tr("Automatic \"I've arrived\" message")} testId="chat-auto-arrived" on={shown.autoArrived.on} disabled={!canEdit} onChange={(on) => set({ autoArrived: { ...shown.autoArrived, on } })} />
         <small className="dx-note">{tr("When the driver arrives (tap or automatic), the rider gets this message once, in the rider's app language.")}</small>
-        <Texts label={tr("\"I've arrived\" text")} testId="chat-auto-arrived-text" text={shown.autoArrived.text} max={AUTO_ARRIVED_TEXT_MAX} disabled={!canEdit || !shown.autoArrived.on} onChange={(text) => set({ autoArrived: { ...shown.autoArrived, text } })} />
+        <Texts info="tips.chat.autoArrivedText" label={tr("\"I've arrived\" text")} testId="chat-auto-arrived-text" text={shown.autoArrived.text} max={AUTO_ARRIVED_TEXT_MAX} disabled={!canEdit || !shown.autoArrived.on} onChange={(text) => set({ autoArrived: { ...shown.autoArrived, text } })} />
       </div>
     </div>
   );

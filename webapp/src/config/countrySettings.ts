@@ -84,7 +84,20 @@ export type CountrySettings = {
   emergencyNumbers: EmergencyNumber[];
   /** v0.18.101 §92 (BQ-V34, owner G14 Q2): CountryRules.sosContactsSms (country standard only) — the driver's SOS texts his emergency contacts. */
   sosContactsSms: boolean;
+  /**
+   * S5 J9 (v0.18.84 debtModel.maxRiderDebt; owner Q-M1, Q-S5-3/4/5, 2026-11-13 15:00 "Any amount"): CountryRules.maxRiderDebt,
+   * country standard only, local money, any amount above 0 (no upper bound; the server's DB floor follows it). At or
+   * above it a rider cannot book a pay-in-car trip (409 rider_debt_above_max).
+   */
+  maxRiderDebt: number;
+  /**
+   * S5 J9 (v0.18.84 debtModel.driverOwes.limit; owner 2026-11-13 14:22 / 14:32 / 14:54): CountryRules.driverOwesLimit,
+   * country standard only: a switch and an amount (local money, null = none). Shipped OFF; TN 150 DT stored. At or over
+   * it the driver gets no cash trips; he is never refused online. ON needs an amount above 0 (400 owes_limit_needs_amount).
+   */
+  driverOwesLimit: DriverOwesLimit;
 };
+export type DriverOwesLimit = { enabled: boolean; max: number | null };
 export type PersonLimits = { savedPlacesPerPerson: number; emergencyContactsPerPerson: number };
 export const PERSON_LIMITS_DEFAULT: PersonLimits = { savedPlacesPerPerson: 50, emergencyContactsPerPerson: 10 };
 export const PERSON_LIMITS_RANGE: Record<keyof PersonLimits, [number, number]> = { savedPlacesPerPerson: [1, 500], emergencyContactsPerPerson: [1, 50] };
@@ -99,6 +112,10 @@ export function personLimitsOf(raw: unknown): PersonLimits {
 }
 /** contract.json#walletCredit.defaultMax (major units). */
 export const WALLET_CREDIT_MAX: Record<MarketId, number> = { SE: 2900, FR: 250, TN: 800 };
+/** contract.json#configDefaults.maxRiderDebt (major units): SE 300 kr, FR 30 €, TN 84 DT (owner Q-S5-5). */
+export const MAX_RIDER_DEBT: Record<MarketId, number> = { SE: 300, FR: 30, TN: 84 };
+/** contract.json#configDefaults.driverOwesLimit (major units): OFF everywhere; TN 150 DT stored (owner 2026-11-13 14:22, 14:32). */
+export const DRIVER_OWES_LIMIT: Record<MarketId, DriverOwesLimit> = { SE: { enabled: false, max: null }, FR: { enabled: false, max: null }, TN: { enabled: false, max: 150 } };
 /** contract.json#configDefaults.driverPayChangeMax (major units); v0.18.82 TN 100 DT (owner Q-S5-6, 2026-11-13: it limits the change; was 300). */
 export const DRIVER_PAY_CHANGE_MAX: Record<MarketId, number> = { SE: 1000, FR: 100, TN: 100 };
 /** contract.json#configDefaults.bonusCampaignMax (0.18.110, D13; major units): SE 2 000 kr, FR 200 €, TN 200 DT. */
@@ -130,7 +147,7 @@ export const ON_TRIP_MIN_DONE_PCT_DEFAULT = 70;
 /** v0.18.33 (owner Q5): CountryRules.onTripOffers.lateFreeCancelMin default. */
 export const CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT = 10;
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "mixedCashInCar", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "mixedCashInCar", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms", "maxRiderDebt", "driverOwesLimit"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "walletFirst", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
@@ -185,6 +202,8 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     dontMatchAgain: { ...DONT_MATCH_DEFAULTS },
     emergencyNumbers: emergencyDefaults(country),
     sosContactsSms: SOS_CONTACTS_SMS_DEFAULT,
+    maxRiderDebt: MAX_RIDER_DEBT[country],
+    driverOwesLimit: { ...DRIVER_OWES_LIMIT[country] },
   };
 }
 
@@ -237,8 +256,40 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     dontMatchAgain: dontMatchOf(raw.dontMatchAgain),
     emergencyNumbers: emergencyNumbersOf(raw.emergencyNumbers, country),
     sosContactsSms: sosContactsSmsOf(raw.sosContactsSms),
+    // S5 J9: no upper bound (owner "Any amount"); a stored value is kept as it is, for the checks to see.
+    maxRiderDebt: finite(raw.maxRiderDebt) ? raw.maxRiderDebt : base.maxRiderDebt,
+    driverOwesLimit: owesLimitOf(raw.driverOwesLimit, base.driverOwesLimit),
     ...mixedOf(raw.mixedMethods),
     ...mixedTipOf(raw.mixedTipRules),
+  };
+}
+
+/** S5 J9: a stored owes-limit { enabled, max } (max a number or null); anything else is the default. */
+function owesLimitOf(stored: unknown, fallback: DriverOwesLimit): DriverOwesLimit {
+  if (!stored || typeof stored !== "object") return { ...fallback };
+  const raw = stored as Record<string, unknown>;
+  if (typeof raw["enabled"] !== "boolean") return { ...fallback };
+  return { enabled: raw["enabled"], max: finite(raw["max"]) ? raw["max"] : null };
+}
+
+/**
+ * S5 J9 (v0.18.84): maxRiderDebt and driverOwesLimit of a country_rules document (the standard's) in local money.
+ * A missing field, or one in another currency, is left out (the panel shows the default, like the server).
+ */
+export function debtSettingsOfRules(document: unknown, country: MarketId): Partial<Pick<CountrySettings, "maxRiderDebt" | "driverOwesLimit">> {
+  const doc = (document && typeof document === "object" ? document : {}) as { maxRiderDebt?: unknown; driverOwesLimit?: unknown };
+  const { currency, minorUnits } = market(country);
+  const money = (value: unknown): number | null | undefined => {
+    if (value === null) return null;
+    const amount = value as { amountMinor?: unknown; currency?: unknown } | undefined;
+    return amount && typeof amount.amountMinor === "number" && amount.currency === currency ? amount.amountMinor / minorUnits : undefined;
+  };
+  const debt = money(doc.maxRiderDebt);
+  const limit = doc.driverOwesLimit as { enabled?: unknown; max?: unknown } | undefined;
+  const max = limit && typeof limit === "object" ? money(limit.max ?? null) : undefined;
+  return {
+    ...(typeof debt === "number" && debt > 0 ? { maxRiderDebt: debt } : {}),
+    ...(limit && typeof limit === "object" && typeof limit.enabled === "boolean" && max !== undefined ? { driverOwesLimit: { enabled: limit.enabled, max } } : {}),
   };
 }
 
@@ -388,6 +439,13 @@ export function countrySettingsIssues(country: MarketId, settings: CountrySettin
   issues.push(...chatSettingsIssues(name, settings.chat));
   issues.push(...dontMatchIssues(name, settings.dontMatchAgain));
   issues.push(...emergencyNumbersIssues(name, settings.emergencyNumbers));
+  // S5 J9 (v0.18.84): Max rider debt is any amount above 0; the owes-limit ON needs an amount above 0.
+  if (!finite(settings.maxRiderDebt) || settings.maxRiderDebt <= 0) issues.push(tr("{0}: Max rider debt must be above 0.", [name]));
+  else if (hasMoreDecimals(settings.maxRiderDebt, country)) issues.push(tr("{0}: Max rider debt has too many decimals.", [name]));
+  const owes = settings.driverOwesLimit;
+  if (owes.max !== null && (!finite(owes.max) || owes.max < 0)) issues.push(tr("{0}: the driver owes-limit must be above 0.", [name]));
+  else if (owes.enabled && !(owes.max !== null && owes.max > 0)) issues.push(tr("{0}: set an amount above 0 to switch the driver owes-limit on.", [name]));
+  else if (owes.max !== null && hasMoreDecimals(owes.max, country)) issues.push(tr("{0}: the driver owes-limit has too many decimals.", [name]));
   // v0.18.26: limits per person, whole numbers in their range.
   for (const key of ["savedPlacesPerPerson", "emergencyContactsPerPerson"] as const) {
     const value = settings.personLimits[key];
@@ -422,6 +480,11 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   lines.push(...dontMatchLines(before.dontMatchAgain, after.dontMatchAgain));
   lines.push(...emergencyNumbersLines(before.emergencyNumbers, after.emergencyNumbers));
   lines.push(...sosContactsSmsLines(before.sosContactsSms, after.sosContactsSms));
+  if (before.maxRiderDebt !== after.maxRiderDebt) lines.push(tr("Max rider debt: {0} → {1}", [`${short(before.maxRiderDebt)} ${symbol}`, `${short(after.maxRiderDebt)} ${symbol}`]));
+  if (JSON.stringify(before.driverOwesLimit) !== JSON.stringify(after.driverOwesLimit)) {
+    const owes = (limit: DriverOwesLimit) => `${tr(limit.enabled ? "on" : "off")}${limit.max !== null ? `, ${short(limit.max)} ${symbol}` : ""}`;
+    lines.push(tr("Driver owes-limit: {0} → {1}", [owes(before.driverOwesLimit), owes(after.driverOwesLimit)]));
+  }
   if (before.personLimits.savedPlacesPerPerson !== after.personLimits.savedPlacesPerPerson) lines.push(tr("Saved places per person: {0} → {1}", [before.personLimits.savedPlacesPerPerson, after.personLimits.savedPlacesPerPerson]));
   if (before.personLimits.emergencyContactsPerPerson !== after.personLimits.emergencyContactsPerPerson) lines.push(tr("Emergency contacts per person: {0} → {1}", [before.personLimits.emergencyContactsPerPerson, after.personLimits.emergencyContactsPerPerson]));
   return lines;

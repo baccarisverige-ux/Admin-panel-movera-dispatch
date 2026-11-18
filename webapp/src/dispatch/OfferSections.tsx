@@ -23,11 +23,11 @@ export function StartOrderCard({ zone, onChange, disabled, zoneId }: Props) {
   ];
   return (
     <Card title={tr("Start & order")} tone="green" icon={<ListOrdered size={18} />} help={tr("Which offer goes out first when a ride is booked in this zone. A time rule and a mode forced in Live still win.")}>
-      <Row label={tr("What starts first")}>
+      <Row info="dispatch.offer.whatStartsFirst" label={tr("What starts first")}>
         <Choice label={tr("What starts first")} value={start.mode} disabled={disabled} onChange={(mode) => setStart({ mode })} options={options} />
       </Row>
       {start.mode === "byDistance" ? (
-        <Row label={tr("Exclusive first when the nearest driver is within")} help={tr("Farther away: Radar first.")}>
+        <Row info="dispatch.offer.exclusiveFirstWhenTheNearestDriver" label={tr("Exclusive first when the nearest driver is within")} help={tr("Farther away: Radar first.")}>
           <Num label={tr("Exclusive first within")} value={start.nearKm} unit="km" step={0.5} min={0.5} max={50} disabled={disabled} onChange={(nearKm) => setStart({ nearKm })} />
         </Row>
       ) : null}
@@ -49,7 +49,7 @@ function ModeSteps({ zone, onChange, disabled, mode }: Props & { mode: OfferMode
   };
   const steps = own ?? shared;
   return (
-    <Row label={tr("Distance steps")} help={same ? tr("Same as the search distance in Best driver: {0} km.", [shared.join(" → ")]) : tr("Own steps for this mode. The search grows one step at a time. Radar and Exclusive may have a different number of steps: the shorter list stays at its widest step.")}>
+    <Row info="dispatch.offer.distanceSteps" label={tr("Distance steps")} help={same ? tr("Same as the search distance in Best driver: {0} km.", [shared.join(" → ")]) : tr("Own steps for this mode. The search grows one step at a time. Radar and Exclusive may have a different number of steps: the shorter list stays at its widest step.")}>
       <Switch label={tr("Same as search distance")} on={same} disabled={disabled} onChange={(on) => setSteps(on ? undefined : [...shared])} />
       {same ? null : (
         <div className="dx-steps" role="group" aria-label={tr("{0} distance steps", [tr(mode === "radar" ? "Radar" : "Exclusive")])}>
@@ -75,15 +75,15 @@ export function RadarRules({ zone, onChange, disabled, zoneId }: Props) {
   return (
     <>
       <StartOrderCard zone={zone} onChange={onChange} disabled={disabled} zoneId={zoneId} />
-      <Card title={tr("Radar")} tone="purple" icon={<Radar size={18} />} help={tr("One request is shown to several nearby drivers at once. The first to accept gets it.")} off={!zone.radar.on} aside={<Switch label={tr("Radar")} on={zone.radar.on} disabled={disabled} onChange={(on) => set({ radar: { ...zone.radar, on } })} />}>
-        <Row label={tr("Drivers who see it")} help={tr("The nearest suitable drivers, all at the same time.")}>
+      <Card title={tr("Radar")} info="dispatch.offer.radar" tone="purple" icon={<Radar size={18} />} help={tr("One request is shown to several nearby drivers at once. The first to accept gets it.")} off={!zone.radar.on} aside={<Switch label={tr("Radar")} on={zone.radar.on} disabled={disabled} onChange={(on) => set({ radar: { ...zone.radar, on } })} />}>
+        <Row info="dispatch.offer.driversWhoSeeIt" label={tr("Drivers who see it")} help={tr("The nearest suitable drivers, all at the same time.")}>
           <Num label={tr("Radar drivers")} value={zone.radar.drivers} unit="drivers" min={1} max={30} disabled={off} onChange={(drivers) => set({ radar: { ...zone.radar, drivers } })} />
         </Row>
-        <Row label={tr("Time on the radar")} help={tr("How long the request stays before the next step. A radar group sent from Live or the Dashboard counts down this time too.")}>
+        <Row info="dispatch.offer.timeOnTheRadar" label={tr("Time on the radar")} help={tr("How long the request stays before the next step. A radar group sent from Live or the Dashboard counts down this time too.")}>
           <Num label={tr("Radar time")} value={zone.radar.seconds} unit="s" min={5} max={120} disabled={off} onChange={(seconds) => set({ radar: { ...zone.radar, seconds } })} />
           {zone.secondsDefaulted?.includes("radar") ? <small className="as-help" data-testid="radar-seconds-defaulted">{tr("Set to the default because it was 0")}</small> : null}
         </Row>
-        <Row label={tr("If nobody accepts")}>
+        <Row info="dispatch.offer.ifNobodyAccepts" label={tr("If nobody accepts")}>
           <Choice label={tr("After Radar")} value={zone.radar.then} disabled={off} onChange={(then) => set({ radar: { ...zone.radar, then } })} options={[{ id: "widen", label: tr("Wider area") }, { id: "exclusive", label: tr("Exclusive") }, { id: "widen_then_exclusive", label: tr("Wider area, then Exclusive") }]} />
         </Row>
         <ModeSteps zone={zone} onChange={onChange} disabled={off} zoneId={zoneId} mode="radar" />
@@ -94,36 +94,36 @@ export function RadarRules({ zone, onChange, disabled, zoneId }: Props) {
         <div className="dx-sub">
           <b>{trn("{0} Full-screen radar list", <Smartphone size={13} aria-hidden="true" />)}</b>
           <small>{tr("When the driver opens the radar screen: a list of the rides on the radar.")}</small>
-          <Row label={tr("Full-screen radar")} help={tr("Most rides shown in the list at once.")} on={app.fullOn} disabled={off} onToggle={(fullOn) => setApp({ fullOn })}>
+          <Row info="dispatch.offer.fullScreenRadar" label={tr("Full-screen radar")} help={tr("Most rides shown in the list at once.")} on={app.fullOn} disabled={off} onToggle={(fullOn) => setApp({ fullOn })}>
             <Num label={tr("Offers on full-screen radar")} before="up to" value={app.full} unit="offers" min={1} max={20} disabled={off || !app.fullOn} onChange={(full) => setApp({ full })} />
           </Row>
-          <Row label={tr("Lock the full-screen list while driving")} help={tr("While the car is moving the driver cannot open the list. It opens again as soon as the car stops.")} on={app.fullLockWhileDriving} disabled={off || !app.fullOn} onToggle={(fullLockWhileDriving) => setApp({ fullLockWhileDriving })} />
+          <Row info="dispatch.offer.lockTheFullScreenListWhile" label={tr("Lock the full-screen list while driving")} help={tr("While the car is moving the driver cannot open the list. It opens again as soon as the car stops.")} on={app.fullLockWhileDriving} disabled={off || !app.fullOn} onToggle={(fullLockWhileDriving) => setApp({ fullLockWhileDriving })} />
         </div>
         <div className="dx-sub">
           <b>{trn("{0} Offer cards on the map", <Car size={13} aria-hidden="true" />)}</b>
           <small>{tr("Small offer cards while the driver is on the map screen. Independent of the full-screen list.")}</small>
-          <Row label={tr("Popup over the map")} help={app.popupSplitByDriving ? tr("Most cards at the same time while the car is stopped.") : tr("Most cards at the same time, all the time.")} on={app.popupOn} disabled={off} onToggle={(popupOn) => setApp({ popupOn })}>
+          <Row info="dispatch.offer.popupOverTheMap" label={tr("Popup over the map")} help={app.popupSplitByDriving ? tr("Most cards at the same time while the car is stopped.") : tr("Most cards at the same time, all the time.")} on={app.popupOn} disabled={off} onToggle={(popupOn) => setApp({ popupOn })}>
             <Num label={tr("Offers in the popup")} before="up to" value={app.popup} unit="cards" min={1} max={5} disabled={off || !app.popupOn} onChange={(popup) => setApp({ popup })} />
           </Row>
-          <Row label={tr("Different limit while driving")} help={tr("On: the cards have their own limit while the car is moving with no rider. Off: one number all the time.")} on={app.popupSplitByDriving} disabled={off || !app.popupOn} onToggle={(popupSplitByDriving) => setApp({ popupSplitByDriving })}>
+          <Row info="dispatch.offer.differentLimitWhileDriving" label={tr("Different limit while driving")} help={tr("On: the cards have their own limit while the car is moving with no rider. Off: one number all the time.")} on={app.popupSplitByDriving} disabled={off || !app.popupOn} onToggle={(popupSplitByDriving) => setApp({ popupSplitByDriving })}>
             {app.popupSplitByDriving ? <Num label={tr("Offer cards while driving")} before="while driving up to" value={app.popupWhileDriving} unit="cards" min={1} max={5} disabled={off || !app.popupOn} onChange={(popupWhileDriving) => setApp({ popupWhileDriving: Math.round(popupWhileDriving) })} /> : null}
           </Row>
           <p className="dx-note">{trn("{0} The app waits about 10 seconds before switching between stopped and driving, so a traffic light does not flip the cards. Cards never pop over the navigation while driving.", <Car size={13} aria-hidden="true" />)}</p>
         </div>
-        <Row label={tr("Hidden with ×: comes back after")} help={tr("A trip the driver hid in the Live list can come back if nobody took it and it is still in Radar. It never counts against the driver.")}>
+        <Row info="dispatch.offer.hiddenWithComesBackAfter" label={tr("Hidden with ×: comes back after")} help={tr("A trip the driver hid in the Live list can come back if nobody took it and it is still in Radar. It never counts against the driver.")}>
           <Num label={tr("Hidden Radar trip comes back after")} value={zone.hiddenComesBackMin} unit="min" min={1} max={60} disabled={off} onChange={(hiddenComesBackMin) => set({ hiddenComesBackMin })} />
         </Row>
         <p className="dx-note">{trn("{0} No Radar offers while driving a rider. Only Exclusive offers come during a trip.", <Route size={13} aria-hidden="true" />)}</p>
       </Card>
 
-      <Card title={tr("Go offline automatically")} tone="red" icon={<Power size={18} />} help={tr("A driver who does not accept offers is set offline, so riders are not kept waiting.")} off={!zone.autoOffline.on} aside={<Switch label={tr("Go offline automatically")} on={zone.autoOffline.on} disabled={disabled} onChange={(on) => set({ autoOffline: { ...zone.autoOffline, on } })} />}>
-        <Row label={tr("After offers not accepted in a row")} help={`${autoOfflineText(zone.autoOffline.after)} ${tr("Offers sent during a trip do not count. The driver can go online again at once.")}`}>
+      <Card title={tr("Go offline automatically")} info="dispatch.offer.goOfflineAutomatically" tone="red" icon={<Power size={18} />} help={tr("A driver who lets Exclusive offers run out is set offline, so riders are not kept waiting. Declining an offer never counts.")} off={!zone.autoOffline.on} aside={<Switch label={tr("Go offline automatically")} on={zone.autoOffline.on} disabled={disabled} onChange={(on) => set({ autoOffline: { ...zone.autoOffline, on } })} />}>
+        <Row info="dispatch.offer.afterOffersNotAcceptedInA" label={tr("After Exclusive offers ignored in a row")} help={`${autoOfflineText(zone.autoOffline.after)} ${tr("Offers sent during a trip do not count. The driver can go online again at once.")} ${tr("Offers that ran out while the server's live link was down do not count either.")}`}>
           <Num label={tr("Offline after offers not accepted")} value={zone.autoOffline.after} unit="offers" min={1} max={99} disabled={disabled || !zone.autoOffline.on} onChange={(after) => set({ autoOffline: { ...zone.autoOffline, after: Math.round(after) } })} />
         </Row>
       </Card>
 
       <Card title={tr("Set offline without position")} tone="red" icon={<Power size={18} />} help={tr("A driver online whose phone sends no position for this long (not during a trip) is set offline by the server and told so. 0 = never.")}>
-        <Row label={tr("Set offline after minutes without position")} help={tr("Default 5 minutes. The driver can go online again at once. Each automatic set offline is in the audit log.")}>
+        <Row info="dispatch.offer.setOfflineAfterMinutesWithoutPosition" label={tr("Set offline after minutes without position")} help={tr("Default 5 minutes. The driver can go online again at once. Each automatic set offline is in the audit log.")}>
           <Num label={tr("Set offline after minutes without position")} value={zone.autoOffline.noFixMinutes} unit="min" min={0} max={120} disabled={disabled} onChange={(noFixMinutes) => set({ autoOffline: { ...zone.autoOffline, noFixMinutes: Math.round(noFixMinutes) } })} />
         </Row>
       </Card>
@@ -138,22 +138,22 @@ export function ExclusiveRules({ zone, onChange, disabled, zoneId }: Props) {
   return (
     <>
       <StartOrderCard zone={zone} onChange={onChange} disabled={disabled} zoneId={zoneId} />
-      <Card title={tr("Exclusive")} tone="blue" icon={<Target size={18} />} help={tr("One request goes to one driver at a time, the best first.")} off={!zone.exclusive.on} aside={<Switch label={tr("Exclusive")} on={zone.exclusive.on} disabled={disabled} onChange={(on) => set({ exclusive: { ...zone.exclusive, on } })} />}>
-        <Row label={tr("Time to accept")} help={tr("Each driver has this long to say yes.")}>
+      <Card title={tr("Exclusive")} info="dispatch.offer.exclusive" tone="blue" icon={<Target size={18} />} help={tr("One request goes to one driver at a time, the best first.")} off={!zone.exclusive.on} aside={<Switch label={tr("Exclusive")} on={zone.exclusive.on} disabled={disabled} onChange={(on) => set({ exclusive: { ...zone.exclusive, on } })} />}>
+        <Row info="dispatch.offer.timeToAccept" label={tr("Time to accept")} help={tr("Each driver has this long to say yes.")}>
           <Num label={tr("Exclusive time")} value={zone.exclusive.seconds} unit="s" min={5} max={60} disabled={off} onChange={(seconds) => set({ exclusive: { ...zone.exclusive, seconds } })} />
           {zone.secondsDefaulted?.includes("exclusive") ? <small className="as-help" data-testid="exclusive-seconds-defaulted">{tr("Set to the default because it was 0")}</small> : null}
         </Row>
-        <Row label={tr("Drivers to try")} help={tr("One after the other, before the next step.")}>
+        <Row info="dispatch.offer.driversToTry" label={tr("Drivers to try")} help={tr("One after the other, before the next step.")}>
           <Num label={tr("Exclusive drivers")} value={zone.exclusive.drivers} unit="drivers" min={1} max={10} disabled={off} onChange={(drivers) => set({ exclusive: { ...zone.exclusive, drivers } })} />
         </Row>
-        <Row label={tr("If all say no")}>
+        <Row info="dispatch.offer.ifAllSayNo" label={tr("If all say no")}>
           <Choice label={tr("After Exclusive")} value={zone.exclusive.then} disabled={off} onChange={(then) => set({ exclusive: { ...zone.exclusive, then } })} options={[{ id: "radar", label: tr("Radar") }, { id: "widen", label: tr("Wider area") }, { id: "widen_then_radar", label: tr("Wider area, then Radar") }]} />
         </Row>
         <ModeSteps zone={zone} onChange={onChange} disabled={off} zoneId={zoneId} mode="exclusive" />
-        <Row label={tr("Exclusive while driving")} help={tr("Offers for the next ride during a trip. Only Exclusive, never Radar. Off: no more finishing-nearby Exclusives; a driver who has done the country's share of his route (Settings › Offers on a trip) still gets Exclusive rides and booked rides (owner, no switch).")} on={zone.exclusiveWhileDriving.on} disabled={off} onToggle={(on) => set({ exclusiveWhileDriving: { ...zone.exclusiveWhileDriving, on } })}>
+        <Row info="dispatch.offer.exclusiveWhileDriving" label={tr("Exclusive while driving")} help={tr("Offers for the next ride during a trip. Only Exclusive, never Radar. Off: no more finishing-nearby Exclusives; a driver who has done the country's share of his route (Settings › Offers on a trip) still gets Exclusive rides and booked rides (owner, no switch).")} on={zone.exclusiveWhileDriving.on} disabled={off} onToggle={(on) => set({ exclusiveWhileDriving: { ...zone.exclusiveWhileDriving, on } })}>
           <Num label={tr("Exclusive offers while driving")} before="up to" value={zone.exclusiveWhileDriving.count} unit="at a time" min={1} max={5} disabled={off} onChange={(count) => set({ exclusiveWhileDriving: { ...zone.exclusiveWhileDriving, count } })} />
         </Row>
-        <Row label={tr("Booked ride for a driver on a trip")} help={tr("A driver on a trip gets only Exclusive offers. A booked ride can come to him as Exclusive when he can finish his trip and reach the pickup in time.")} on={zone.bookedNext.on} disabled={off} onToggle={(on) => set({ bookedNext: { ...zone.bookedNext, on } })}>
+        <Row info="dispatch.offer.bookedRideForADriverOn" label={tr("Booked ride for a driver on a trip")} help={tr("A driver on a trip gets only Exclusive offers. A booked ride can come to him as Exclusive when he can finish his trip and reach the pickup in time.")} on={zone.bookedNext.on} disabled={off} onToggle={(on) => set({ bookedNext: { ...zone.bookedNext, on } })}>
           <Num label={tr("Driver on a trip can get a booked ride starting within (min)")} value={zone.bookedNext.withinMin} unit="min" min={0} max={240} disabled={off || !zone.bookedNext.on} onChange={(withinMin) => set({ bookedNext: { ...zone.bookedNext, withinMin } })} />
         </Row>
         <p className="dx-note">{trn("{0} The best driver, drivers finishing a ride nearby and favourite drivers are in {1}. What the offer card shows is in {2}.", <Target size={13} aria-hidden="true" />, <Link to={`/dispatch?tab=best&zone=${zoneId}`}>{tr("Dispatch › Best driver")}</Link>, <Link to={`/dispatch?zone=${zoneId}&card=Offer+card`}>{tr("Dispatch › Modes")}</Link>)}</p>

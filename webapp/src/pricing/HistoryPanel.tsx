@@ -4,6 +4,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { largeStoreChanges, restoreRevision, SLICE_KEY, type PricingStore } from "./zonePricing";
 import { zoneById } from "../markets/markets";
 import { tr, trn, uiLocale } from "../i18n";
+import { PRICING_WHO, pricingWhere } from "../ui/confirmInfo";
 
 type Props = {
   store: PricingStore;
@@ -23,6 +24,7 @@ export function HistoryPanel({ store, zoneId, agentId, canEdit, timeZone, onRest
   return (
     <>
       <div className="history-head">
+        {/* info-skip: list filter, not a setting */}
         <label className="mini-switch">{trn("{0}{1}Only {2}", <input type="checkbox" checked={onlyZone} onChange={(event) => setOnlyZone(event.target.checked)} aria-label={tr("Only {0}", [zoneById(zoneId)?.name ?? zoneId])} />, <span aria-hidden="true"><i /></span>, zoneById(zoneId)?.name ?? zoneId)}</label>
         <small>{trn("Current pricing revision {0}", store.draftRev)}</small>
       </div>
@@ -60,6 +62,7 @@ export function HistoryPanel({ store, zoneId, agentId, canEdit, timeZone, onRest
                     disabled={!canEdit || Boolean(restore.error)}
                     title={restore.error}
                     largeChanges={restore.error ? undefined : largeStoreChanges(store, restore.store)}
+                    info={{ where: pricingWhere(revision.zoneIds), who: tr(PRICING_WHO) }}
                     onDone={() => onRestored(tr("Pricing revision {0} restored as revision {1}.", [revision.rev, restore.store.draftRev]))}
                   >{trn("{0} Restore", <RotateCcw size={13} aria-hidden="true" />)}</CommandButton>
                 ) : null}

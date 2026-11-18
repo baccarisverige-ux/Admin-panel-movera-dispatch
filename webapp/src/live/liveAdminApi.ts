@@ -23,7 +23,7 @@ import type { TripOffersView } from "../api/dispatchSim.ts";
 import { ApiError } from "../api/httpClient.ts";
 import { radarRepeatOf, toolRefusal, type RadarZoneSend } from "./dispatchTools.ts";
 import { rememberSendTarget, sendTarget, setActiveRadarSend } from "../dispatch/radarSends.ts";
-import type { ApprovalRow, AuditRow, DemoRecord, LiveDriverFacts, LiveTripFacts, ZoneScope } from "../api/seed.ts";
+import type { ApprovalRow, AuditRow, DemoRecord, LiveTripFacts, ZoneScope } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
 import { LIST_PAGE, PAGE_LIMIT, all, paged, readUncounted, type ListCounting } from "./listPages.ts";
 export { LIST_PAGE };
@@ -32,7 +32,7 @@ export { DUE_PAYOUTS_LIST, LIVE_PAGE };
 import { LIVE_CARD_LIST } from "../dashboard/liveCard.ts";
 import { ridersOnlineRecords } from "../dashboard/riders.ts";
 import { zoneSupplyRecords } from "../dashboard/insights.ts";
-import type { AdminRating, TripTrace, SupportTicket, Approval, AuditEntry, DocumentSummary, Driver, DriverPerformance, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, RideCheckRow, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
+import type { AdminRating, TripTrace, SupportTicket, Approval, AuditEntry, Driver, Fleet, LiveDriverList, LiveDriverRow, LiveMoney, NearbyDriver, Page, Payment, RefundPayout, RideCheckRow, Rider, Trip, TripOffer, Vehicle } from "./types.ts";
 import { alertCall, bookFromServer, liveCountry, type AlertBookState } from "./liveAlerts.ts";
 import { ALERTS_KEY, normalizeAlertBook } from "../alerts/engine.ts";
 import { INCIDENT_OPS_KEY, emptyIncidentOps } from "../safety/cases.ts";
@@ -49,7 +49,9 @@ import { zoneById } from "../markets/markets.ts";
 import { remember, setLiveData } from "./realData.ts";
 import { bonusByKind, commissionBeforeBonus, liveBonusLimits } from "./tripLive.ts";
 import { vehicleMissing } from "./activation.ts";
-import { errorText, mainDocuments, requiredForVehicle } from "./format.ts";
+import { errorText, requiredForVehicle } from "./format.ts";
+import { docState, performanceFacts } from "./docState.ts";
+import { DRIVER_BY_ID_LIST, OPEN_TICKETS_LIST, RIDE_CHECK_ALERTS_LIST, RIDE_CHECKS_OF_TRIP_LIST, WAITING_TRIPS_LIST } from "./listNames.ts";
 import { expectedOf, freshRunCard, runChangedText } from "./payoutRunGuard.ts";
 import { formatNumber, tr } from "../i18n/index.ts";
 import { revealPath, type Revealed } from "./masking.ts";
@@ -80,22 +82,7 @@ function fullName(first: string, last?: string): string {
   return [first, last].filter(Boolean).join(" ");
 }
 
-/** The demo's one-word document state of a person or car. */
-export function docState(all: readonly DocumentSummary[] = [], required: readonly string[] = []): string {
-  // v0.18.5 (G2-D1): a renewal waiting or refused does not change the state of the approved document.
-  const documents = mainDocuments(all);
-  if (documents.some((doc) => doc.status === "rejected")) return "rejected";
-  if (documents.some((doc) => doc.status === "expired")) return "expired";
-  const have = new Set(documents.filter((doc) => doc.status !== "missing").map((doc) => doc.type));
-  if (required.some((type) => !have.has(type))) return "needed";
-  if (documents.some((doc) => doc.status === "in_review")) return "in_review";
-  return "approved";
-}
-
-/** G3-D2: the three numbers the panel shows from Driver.performance (null stays null → "—"). */
-export function performanceFacts(performance: DriverPerformance): NonNullable<LiveDriverFacts["performance"]> {
-  return { acceptancePct: performance.acceptancePct ?? null, cancellationPct: performance.cancellationPct ?? null, rating: performance.rating ?? null };
-}
+export { docState, performanceFacts } from "./docState.ts";
 
 export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
   const location = live?.location ?? driver.location;
@@ -153,15 +140,8 @@ export function presenceRecord(live: LiveDriverRow, detail?: Driver): DemoRecord
   return driverRecord(bare, live);
 }
 
-/** Step 39: list names the Dashboard and the driver page read from the server (the demo keeps "trips" / "drivers"). */
-export const WAITING_TRIPS_LIST = "waitingTrips";
-export const DRIVER_BY_ID_LIST = "driverById:";
-/** C4 (A15 N15): the ride checks of one trip (GET /admin/ride-checks?tripId=…). */
-export const RIDE_CHECKS_OF_TRIP_LIST = "rideChecksOfTrip:";
-/** C4 (A15 N15): the checks behind ride-check alerts and the map (need_help, waiting, recent no_answer; both sides). */
-export const RIDE_CHECK_ALERTS_LIST = "rideCheckAlerts";
-/** C7 (A15 N12): the Dashboard counts: open tickets and not-yet-paid payouts, filtered by the server's status. */
-export const OPEN_TICKETS_LIST = "openTickets";
+/** The live list names (Step 39, C4, C7) are in listNames.ts, kept out of the first load; re-exported here. */
+export { DRIVER_BY_ID_LIST, OPEN_TICKETS_LIST, RIDE_CHECK_ALERTS_LIST, RIDE_CHECKS_OF_TRIP_LIST, WAITING_TRIPS_LIST } from "./listNames.ts";
 /** Poll cost: an alert trip's both-sides read is kept at most this long, even with no event for it (the stream's fallback pace). */
 const ALERT_TRIP_MAX_AGE_MS = FALLBACK_POLL_MS;
 /** No-answer checks older than this belong to trips long over (the map shows checks of trips going on now). */
