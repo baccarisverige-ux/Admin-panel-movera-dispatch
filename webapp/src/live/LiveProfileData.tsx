@@ -5,7 +5,7 @@ import { ApiError } from "../api/httpClient";
 import { tr } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
 import { ErrorLine } from "./ui";
-import { categoryLabel, riderPlacesPath, driverPreferencesPath, type AdminDriverPreferences, type AdminRiderSavedPlaces } from "./emergencyContacts";
+import { categoryLabel, fixedCategoryOf, riderPlacesPath, driverPreferencesPath, type AdminDriverPreferences, type AdminRiderSavedPlaces } from "./emergencyContacts";
 
 /**
  * Owner 2026-11-04 "Read-only on profile" (contract v0.18.26 §47): the rider's saved places and the driver's ride
@@ -44,7 +44,8 @@ function PlacesList({ riderId, enabled, read }: { riderId: string; enabled: bool
   if (q.error) return q.error instanceof ApiError && q.error.status === 403 ? <p className="op-help">{tr("Your role cannot see this.")}</p> : <ErrorLine error={q.error} onRetry={() => void q.refetch()} />;
   const items = q.data?.items ?? [];
   if (!items.length) return <p className="op-help">{tr("No saved places.")}</p>;
-  return <ul className="op-past">{items.map((p) => <li key={p.placeId}>{p.kind === "home" ? tr("Home") : p.kind === "work" ? tr("Work") : p.label} · {p.place.address}</li>)}</ul>;
+  // v0.18.129: a place's fixed ride category (null / absent = none, nothing shown).
+  return <ul className="op-past">{items.map((p) => <li key={p.placeId}>{p.kind === "home" ? tr("Home") : p.kind === "work" ? tr("Work") : p.label} · {p.place.address}{fixedCategoryOf(p) ? <> · <span data-testid="saved-place-category">{tr("Fixed category: {0}", [fixedCategoryOf(p)])}</span></> : null}</li>)}</ul>;
 }
 
 export function LiveDriverPreferences({ driverId }: { driverId: string }) {

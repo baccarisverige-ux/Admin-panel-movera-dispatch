@@ -32,4 +32,6 @@ export const svC4PhoneData: Record<keyof typeof enC4PhoneData, string> = {
   "The rider has not added emergency contacts.": "Resenären har inte lagt till några nödkontakter.",
   "Show contacts": "Visa kontakter",
   "The driver has not added emergency contacts.": "Föraren har inte lagt till några nödkontakter.",
+  // v0.18.129 (contract.json#phoneDataToServer.riderPlaces.preferredCategory): a saved place's fixed ride category.
+  "Fixed category: {0}": "Fast kategori: {0}",
 };

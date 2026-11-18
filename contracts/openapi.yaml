@@ -1,11 +1,11 @@
-# Movera API v0.18.125 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.129 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.125
+  version: 0.18.129
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.125 in this folder; this file must agree with them.
+    v0.18.129 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.125
+  version: 0.18.129
   source: contract.json
 paths:
   /auth/otp/request:
@@ -1546,6 +1546,8 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+      description: 'v0.18.128 (contract.json#realtime.appStreamsPerSession): more than 3 open app streams of one session on
+        a server copy are logged and counted, never refused in this version.'
   /rider/profile:
     get:
       operationId: getRiderProfile
@@ -1724,7 +1726,14 @@ paths:
         rider for places, the signed-in driver for preferences and contacts); another rider or driver never sees it and an
         id of someone else''s place is 404 place_not_found. Admins only read (never edit): emergency contacts through an OPEN
         safety case of that driver, saved places and ride preferences on the rider / driver profile page; every admin view
-        is written to the admin audit without the addresses, names or numbers. Logs never carry them.'
+        is written to the admin audit without the addresses, names or numbers. Logs never carry them. v0.18.129 (contract.json#phoneDataToServer.riderPlaces.preferredCategory):
+        SavedPlaceRequest.preferredCategoryId (optional, CategoryId | null): on POST a new place without it gets null; a POST
+        that replaces home / work and a PUT without the field keep the stored value (older apps never clear it by accident);
+        null clears it; a category id sets it. An item of POST /rider/places/import may carry it too, checked the same way.
+        The id must be a category in the admin Pricing catalog (contract.json#categories; the exact id, no alias); an unknown
+        id is 400 invalid_request, reason unknown_category (as driverPreferences.categoriesOff). A category deactivated or
+        removed later is NOT cleared by the server: the read still answers the id, and the rider app treats it as not available
+        (step 6).'
   /rider/places/{placeId}:
     delete:
       operationId: deleteSavedPlace
@@ -1767,7 +1776,14 @@ paths:
       description: 'v0.18.26: only the rider''s own place (else 404 place_not_found). kind home and kind work: one each; saving
         a new home (or work) replaces the old one and keeps its placeId. kind other: as many as maxPlaces allows, each with
         its own placeId. type is the app''s finer word for an other place (gym, mall, school, airport, family, restaurant,
-        other); the app picks the icon and label from it.'
+        other); the app picks the icon and label from it. v0.18.129 (contract.json#phoneDataToServer.riderPlaces.preferredCategory):
+        SavedPlaceRequest.preferredCategoryId (optional, CategoryId | null): on POST a new place without it gets null; a POST
+        that replaces home / work and a PUT without the field keep the stored value (older apps never clear it by accident);
+        null clears it; a category id sets it. An item of POST /rider/places/import may carry it too, checked the same way.
+        The id must be a category in the admin Pricing catalog (contract.json#categories; the exact id, no alias); an unknown
+        id is 400 invalid_request, reason unknown_category (as driverPreferences.categoriesOff). A category deactivated or
+        removed later is NOT cleared by the server: the read still answers the id, and the rider app treats it as not available
+        (step 6).'
       tags:
       - Rider · Account
       x-actor:
@@ -2805,6 +2821,8 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+      description: 'v0.18.128 (contract.json#realtime.appStreamsPerSession): more than 3 open app streams of one session on
+        a server copy are logged and counted, never refused in this version.'
   /driver/offers/{offerId}:
     get:
       operationId: getDriverOffer
@@ -3512,7 +3530,8 @@ paths:
         stream to another zone, so the app reopens it (app rule above). ?zoneId= always wins (unchanged). A zone that does
         not exist is 404 zone_not_found (config and stream); on GET /driver/config a zone with nothing published (own or country
         standard) is 404 config_not_published and the app keeps its document. There is no rule limiting which zone a driver
-        may read (unchanged).'
+        may read (unchanged). v0.18.128 (contract.json#realtime.appStreamsPerSession): more than 3 open app streams of one
+        session on a server copy are logged and counted, never refused in this version.'
   /driver/earnings:
     get:
       operationId: getDriverEarnings
@@ -8469,7 +8488,17 @@ paths:
       summary: Admin incident feed (opened, updated, escalated, closed)
       description: 'v0.7.0. Any signed-in admin may listen. Events of an incident go to admins with incidents.read whose zones
         cover its zone; once it is escalated (not taken in contract.json#safety.escalateAfterSeconds) to every signed-in admin.
-        Without Accept: text/event-stream: a JSON page of the same events (polling fallback).'
+        Without Accept: text/event-stream: a JSON page of the same events (polling fallback). v0.18.126 (contract.json#safety.feedStart):
+        v0.18.126 (S7 W2 Q126 = Q-B4; owner 2026-11-15 "Yes, open ones only (Rec.)", Rules decisions/session-2026-11-06.md;
+        Rule 33): GET /admin/incidents/stream with no cursor (no `after`, `after=0`, no Last-Event-ID) starts from the OPEN
+        incidents: first the newest event of each open or investigating incident (at or before the newest sequence when the
+        stream opened), oldest first, then live after that newest sequence. Closed incidents'' history is not replayed. The
+        open start is never cut by `limit`: every open case is an alarm. The JSON page (polling) without a cursor answers
+        the same open start, with `nextCursor` = the newest sequence when it is newer than the last item, else null. With
+        a cursor (`after` > 0 or Last-Event-ID) nothing changes: every event after it, in order. Zone rules unchanged (mayHear).
+        Rule 33: the start and the newest sequence are read from the one incident_events table; a Last-Event-ID from one server
+        copy is valid on every copy; no shared memory. Admin: no change needed (the panel already reads the open incident
+        list on load and keeps the highest sequence it saw); rider and driver apps: none (they do not use this stream).'
       tags:
       - Admin · Safety
       x-actor:
@@ -17349,7 +17378,14 @@ paths:
       description: 'v0.18.26: One-time upload of the places a phone kept before v0.18.26. Applied only the first time for
         this rider (the server remembers it); later calls change nothing and answer the server''s list. Items follow the POST
         rules (home / work replace, others added); items past maxPlaces are dropped. The app calls it once after sign-in,
-        then reads GET /rider/places and from then on the server''s list is the one shown.'
+        then reads GET /rider/places and from then on the server''s list is the one shown. v0.18.129 (contract.json#phoneDataToServer.riderPlaces.preferredCategory):
+        SavedPlaceRequest.preferredCategoryId (optional, CategoryId | null): on POST a new place without it gets null; a POST
+        that replaces home / work and a PUT without the field keep the stored value (older apps never clear it by accident);
+        null clears it; a category id sets it. An item of POST /rider/places/import may carry it too, checked the same way.
+        The id must be a category in the admin Pricing catalog (contract.json#categories; the exact id, no alias); an unknown
+        id is 400 invalid_request, reason unknown_category (as driverPreferences.categoriesOff). A category deactivated or
+        removed later is NOT cleared by the server: the read still answers the id, and the rider app treats it as not available
+        (step 6).'
       tags:
       - Rider · Account
       x-actor:
@@ -22894,6 +22930,17 @@ components:
           $ref: '#/components/schemas/Timestamp'
         updatedAt:
           $ref: '#/components/schemas/Timestamp'
+        preferredCategoryId:
+          description: 'v0.18.129 (contract.json#phoneDataToServer.riderPlaces.preferredCategory): SavedPlace.preferredCategoryId:
+            CategoryId | null, always sent by a v0.18.129 server (left optional in the schema so older answers still validate)
+            in reads (GET /rider/places, POST / PUT answers, POST /rider/places/import answer, GET /admin/riders/{riderId}/saved-places);
+            null = no fixed category (every place saved before v0.18.129). The id must be a category in the admin Pricing
+            catalog (contract.json#categories; the exact id, no alias); an unknown id is 400 invalid_request, reason unknown_category
+            (as driverPreferences.categoriesOff). A category deactivated or removed later is NOT cleared by the server: the
+            read still answers the id, and the rider app treats it as not available (step 6).'
+          oneOf:
+          - $ref: '#/components/schemas/CategoryId'
+          - type: 'null'
     SupportTicket:
       type: object
       required:
@@ -29303,7 +29350,9 @@ components:
     RiderTripEvent:
       type: object
       description: 'v0.18.32 (contract.json#bookedRideSeen.riderTripEvent, P21): a trip of this rider changed (made, accepted,
-        any status), also when made elsewhere. The rider app reads GET /rider/trips/active again.'
+        any status), also when made elsewhere. The rider app reads GET /rider/trips/active again. v0.18.127 (contract.json#bookedRideSeen.riderTripEvent):
+        not sent for a GPS update (trip event kind location: a position fix or an ETA tick); every other event of the rider''s
+        trips still sends it.'
       required:
       - eventId
       - kind
@@ -30434,6 +30483,17 @@ components:
           description: 'v0.18.26: the app''s word for an other place (gym, mall, ...).'
         place:
           $ref: '#/components/schemas/SavedPlaceAddress'
+        preferredCategoryId:
+          description: 'v0.18.129 (contract.json#phoneDataToServer.riderPlaces.preferredCategory): SavedPlaceRequest.preferredCategoryId
+            (optional, CategoryId | null): on POST a new place without it gets null; a POST that replaces home / work and
+            a PUT without the field keep the stored value (older apps never clear it by accident); null clears it; a category
+            id sets it. An item of POST /rider/places/import may carry it too, checked the same way. The id must be a category
+            in the admin Pricing catalog (contract.json#categories; the exact id, no alias); an unknown id is 400 invalid_request,
+            reason unknown_category (as driverPreferences.categoriesOff). A category deactivated or removed later is NOT cleared
+            by the server: the read still answers the id, and the rider app treats it as not available (step 6).'
+          oneOf:
+          - $ref: '#/components/schemas/CategoryId'
+          - type: 'null'
     VehicleRequest:
       type: object
       required:
