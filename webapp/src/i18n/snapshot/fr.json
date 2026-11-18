@@ -4847,7 +4847,6 @@
 ["Open booked rides per rider","Courses programmées ouvertes par passager"],
 ["Open booked rides per rider, at most","Courses programmées ouvertes par passager, au plus"],
 ["Example: at 3, a rider with 3 booked rides that have not ended must cancel one before booking another. Live rides do not count.","Exemple : à 3, un passager qui a 3 courses programmées pas encore terminées doit en annuler une avant d’en programmer une autre. Les courses immédiates ne comptent pas."],
-["Heading to the pickup = at least","Se dirige vers la prise en charge = au moins"],
 ["Checked every 30 s from accept until arrival: the driver must come at least this share as much closer to the pickup as normal road speed allows. Usual value {0} %.","Vérifié toutes les 30 s, de l’acceptation à l’arrivée : le chauffeur doit se rapprocher de la prise en charge d’au moins cette part de ce que permet la vitesse normale sur la route. Valeur habituelle {0} %."],
 ["Heading to the pickup (%)","Se dirige vers la prise en charge (%)"],
 ["Free cancel when not heading for","Annulation gratuite si le chauffeur ne se dirige pas vers la prise en charge pendant"],
