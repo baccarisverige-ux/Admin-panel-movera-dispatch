@@ -1018,7 +1018,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       }
       const next = await client.json<Trip>(`/admin/trips/${encodeURIComponent(trip.tripId)}/reverse-no-show`, { method: "POST", body: JSON.stringify({ expectedVersion: trip.version, reason: reason.slice(0, 1000), takeBackDriverShare: takeBack }), ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}) });
       if (next?.tripId) trips.set(next.tripId, next);
-      return done(takeBack ? "No-show reversed. The fee is gone and the driver's share is taken back." : "No-show reversed. The fee is gone; the driver keeps his share.");
+      return done(takeBack ? "No-show reversed. The fee is gone and the driver's share is taken back." : "No-show reversed. The fee is gone; the driver keeps their share.");
     }
     if (input.action === "admin.dispatch.control") {
       // Dispatch › Live: pause, force a mode, resume or back to the rules (PUT /admin/zones/{zoneId}/dispatch-control).
@@ -1433,7 +1433,7 @@ export function moneySendNotice(send: MoneySendAnswer, scope: "exclusive" | "rad
 /** v0.18.26 (owner "Yes, respect it"): drivers left out because their Ride preferences switch this ride type off. */
 export function switchedOffNotice(count: number): string | null {
   if (!count) return null;
-  return tr(count === 1 ? "{0} driver switched this ride type off in his ride preferences." : "{0} drivers switched this ride type off in their ride preferences.", [count]);
+  return tr(count === 1 ? "{0} driver switched this ride type off in their ride preferences." : "{0} drivers switched this ride type off in their ride preferences.", [count]);
 }
 
 export function refreshedNotice(refreshed: number, sent: number, raised: boolean, skipped = 0): string | null {

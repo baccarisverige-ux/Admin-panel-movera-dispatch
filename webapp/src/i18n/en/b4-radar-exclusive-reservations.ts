@@ -94,7 +94,6 @@ export const enB4RadarExclusiveReservations = {
   "Open booked rides per rider, at most": "Open booked rides per rider, at most",
   "Example: at 3, a rider with 3 booked rides that have not ended must cancel one before booking another. Live rides do not count.": "Example: at 3, a rider with 3 booked rides that have not ended must cancel one before booking another. Live rides do not count.",
   // BQ-V21 + BQ-V22 (SAFETY): Dispatch › Drivers › Rest after long work; Dispatch › Rides › Rider cancels: smart check.
-  "Heading to the pickup = at least": "Heading to the pickup = at least",
   "Checked every 30 s from accept until arrival: the driver must come at least this share as much closer to the pickup as normal road speed allows. Usual value {0} %.": "Checked every 30 s from accept until arrival: the driver must come at least this share as much closer to the pickup as normal road speed allows. Usual value {0} %.",
   "Heading to the pickup (%)": "Heading to the pickup (%)",
   "Free cancel when not heading for": "Free cancel when not heading for",

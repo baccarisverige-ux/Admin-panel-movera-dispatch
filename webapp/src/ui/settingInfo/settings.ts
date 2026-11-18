@@ -46,7 +46,7 @@ export const SETTINGS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "Off: riders cannot share a trip; On: the Share trip button shows.",
   ),
   "config.switch.showRating": t(
-    "Shows the driver his own rating in the driver app.",
+    "Shows the driver their own rating in the driver app.",
     DRIVER,
     "On or off.",
     "On.",
@@ -54,7 +54,7 @@ export const SETTINGS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "Off: drivers do not see their rating; On: they do.",
   ),
   "config.switch.showAcceptance": t(
-    "Shows the driver his acceptance rate in the driver app.",
+    "Shows the driver their acceptance rate in the driver app.",
     DRIVER,
     "On or off.",
     "On.",
@@ -62,7 +62,7 @@ export const SETTINGS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "Off: drivers do not see their acceptance rate; On: they do.",
   ),
   "config.switch.showCancellation": t(
-    "Shows the driver his cancellation rate in the driver app.",
+    "Shows the driver their cancellation rate in the driver app.",
     DRIVER,
     "On or off.",
     "On.",
@@ -228,7 +228,7 @@ export const SETTINGS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "English, French or Swedish.",
     "Swedish in Sweden, French in France and Tunisia.",
     "Tunisia on French: a new rider sees the app in French.",
-    "Each choice only sets the start language; a rider who picked another one keeps his.",
+    "Each choice only sets the start language; a rider who picked another one keeps theirs.",
   ),
   "settings.language.driver": t(
     "The language the driver app starts in, in this country. Each driver can change it.",
@@ -236,15 +236,15 @@ export const SETTINGS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "English, French or Swedish.",
     "Swedish in Sweden, French in France and Tunisia.",
     "Sweden on Swedish: a new driver sees the app in Swedish.",
-    "Each choice only sets the start language; a driver who picked another one keeps his.",
+    "Each choice only sets the start language; a driver who picked another one keeps theirs.",
   ),
   "settings.language.admin": t(
-    "The language the admin panel starts in for this country. Each admin can change his own.",
+    "The language the admin panel starts in for this country. Each admin can change their own.",
     `${COUNTRY} Admin panel.`,
     "English, French or Swedish.",
     "Swedish in Sweden, French in France and Tunisia.",
     "France on French: a new admin there sees French.",
-    "Each choice only sets the start language; an admin who picked another one keeps his.",
+    "Each choice only sets the start language; an admin who picked another one keeps theirs.",
   ),
   "settings.requestLimits.writesPerUserPerMinute": t(
     "How many changes (book, cancel, send, save) one signed-in person may send per minute. Above it the apps say \"wait a moment\" and try again by themselves.",

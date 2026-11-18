@@ -98,7 +98,7 @@ test("J9: Tips & limits shows Max rider debt (no max) and the owes-limit switch 
   const panel = readFileSync(new URL("../pricing/CountryExtrasPanel.tsx", import.meta.url), "utf8");
   assert.match(panel, /tr\("Max rider debt"\)/);
   assert.match(panel, /aria-label=\{tr\("Driver owes-limit on"\)\}/);
-  assert.match(panel, /tr\("Over the limit the driver gets no cash trips; he can still go online\."\)/);
+  assert.match(panel, /tr\("Over the limit the driver gets no cash trips; they can still go online\."\)/);
   assert.ok(panel.indexOf("Max rider debt") > panel.indexOf("Largest Add money to wallet at one time"), "beside walletCreditMax");
 });
 

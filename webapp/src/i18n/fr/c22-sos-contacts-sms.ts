@@ -2,7 +2,7 @@
 export const frC22SosContactsSms = {
   "SMS to the driver's emergency contacts on SOS": "SMS aux contacts d’urgence du chauffeur lors d’un SOS",
   "{0} SMS to the driver's emergency contacts on SOS": "{0} SMS aux contacts d’urgence du chauffeur lors d’un SOS",
-  "When a driver presses SOS during a trip, each of his emergency contacts gets one SMS with his position. Off: no SMS; the call and the Movera alert stay. Sent only once an SMS company is connected.": "Quand un chauffeur appuie sur SOS pendant une course, chacun de ses contacts d’urgence reçoit un SMS avec sa position. Désactivé : pas de SMS ; l’appel et l’alerte Movera restent. Envoyé seulement quand une société SMS est connectée.",
+  "When a driver presses SOS during a trip, each of their emergency contacts gets one SMS with their position. Off: no SMS; the call and the Movera alert stay. Sent only once an SMS company is connected.": "Quand un chauffeur appuie sur SOS pendant une course, chacun de ses contacts d’urgence reçoit un SMS avec sa position. Désactivé : pas de SMS ; l’appel et l’alerte Movera restent. Envoyé seulement quand une société SMS est connectée.",
   "SMS to the driver's emergency contacts on SOS: {0}": "SMS aux contacts d’urgence du chauffeur lors d’un SOS : {0}",
   "SMS to emergency contacts: off": "SMS aux contacts d’urgence : désactivé",
   "SMS to emergency contacts: the driver has none": "SMS aux contacts d’urgence : le chauffeur n’en a aucun",

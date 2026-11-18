@@ -9,7 +9,7 @@ export const frC28OfflineReasons = {
   "Account on hold, suspended or back to pending": "Compte en pause, suspendu ou remis en attente",
   "Set offline by Movera": "Mis hors ligne par Movera",
   "A required document has expired": "Un document obligatoire a expiré",
-  "Went offline after his trip (asked during the trip)": "Passé hors ligne après sa course (demandé pendant la course)",
+  "Went offline after their trip (asked during the trip)": "Passé hors ligne après sa course (demandé pendant la course)",
   "Set offline by the server ({0})": "Mis hors ligne par le serveur ({0})",
   "Offline reason": "Raison de la mise hors ligne",
   "Set offline {0}": "Mis hors ligne {0}",

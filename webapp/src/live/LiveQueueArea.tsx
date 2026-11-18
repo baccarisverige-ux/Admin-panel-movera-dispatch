@@ -60,9 +60,9 @@ export function LiveQueueArea({ zone, disabled }: { zone: ServerZone; disabled: 
         <label className="field"><span>{tr("Queue offers before the nearest driver")}</span><NumberField label={tr("Queue offers before the nearest driver")} value={draft.maxQueueOffers} min={QUEUE_RANGES.maxQueueOffers[0]} max={QUEUE_RANGES.maxQueueOffers[1]} disabled={disabled} onChange={(maxQueueOffers) => set({ maxQueueOffers })} /></label>
       </div>
       <label className={draft.keepPlaceAfterDecline ? "zd-toggle on" : "zd-toggle"}>
-        <input type="checkbox" aria-label={tr("A driver who declines keeps his place")} checked={draft.keepPlaceAfterDecline} disabled={disabled} onChange={(event) => set({ keepPlaceAfterDecline: event.target.checked })} />
+        <input type="checkbox" aria-label={tr("A driver who declines keeps their place")} checked={draft.keepPlaceAfterDecline} disabled={disabled} onChange={(event) => set({ keepPlaceAfterDecline: event.target.checked })} />
         <span className="zd-switch" aria-hidden="true"><i /></span>
-        <span><b>{tr("A driver who declines keeps his place")}</b><small>{tr("Off: he goes to the back of the queue.")}</small></span>
+        <span><b>{tr("A driver who declines keeps their place")}</b><small>{tr("Off: the driver goes to the back of the queue.")}</small></span>
       </label>
       <div className="cat-actions">
         <button data-command="admin.zone.save" type="button" className="dash-btn small" disabled={disabled || draft.polygon.length < 3 || state === "saving"} onClick={() => void save()}>{tr("Save queue area")}</button>

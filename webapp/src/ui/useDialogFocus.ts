@@ -1,4 +1,8 @@
 import { useLayoutEffect, useRef } from "react";
+import { initialFocusOf, tabTargetOf } from "./dialogFocus";
+
+/** The confirm "!" button (ui/ConfirmInfo.tsx) is marked so the first field gets the dialog's first focus (R18). */
+const skipsInitial = (element: HTMLElement) => element.hasAttribute("data-skip-initial-focus");
 
 export function useDialogFocus(open: boolean, onClose: () => void) {
   const root = useRef<HTMLDivElement>(null);
@@ -20,21 +24,19 @@ export function useDialogFocus(open: boolean, onClose: () => void) {
       }
       if (event.key !== "Tab") return;
       const items = focusable();
-      const first = items[0];
-      const last = items.at(-1);
-      if (!first) {
+      if (!items.length) {
         event.preventDefault();
         node!.focus();
-      } else if (event.shiftKey && (document.activeElement === first || document.activeElement === node)) {
+        return;
+      }
+      const target = document.activeElement === node && event.shiftKey ? items.at(-1)! : tabTargetOf(items, document.activeElement as HTMLElement | null, event.shiftKey, skipsInitial);
+      if (target) {
         event.preventDefault();
-        last!.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
+        target.focus();
       }
     }
     node.addEventListener("keydown", key);
-    (focusable()[0] ?? node).focus();
+    (initialFocusOf(focusable(), skipsInitial) ?? node).focus();
     return () => {
       node.removeEventListener("keydown", key);
       if (previous?.isConnected) previous.focus();

@@ -24,7 +24,7 @@ export const frC2ServerAlerts = {
   "Booked ride late": "Course programmée en retard",
   "The pickup time passed and the booked ride still has no driver.": "L’heure de prise en charge est passée et la course programmée n’a toujours pas de chauffeur.",
   "Booked ride not started": "Course programmée pas commencée",
-  "The driver holds the booked ride, his leave time passed and he has not started it.": "Le chauffeur a la course programmée, son heure de départ est passée et il ne l’a pas commencée.",
+  "The driver holds the booked ride, the leave time passed and the ride has not started.": "Le chauffeur a la course programmée, son heure de départ est passée et il ne l’a pas commencée.",
   "Limit {0}": "Limite {0}",
   "Asked for help": "A demandé de l’aide",
   "{0}'s booked ride: pickup time {1} passed, no driver": "Course programmée de {0} : heure de prise en charge {1} passée, aucun chauffeur",

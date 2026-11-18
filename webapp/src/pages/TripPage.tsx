@@ -465,7 +465,7 @@ export function TripPage() {
                 </dl>
               ) : <p className="op-help">{tr("No fee.")}</p>}
               {cancelFacts.reversal ? (
-                <p className="op-help" data-testid="trip-no-show-reversal">{tr("Reversed {0} by {1}: {2}", [time(cancelFacts.reversal.at), cancelFacts.reversal.by ?? "—", cancelFacts.reversal.reason ?? "—"])}{cancelFacts.reversal.driverShareTakenBack ? ` · ${tr("driver's share taken back")}` : ` · ${tr("driver keeps his share")}`}</p>
+                <p className="op-help" data-testid="trip-no-show-reversal">{tr("Reversed {0} by {1}: {2}", [time(cancelFacts.reversal.at), cancelFacts.reversal.by ?? "—", cancelFacts.reversal.reason ?? "—"])}{cancelFacts.reversal.driverShareTakenBack ? ` · ${tr("driver's share taken back")}` : ` · ${tr("driver keeps their share")}`}</p>
               ) : null}
               {live && trip.status === "no_show" && !cancelFacts.reversal && can(role, "trips.intervene") ? (
                 <ReverseNoShowButton tripId={trip.id} zoneId={trip.zoneId} onDone={(message) => { setNotice(message); void dispatchOffers.refetch(); void trips.refetch(); }} />

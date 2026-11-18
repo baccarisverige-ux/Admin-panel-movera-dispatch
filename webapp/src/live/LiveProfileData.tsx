@@ -61,5 +61,5 @@ function PrefsList({ driverId, enabled, read }: { driverId: string; enabled: boo
   if (q.isLoading) return <p className="state-line">{tr("Loading.")}</p>;
   if (q.error) return q.error instanceof ApiError && q.error.status === 403 ? <p className="op-help">{tr("Your role cannot see this.")}</p> : <ErrorLine error={q.error} onRetry={() => void q.refetch()} />;
   const off = q.data?.categoriesOff ?? [];
-  return <p className="op-help">{off.length ? tr("Switched off by the driver: {0}", [off.map(categoryLabel).join(", ")]) : tr("The driver takes every ride type his car allows.")}</p>;
+  return <p className="op-help">{off.length ? tr("Switched off by the driver: {0}", [off.map(categoryLabel).join(", ")]) : tr("The driver takes every ride type their car allows.")}</p>;
 }

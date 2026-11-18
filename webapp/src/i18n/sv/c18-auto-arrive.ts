@@ -1,7 +1,7 @@
 /** Swedish dictionary, area c18-auto-arrive: job C9 (contract v0.18.93 autoArrive, owner review Q3 "Both: auto + button"): Dispatch › Waiting at pickup distances and the trip page waiting box. Add new keys at the end of this file. Merged in ../sv.ts in this order. */
 export const svC18AutoArrive = {
   "Auto arrived and waiting away": "Automatiskt framme och väntan när föraren åker iväg",
-  "The server marks the driver arrived when he is this close to the pickup; he can still tap Arrived. While he is farther than the second distance before the rider is in the car, the waiting time stops (no free minutes used, nothing charged, no no-show) and goes on when he is back.": "Servern markerar föraren som framme när han är så här nära upphämtningen; han kan fortfarande trycka på Framme. Medan han är längre bort än det andra avståndet innan resenären har klivit in står väntetiden still (inga gratisminuter används, inget debiteras, ingen utebliven resenär) och fortsätter när han är tillbaka.",
+  "The server marks the driver arrived when they are this close to the pickup; they can still tap Arrived. While they are farther than the second distance before the rider is in the car, the waiting time stops (no free minutes used, nothing charged, no no-show) and goes on when they are back.": "Servern markerar föraren som framme när föraren är så här nära upphämtningen; föraren kan fortfarande trycka på Framme. Medan föraren är längre bort än det andra avståndet innan resenären har klivit in står väntetiden still (inga gratisminuter används, inget debiteras, ingen utebliven resenär) och fortsätter när föraren är tillbaka.",
   "Auto arrived within": "Automatiskt framme inom",
   "arrived within": "framme inom",
   "Waiting stops beyond": "Väntan stannar bortom",

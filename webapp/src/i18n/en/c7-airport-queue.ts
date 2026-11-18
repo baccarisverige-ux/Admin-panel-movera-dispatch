@@ -12,7 +12,7 @@ export const enC7AirportQueue = {
   "Leave the queue after (outside the area)": "Leave the queue after (outside the area)",
   "Time to answer a queue offer": "Time to answer a queue offer",
   "Queue offers before the nearest driver": "Queue offers before the nearest driver",
-  "A driver who declines keeps his place": "A driver who declines keeps his place",
-  "Off: he goes to the back of the queue.": "Off: he goes to the back of the queue.",
+  "A driver who declines keeps their place": "A driver who declines keeps their place",
+  "Off: the driver goes to the back of the queue.": "Off: the driver goes to the back of the queue.",
   "Save queue area": "Save queue area",
 } as const;

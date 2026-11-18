@@ -155,7 +155,7 @@ test("R9 history restores an older revision as a new one, and undo goes back one
   await page.getByRole("tab", { name: "Prices" }).click();
   await expect(page.getByLabel("Södermalm Movera Price per km")).toHaveValue("20");
 
-  await page.getByRole("button", { name: /^Undo last publish/ }).click();
+  await page.getByRole("button", { name: /^Undo last pricing publish/ }).click();
   await confirm(page);
   await expect(page.getByText("Revision 4 undone.")).toBeVisible();
   await expect(page.getByLabel("Södermalm Movera Price per km")).toHaveValue("25");

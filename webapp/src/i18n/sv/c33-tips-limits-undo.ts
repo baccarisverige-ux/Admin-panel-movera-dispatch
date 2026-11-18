@@ -1,0 +1,20 @@
+/** Swedish dictionary, area c33-tips-limits-undo: see ../en/c33-tips-limits-undo.ts. Same keys, same order. */
+export const svC33TipsLimitsUndo = {
+  "Undo last Tips & limits save": "Ångra senaste sparningen av dricks och gränser",
+  "Rider app tip rules": "Dricksregler i resenärsappen",
+  "{0} · {1}: version {2} → back to version {3}": "{0} · {1}: version {2} → tillbaka till version {3}",
+  "{0} · {1}: its own version {2} → back to the Standard": "{0} · {1}: egen version {2} → tillbaka till Standard",
+  "{0} · {1}: version {2} is its first version. Not touched.": "{0} · {1}: version {2} är den första versionen. Rörs inte.",
+  "{0} · {1}: version {2} was changed after this save. Not touched.": "{0} · {1}: version {2} har ändrats efter den här sparningen. Rörs inte.",
+  "Saved. These zones use the Standard and got it through the Standard, with no copy of their own: {0}.": "Sparat. De här zonerna använder Standard och fick det via Standard, utan egen kopia: {0}.",
+  "Undone: {0} document(s) of the last Tips & limits save are back as before.": "Ångrat: {0} dokument från senaste sparningen av dricks och gränser är tillbaka som förut.",
+  "Not undone: {0}": "Inte ångrat: {0}",
+  "Nothing to undo: no Tips & limits save that can go back was found.": "Inget att ångra: ingen sparning av dricks och gränser som kan gå tillbaka hittades.",
+  "Another Tips & limits save was made meanwhile. Open Tips & limits again to see what Undo would do now.": "En annan sparning av dricks och gränser har gjorts under tiden. Öppna Dricks och gränser igen för att se vad Ångra skulle göra nu.",
+  "Nothing was undone: every document of that save was changed after it.": "Inget ångrades: varje dokument i den sparningen har ändrats efteråt.",
+  "Saved {0} by {1} · {2} document(s) go back": "Sparat {0} av {1} · {2} dokument går tillbaka",
+  "No Tips & limits save to undo in {0}. Only saves made from this panel version on can be undone here.": "Ingen sparning av dricks och gränser att ångra i {0}. Bara sparningar gjorda från och med den här panelversionen kan ångras här.",
+  "The last Tips & limits save was already undone or changed. Nothing can go back.": "Den senaste sparningen av dricks och gränser är redan ångrad eller ändrad. Inget kan gå tillbaka.",
+  "Undo the Tips & limits save of {0} by {1}. Each document below goes back to the version before that save; nothing else changes.": "Ångra sparningen av dricks och gränser från {0} av {1}. Varje dokument nedan går tillbaka till versionen före den sparningen; inget annat ändras.",
+  "Looking for the last Tips & limits save.": "Letar efter den senaste sparningen av dricks och gränser.",
+};

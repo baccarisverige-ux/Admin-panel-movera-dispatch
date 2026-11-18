@@ -115,7 +115,7 @@ const NEW_TEXTS = [
   "Cash tip time in the car",
   "Cash tip time in the car: {0} min",
   "Off: a cash tip is only possible in the car, in the first {0} minutes after the trip.",
-  "The driver gets a notice with the amount taken from his pay and this reason.",
+  "The driver gets a notice with the amount taken from their pay and this reason.",
 ];
 
 test("C8 + A7: the panel has the field (no fixed 5), the trip page tells the admin the driver sees the reason", () => {
@@ -125,7 +125,7 @@ test("C8 + A7: the panel has the field (no fixed 5), the trip page tells the adm
   const configs = readFileSync(new URL("./appConfigs.ts", import.meta.url), "utf8");
   assert.ok(!configs.includes("cashInCarMinutes: 5"));
   const money = readFileSync(new URL("../live/LiveTripMoney.tsx", import.meta.url), "utf8");
-  assert.ok(money.includes("The driver gets a notice with the amount taken from his pay and this reason."));
+  assert.ok(money.includes("The driver gets a notice with the amount taken from their pay and this reason."));
 });
 
 for (const [lang, dictionary] of Object.entries({ en, sv, fr }) as Array<[string, Record<string, string>]>) {

@@ -61,8 +61,15 @@ import { frC28OfflineReasons } from "./fr/c28-offline-reasons.ts";
 import { frC19DebtModel } from "./fr/c19-debt-model.ts";
 import { frC25BonusCampaigns } from "./fr/c25-bonus-campaigns.ts";
 import { frC29SupportOrder } from "./fr/c29-support-order.ts";
+import { frC33TipsLimitsUndo } from "./fr/c33-tips-limits-undo.ts";
+import { frC35WhereItLands } from "./fr/c35-where-it-lands.ts";
+import { frC38FromTo } from "./fr/c38-from-to.ts";
+import { frC39ConfirmDetails } from "./fr/c39-confirm-details.ts";
 import { frC31PickupSpots } from "./fr/c31-pickup-spots.ts";
+import { frC39ParkedGeofence } from "./fr/c39-parked-geofence.ts";
 import { frC32ShareTrip } from "./fr/c32-share-trip.ts";
+import { frC37AutoOfflineOutage } from "./fr/c37-auto-offline-outage.ts";
+import { frC40OneStream } from "./fr/c40-one-stream.ts";
 import { frC41LaneLate } from "./fr/c41-lane-late.ts";
 
 /** French. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
@@ -130,7 +137,14 @@ export const fr: Record<MessageKey, string> = {
   ...frC19DebtModel,
   ...frC25BonusCampaigns,
   ...frC29SupportOrder,
+  ...frC33TipsLimitsUndo,
+  ...frC35WhereItLands,
+  ...frC38FromTo,
+  ...frC39ConfirmDetails,
   ...frC31PickupSpots,
+  ...frC39ParkedGeofence,
   ...frC32ShareTrip,
+  ...frC37AutoOfflineOutage,
+  ...frC40OneStream,
   ...frC41LaneLate,
 };
