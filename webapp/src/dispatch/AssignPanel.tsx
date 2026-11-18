@@ -257,7 +257,7 @@ export function AssignPanel({ tripId, candidates, onClose }: { tripId: string; c
                 const checked = selected.includes(row.driverId);
                 const full = !checked && selected.length >= RADAR_GROUP_MAX;
                 return (
-                  <button key={row.driverId} data-driver={row.driverId} data-command="admin.dispatch.view" type="button" className={checked ? "as-chip active" : "as-chip"} role="checkbox" aria-checked={checked} aria-label={tr("Select {0} for the radar", [row.name])} disabled={!pickable(row.driverId) || full} title={full ? tr("At most {0} drivers in one radar group.", [RADAR_GROUP_MAX]) : row.openOfferId ? tr("{0} already sees this ride: the radar raises his offer.", [row.name]) : undefined} onClick={() => setPicked((list) => (list.includes(row.driverId) ? list.filter((id) => id !== row.driverId) : [...list, row.driverId]))}>
+                  <button key={row.driverId} data-driver={row.driverId} data-command="admin.dispatch.view" type="button" className={checked ? "as-chip active" : "as-chip"} role="checkbox" aria-checked={checked} aria-label={tr("Select {0} for the radar", [row.name])} disabled={!pickable(row.driverId) || full} title={full ? tr("At most {0} drivers in one radar group.", [RADAR_GROUP_MAX]) : row.openOfferId ? tr("{0} already sees this ride: the radar raises their offer.", [row.name]) : undefined} onClick={() => setPicked((list) => (list.includes(row.driverId) ? list.filter((id) => id !== row.driverId) : [...list, row.driverId]))}>
                     {row.name} · {distanceLabel(row.distanceMeters)}
                   </button>
                 );

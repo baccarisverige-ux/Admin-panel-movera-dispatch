@@ -1,3 +1,4 @@
+import { ConfirmInfo } from "../ui/ConfirmInfo";
 import { useMemo, useState } from "react";
 import { BellRing, CalendarClock, CalendarX2, CarFront, FileCheck2, ListOrdered, MailCheck, Pencil, Plus, Trash2 } from "lucide-react";
 import { useSession } from "../auth/SessionContext";
@@ -45,7 +46,7 @@ const STEP_LABEL: Record<StepId, { label: MessageKey; help: MessageKey }> = {
 
 const SCOPE_LABEL: Record<Scope, { title: MessageKey; help: MessageKey }> = {
   driver: { title: "Driver documents", help: "Every driver uploads these, in a fleet or not." },
-  fleet: { title: "Fleet company documents", help: "A fleet owner (or a driver who starts his own company) also uploads these for the company." },
+  fleet: { title: "Fleet company documents", help: "A fleet owner (or a driver who starts their own company) also uploads these for the company." },
   vehicle: { title: "Car documents", help: "Every car needs these before it can be picked. The four photos are added while photos are needed." },
 };
 
@@ -169,7 +170,7 @@ export function OnboardingSettingsEditor({ country, part, cars = [], liveFitCoun
             </Card>
             {/* v0.18.76 G30 (owner Q6 "Add the setting, off"; REMINDERS 58 warning while Movera has no own e-mail domain). */}
             <Card title={tr("E-mail before approval")} icon={<MailCheck size={18} />} tone="purple">
-              <Row label={tr("Driver needs a verified e-mail before approval")} help={tr("On: Movera cannot approve a new driver until his e-mail is verified (drivers who were active before are not checked).")} on={current.emailVerifiedForApproval === true} onToggle={(on) => (on ? setAskEmailCheck(true) : patch({ emailVerifiedForApproval: false }))} />
+              <Row label={tr("Driver needs a verified e-mail before approval")} help={tr("On: Movera cannot approve a new driver until their e-mail is verified (drivers who were active before are not checked).")} on={current.emailVerifiedForApproval === true} onToggle={(on) => (on ? setAskEmailCheck(true) : patch({ emailVerifiedForApproval: false }))} />
               <p className="fd-banner amber" data-testid="email-check-warning">{tr("Until Movera's own e-mail domain is added in the e-mail service, codes reach only the test address. Turning this on now stops new drivers from being approved.")}</p>
             </Card>
           </>
@@ -209,6 +210,14 @@ export function OnboardingSettingsEditor({ country, part, cars = [], liveFitCoun
         <Modal open title={tr("Turn on the e-mail check?")} onClose={() => setAskEmailCheck(false)}>
           <div className="live-dialog" data-testid="email-check-confirm">
             <p>{tr("Until Movera's own e-mail domain is added in the e-mail service, codes reach only the test address. Turning this on now stops new drivers from being approved.")}</p>
+            <ConfirmInfo
+              what={tr("Until Movera's own e-mail domain is added in the e-mail service, codes reach only the test address. Turning this on now stops new drivers from being approved.")}
+              where={tr("In the draft of this country's onboarding settings. Nothing is live until you publish.")}
+              who={tr("New drivers of this country, after you publish.")}
+              undo={tr("Switch it off again in the same list, before or after you publish.")}
+              when={tr("Only after you publish the draft.")}
+              money={tr("No money moves.")}
+            />
             <div className="actions">
               <button data-command="admin.onboarding.editTypes" type="button" className="primary-btn" onClick={() => { patch({ emailVerifiedForApproval: true }); setAskEmailCheck(false); }}>{tr("Turn on")}</button>
               <button data-command="admin.onboarding.editTypes" type="button" className="secondary-btn" onClick={() => setAskEmailCheck(false)}>{tr("Cancel")}</button>

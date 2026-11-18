@@ -9,7 +9,7 @@ import type { LatLng } from "../dashboard/route.ts";
 import type { LiveTripFacts } from "../api/seed.ts";
 import type { CancelReasonBook, LangId } from "../dispatch/offers.ts";
 import { reasonText } from "../dispatch/offers.ts";
-import { hasMessage, translate } from "../i18n/core.ts";
+import { hasMessage, tr, translate } from "../i18n/core.ts";
 import type { AppLanguage } from "../i18n/languages.ts";
 import { formatMoney, isCurrency } from "../domain/money.ts";
 import { CONFIG_DEFAULTS } from "../config/zoneDefaults.ts";
@@ -147,9 +147,24 @@ export function walletByCurrency(facts: { walletByCurrency?: { amountMinor: numb
   return facts.walletMinor && facts.currency ? [{ amountMinor: facts.walletMinor, currency: facts.currency }] : [];
 }
 
-/** "65,00 € · 30,00 kr": each wallet balance in its own currency, never a sum; "0" in [fallback] when there is none. */
+/**
+ * "65,00 € · 30,00 kr": each wallet balance in its own currency, never a sum; "0" in [fallback] when there is none.
+ * S5 J9 (v0.18.84 debtModel.riderWallet): a balance below 0 is what the rider owes ("Owes 50,00 kr").
+ */
 export function walletText(balances: readonly { amountMinor: number; currency: string }[], fallback: string): string {
-  return balances.length ? owedText(balances) : tripMoney(0, fallback);
+  if (!balances.length) return tripMoney(0, fallback);
+  return balances.map((money) => (money.amountMinor < 0 ? tr("Owes {0}", [tripMoney(-money.amountMinor, money.currency)]) : tripMoney(money.amountMinor, money.currency))).join(" · ");
+}
+
+/**
+ * S5 J9 (v0.18.84): the two new WalletEntry kinds in words; fee = an unpaid cancel / no-show fee, debt_paid = that debt
+ * paid with a trip (contract texts.walletFee / walletDebtPaid). Any other kind shows as it is. No admin route lists
+ * wallet entries yet (the contract has none), so this is ready for the rider's wallet history.
+ */
+const WALLET_KIND_LABEL: Record<string, string> = { fee: "Unpaid fee", debt_paid: "Unpaid fee paid" };
+export function walletKindLabel(kind: string): string {
+  const label = WALLET_KIND_LABEL[kind];
+  return label ? tr(label as Parameters<typeof tr>[0]) : kind;
 }
 
 /** "100,00 kr · 10,00 €": every owed amount in its own currency. */

@@ -6,7 +6,7 @@ test("409 details are grouped as driver, company and car", () => {
   assert.deepEqual(groupMissing(["driver:terms", "fleet:company_registration", "vehicle:insurance", "driver:terms", "info_session"]), { driver: ["terms", "info_session"], fleet: ["company_registration"], vehicle: ["insurance"] });
 });
 
-test("a fleet member needs only his own documents; an owner also the company's", () => {
+test("a fleet member needs only their own documents; an owner also the company's", () => {
   const docs = [{ documentId: "1", type: "terms", status: "approved" as const }];
   const member = { country: "SE", accountType: "driver" as const, documents: docs };
   assert.deepEqual(activationMissing(member), ["driver:info_session", "driver:driving_license", "driver:profile_photo", "driver:taxi_driver_license"]);

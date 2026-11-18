@@ -197,7 +197,7 @@ export function errorText(error: unknown): string {
   if (error.reason === "driver_not_available") return tr("The driver cannot take a ride now (offline or no position). For a ride hours ahead you can still give it.");
   if (error.reason === "driver_on_trip") return tr("The driver is on a trip now.");
   // v0.18.26 (owner 2026-11-04 "Yes, respect it"): his Ride preferences switch this ride type off.
-  if (error.reason === "category_switched_off") return tr("This driver switched this ride type off in his ride preferences.");
+  if (error.reason === "category_switched_off") return tr("This driver switched this ride type off in their ride preferences.");
   if (error.reason === "no_show_too_early") return tr("A booked ride can be marked a no-show only after its pickup time and the waiting time.");
   if (error.reason === "no_free_driver") return tr("None of these drivers can take the ride now.");
   if (error.reason === "currency_mismatch") return tr("The amount must be in the ride's currency.");
@@ -227,6 +227,12 @@ export function errorText(error: unknown): string {
   // v0.18.8 (G6): Reverse no-show and Waive the fee.
   if (error.reason === "not_a_no_show") return tr("This trip is not a no-show.");
   if (error.reason === "fee_on_running_trip") return tr("The fee is part of a ride going on now. Try again when that ride has ended.");
+  // S5 J9 (v0.18.84 debtModel; fee_on_running_trip above stays for an older server, Rule 21).
+  if (error.reason === "driver_owes_movera") return tr("This driver owes Movera {0} (limit {1}), so they get no cash trips. Give the ride to another driver.", [detailMoney(error.details, "owed"), detailMoney(error.details, "limit")]);
+  if (error.reason === "rider_debt_above_max") return tr("The rider owes {0} from earlier trips (max {1}): trips paid in the car are paused until it is paid.", [detailMoney(error.details, "debt"), detailMoney(error.details, "max")]);
+  if (error.reason === "owed_changed") return tr("What the driver owes changed. It was reloaded; check it and try again.");
+  if (error.reason === "paid_above_owed") return tr("That is more than the driver owes Movera.");
+  if (error.reason === "owes_limit_needs_amount") return tr("Set an amount above 0 to switch the driver owes-limit on.");
   if (error.reason === "pin_not_now") return tr("The PIN can only be checked while the driver is at the pickup.");
   if (error.reason === "pin_blocked") return tr("Too many wrong codes: the PIN is blocked until an admin unlocks it.");
   if (error.reason === "reason_required") return tr("Write a reason.");
@@ -327,6 +333,12 @@ export function viewableMediaType(mediaType: string): "image" | "pdf" | "downloa
 }
 
 /** Money from the server in the currency's own format ("520,00 kr"); an unknown currency as "520.00 XYZ". */
+/** S5 J9: the money in a refusal's details ("owed:180000 TND" → "180,000 DT"); "—" when it is not there. */
+export function detailMoney(details: readonly string[], key: string): string {
+  const found = details.map((line) => /^([a-z_]+):(-?\d+) ([A-Z]{3})$/.exec(line)).find((match) => match?.[1] === key);
+  return found ? liveMoney({ amountMinor: Number(found[2]), currency: found[3]! }) : "—";
+}
+
 export function liveMoney(value: { amountMinor: number; currency: string } | null | undefined): string {
   if (!value) return "—";
   if (value.currency in CURRENCIES) return formatMoney(value as Money);

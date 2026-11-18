@@ -292,7 +292,7 @@ export const svA7QR: Record<keyof typeof enA7QR, string> = {
   "RiderAppConfig JSON for this zone, as the rider app reads it": "RiderAppConfig-JSON för zonen, som resenärsappen läser den",
   "riders": "resenärer",
   "Riders": "Resenärer",
-  "Riders can add stops. The driver sees every stop before accepting.": "Resenärer kan lägga till stopp. Föraren ser alla stopp innan hen accepterar.",
+  "Riders can add stops. The driver sees every stop before accepting.": "Resenärer kan lägga till stopp. Föraren ser alla stopp innan föraren accepterar.",
   "Riders can mark a driver as a favourite. That driver gets the request first.": "Resenärer kan markera en förare som favorit. Den föraren får förfrågan först.",
   "Riders for the promotion": "Resenärer för kampanjen",
   "Riders I pick": "Resenärer jag väljer",

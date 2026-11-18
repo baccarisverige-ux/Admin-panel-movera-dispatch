@@ -46,7 +46,7 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "0: no cash tip in the app once the trip has ended; 60: the button stays an hour.",
   ),
   "tips.customAmount": t(
-    "Lets the rider type his own tip amount besides the buttons.",
+    "Lets the rider type their own tip amount besides the buttons.",
     `${COUNTRY} Rider app.`,
     "On or off.",
     "Off.",
@@ -62,12 +62,12 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "A low maximum blocks big tips; 10 times the tip maximum is the highest allowed.",
   ),
   "tips.raiseSteps": t(
-    "The quick \"+\" buttons the rider can tap to raise his offer while he waits for a driver.",
+    "The quick \"+\" buttons the rider can tap to raise their offer while waiting for a driver.",
     `${COUNTRY} Rider app.`,
     "Up to 8 amounts, each at most 500 kr (about 47.50 € or 150 DT).",
     "+50, +100, +150, +200 kr; +2, +4, +6, +8 €; +2, +4, +6, +8 DT.",
     "Buttons +20, +50 kr on a busy night.",
-    "No steps: the rider cannot raise his offer with a tap; 500 kr is the largest step.",
+    "No steps: the rider cannot raise their offer with a tap; 500 kr is the largest step.",
   ),
   "tips.promoCap": t(
     "The highest promo discount on one ride, shown to the rider. Off = no cap.",
@@ -109,8 +109,24 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "2 000 kr: a campaign paying 2 500 kr cannot be saved.",
     "0: no campaign can pay anything; 1 000 000 is in practice no limit, so check each campaign's amount.",
   ),
+  "tips.maxRiderDebt": t(
+    "The most a rider can owe Movera (cancel fees, unpaid trips). At or above it the rider cannot book a trip paid in the car.",
+    `${STANDARD_ONLY} Rider app at booking; admins see "Owes" on a rider's wallet.`,
+    "Money above 0; any amount (no upper limit).",
+    "300 kr, 30 €, 84 DT.",
+    "300 kr: a rider who owes 300 kr can only book with card or wallet until they pay.",
+    "A very small amount blocks cash booking after one fee; a very large one lets a debt grow with no stop.",
+  ),
+  "tips.driverOwesLimit": t(
+    "When on: a driver who owes Movera this much or more (commission and rider debt they kept in cash) gets no cash trips. They can still go online.",
+    `${STANDARD_ONLY} Driver app (Home line and Accept), dispatch, and Drivers › Owe Movera.`,
+    "On or off; when on, money above 0.",
+    "Off everywhere (Tunisia keeps 150 DT stored).",
+    "On, 500 kr: a driver who owes 520 kr is not offered cash trips until they pay Movera.",
+    "Off: a driver's debt is never checked at Accept; a very small amount stops cash trips after one trip.",
+  ),
   "tips.onTripMinDonePct": t(
-    "A driver on a trip gets offers (Exclusive only) only after he has driven this share of his route to the drop-off.",
+    "A driver on a trip gets offers (Exclusive only) only after they have driven this share of their route to the drop-off.",
     `${COUNTRY} Driver app and dispatch.`,
     "Percent of the route, 0 to 100.",
     "70.",
@@ -122,8 +138,8 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     `${COUNTRY} Rider app.`,
     "Minutes, 0 to 120.",
     "10.",
-    "10 min: the driver is late from his last trip, so after 10 minutes the rider cancels free.",
-    "0: the rider can cancel free at once; 120: he waits two hours before a free cancel.",
+    "10 min: the driver is late from the last trip, so after 10 minutes the rider cancels free.",
+    "0: the rider can cancel free at once; 120: the rider waits two hours before a free cancel.",
   ),
   "tips.calls.on": t(
     "Rider and driver can call each other in the app, during the trip and for a while after the drop-off. Nobody sees a phone number; calls are not recorded.",
@@ -274,7 +290,7 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     `${COUNTRY} Rider and driver apps, dispatch.`,
     "On or off.",
     "On.",
-    "A rider gives 1 star and ticks it: that driver never gets his rides again.",
+    "A rider gives 1 star and ticks it: that driver never gets that rider's rides again.",
     "Off: no tick, nobody is blocked by a rating; On: the tick shows at the star limit below.",
   ),
   "tips.dontMatch.atStars": t(
@@ -326,7 +342,7 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "Empty: the kind's name shows; 40 characters is the most.",
   ),
   "tips.sosContactsSms": t(
-    "When a driver presses SOS during a trip, each of his emergency contacts gets one SMS with his position. Off: no SMS; the call and the Movera alert stay.",
+    "When a driver presses SOS during a trip, each of their emergency contacts gets one SMS with their position. Off: no SMS; the call and the Movera alert stay.",
     `${STANDARD_ONLY} Driver app SOS. Sent only once an SMS company is connected.`,
     "On or off.",
     "On.",

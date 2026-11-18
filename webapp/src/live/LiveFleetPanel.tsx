@@ -193,6 +193,7 @@ function Panel({ fleetId }: { fleetId: string }) {
 
       <DecisionDialog
         open={newCode}
+        command="admin.server.fleetCode"
         title={tr("New join code")}
         summary={tr("A new code is made and the old one stops working at once. Drivers already linked stay linked.")}
         confirmLabel={tr("Make a new code")}
@@ -211,10 +212,11 @@ function Panel({ fleetId }: { fleetId: string }) {
 
       <DecisionDialog
         open={Boolean(deciding)}
+        command={deciding?.action === "accept" ? "admin.server.invitationAccept" : "admin.server.invitationCancel"}
         title={deciding?.action === "accept" ? tr("Accept invitation") : tr("Cancel invitation")}
         summary={deciding ? (
           deciding.action === "accept"
-            ? trn("Accept {0} into {1}. The driver is linked, paid through the fleet, and every other pending invitation of his closes.", <strong>{deciding.invitation.driverName || deciding.invitation.driverId || deciding.invitation.phone}</strong>, <strong>{fleet.name}</strong>)
+            ? trn("Accept {0} into {1}. The driver is linked, paid through the fleet, and every other pending invitation of that driver closes.", <strong>{deciding.invitation.driverName || deciding.invitation.driverId || deciding.invitation.phone}</strong>, <strong>{fleet.name}</strong>)
             : trn("Withdraw the invitation for {0}. Nothing links; the other side is told.", <strong>{deciding.invitation.driverName || deciding.invitation.phone || deciding.invitation.driverId}</strong>)
         ) : null}
         confirmLabel={deciding?.action === "accept" ? tr("Accept") : tr("Cancel invitation")}
@@ -241,6 +243,7 @@ function Panel({ fleetId }: { fleetId: string }) {
 
       <DecisionDialog
         open={Boolean(removing)}
+        command="admin.server.removeDriver"
         title={tr("Remove from fleet")}
         summary={removing ? trn("Remove {0} from {1}. The car is released, the driver goes offline and may join another fleet with a new code.", <strong>{fullName(removing.firstName, removing.lastName, removing.driverId)}</strong>, <strong>{fleet.name}</strong>) : null}
         confirmLabel={tr("Remove from fleet")}

@@ -149,7 +149,7 @@ export const enB8DriverMoneySupplyDemand = {
   "Accept is possible once that number has signed up.": "Accept is possible once that number has signed up.",
   "Cancel invitation": "Cancel invitation",
   "Accept invitation": "Accept invitation",
-  "Accept {0} into {1}. The driver is linked, paid through the fleet, and every other pending invitation of his closes.": "Accept {0} into {1}. The driver is linked, paid through the fleet, and every other pending invitation of his closes.",
+  "Accept {0} into {1}. The driver is linked, paid through the fleet, and every other pending invitation of that driver closes.": "Accept {0} into {1}. The driver is linked, paid through the fleet, and every other pending invitation of that driver closes.",
   "Withdraw the invitation for {0}. Nothing links; the other side is told.": "Withdraw the invitation for {0}. Nothing links; the other side is told.",
   "This invitation has expired.": "This invitation has expired.",
   "This invitation was already answered or withdrawn.": "This invitation was already answered or withdrawn.",

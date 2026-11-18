@@ -42,7 +42,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     radar: { on: true, drivers: airport ? 8 : 5, seconds: 15, then: "widen_then_exclusive" },
     exclusive: { on: true, seconds: 15, drivers: 3, then: "widen_then_radar" },
     radarApp: { fullOn: true, full: 8, fullLockWhileDriving: true, popupOn: true, popup: 2, popupSplitByDriving: false, popupWhileDriving: 1 },
-    // Owner decision 35 (2026-10-26, contract v0.5.6): offline after 10 missed or declined Exclusive offers in a row
+    // Owner decision 35 (2026-10-26, contract v0.5.6): offline after 10 Exclusive offers in a row the driver let run out (owner 2026-11-16: a decline never counts)
     // (contract.json#configDefaults; Q46 had 3).
     // G3-R1 (2026-10-30, contract v0.18.4): offline after 5 min with no position (0 = never), independent of the switch.
     autoOffline: { on: true, after: 10, noFixMinutes: CONFIG_DEFAULTS.noFixMinutesBeforeOffline },

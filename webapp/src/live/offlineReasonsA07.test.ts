@@ -49,7 +49,7 @@ test("A07: every reason has its own clear text in en, sv and fr; numbers and the
     }
   }
   assert.equal(offlineReasonText("no_position"), en["No position"]);
-  assert.equal(offlineReasonText("missed_offers"), "Missed or declined offers in a row");
+  assert.equal(offlineReasonText("missed_offers"), "Let Exclusive offers run out in a row"); // owner 2026-11-16: declines never count
   assert.equal(offlineReasonText("vehicle_blocked"), "Car blocked or rejected by an admin");
   assert.equal(offlineReasonText("some_new_reason"), "Set offline by the server (some_new_reason)", "a reason this panel does not know yet still shows");
 });
@@ -58,11 +58,11 @@ test("A07: the Audit page reads every reason of driver.auto_offline, not only no
   const row = (after: Record<string, unknown>) => auditRow({ auditId: "a1", at: "2026-11-15T10:00:00Z", actor: "system", actorId: "system", action: "driver.auto_offline", targetType: "driver", targetId: "drv_1", result: "committed", requestId: "r1", after });
   assert.equal(auditDetailText(row({ reason: "no_position", minutes: 5 })), "No position for 5 min");
   assert.equal(auditDetailText(row({ minutes: 7 })), "No position for 7 min", "old rows without reason are no_position");
-  assert.equal(auditDetailText(row({ reason: "missed_offers", count: 10 })), "Missed or declined 10 offers in a row");
+  assert.equal(auditDetailText(row({ reason: "missed_offers", count: 10 })), "Let 10 Exclusive offers run out in a row");
   assert.equal(auditDetailText(row({ reason: "documents_expired" })), "A required document has expired");
   setLanguage("sv");
   try {
-    assert.equal(auditDetailText(row({ reason: "missed_offers", count: 10 })), "Missade eller nekade 10 erbjudanden i rad");
+    assert.equal(auditDetailText(row({ reason: "missed_offers", count: 10 })), "Lät 10 Exklusiva erbjudanden gå ut i rad");
   } finally {
     setLanguage("en");
   }

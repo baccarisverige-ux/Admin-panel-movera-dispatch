@@ -76,9 +76,14 @@ test("G4-E2/E3: the limit is 10 and the rule text says hand-sent offers count, i
   assert.equal(zone().autoOffline.after, 10);
   assert.equal(driverAppConfig("Z001", appConfigState({ now: NOW })).offers.autoOffline.missedExclusive, 10);
   assert.deepEqual([...AUTO_OFFLINE_COUNTS], ["exclusive", "assigned"]);
-  assert.equal(autoOfflineText(10, "en"), "The driver goes offline after 10 missed or declined Exclusive or hand-sent offers in a row (Radar does not count).");
-  assert.equal(autoOfflineText(10, "sv"), "Föraren går offline efter 10 missade eller nekade Exklusiva eller manuellt skickade erbjudanden i rad (Radar räknas inte).");
-  assert.equal(autoOfflineText(7, "fr"), "Le chauffeur passe hors ligne après 7 offres Exclusives ou envoyées à la main manquées ou refusées d’affilée (le Radar ne compte pas).");
+  // The sentence is the carried contract's (contract.json#autoOffline.adminText). Its words changed in contract v0.18.120
+  // (owner 2026-11-16: only Exclusive offers the driver let run out count, a decline never does); the exact new sentence
+  // is checked in autoOfflineIgnoredOnly.test.ts once the admin carries that contract (was pinned here to "missed or declined").
+  const adminText = (contract as unknown as { autoOffline: { adminText: Record<"sv" | "fr" | "en", string> } }).autoOffline.adminText;
+  for (const lang of ["en", "sv", "fr"] as const) {
+    assert.equal(autoOfflineText(10, lang), adminText[lang].replace("{n}", "10"));
+    assert.ok(/hand-sent|manuellt skickade|envoyées à la main/.test(autoOfflineText(10, lang)) && autoOfflineText(10, lang).includes("Radar"), lang);
+  }
   // The rules file for the backend team says the same: hand-sent offers count, offers during a trip do not.
   const glossary = rulesFile(emptyDispatchBook(), "SE", "now").glossary.autoOffline;
   assert.ok(glossary.includes("hand-sent") && glossary.includes("during a trip never count"));

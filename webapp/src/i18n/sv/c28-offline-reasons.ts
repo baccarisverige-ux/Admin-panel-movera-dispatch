@@ -9,7 +9,7 @@ export const svC28OfflineReasons = {
   "Account on hold, suspended or back to pending": "Kontot pausat, avstängt eller tillbaka till väntande",
   "Set offline by Movera": "Satt offline av Movera",
   "A required document has expired": "Ett obligatoriskt dokument har gått ut",
-  "Went offline after his trip (asked during the trip)": "Gick offline efter resan (bad om det under resan)",
+  "Went offline after their trip (asked during the trip)": "Gick offline efter resan (bad om det under resan)",
   "Set offline by the server ({0})": "Satt offline av servern ({0})",
   "Offline reason": "Orsak till offline",
   "Set offline {0}": "Satt offline {0}",

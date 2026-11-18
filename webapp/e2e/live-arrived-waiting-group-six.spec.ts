@@ -86,7 +86,7 @@ test("trip page: paid waiting minutes, the airport rule, the PIN for admins; Rev
   await page.getByRole("button", { name: "Reverse no-show" }).click();
   const dialog = page.getByTestId("reverse-no-show-dialog");
   await expect(dialog.getByTestId("reverse-take-back")).not.toBeChecked();
-  await expect(dialog).toContainText("The driver keeps his share");
+  await expect(dialog).toContainText("The driver keeps their share");
   await expect(dialog.getByRole("button", { name: "Confirm" })).toBeDisabled();
   await dialog.getByLabel("Reason (required)").fill("Rider waited at the other terminal door");
   await dialog.getByTestId("reverse-take-back").check();

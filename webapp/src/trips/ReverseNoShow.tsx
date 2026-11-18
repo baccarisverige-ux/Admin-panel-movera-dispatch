@@ -1,3 +1,4 @@
+import { ConfirmInfo } from "../ui/ConfirmInfo";
 import { useState } from "react";
 import { useCommand } from "../api/hooks";
 import { tr, trn, trSentences } from "../i18n";
@@ -36,9 +37,16 @@ export function ReverseNoShowButton({ tripId, zoneId, onDone }: { tripId: string
           >
             <h3>{tr("Reverse no-show")}</h3>
             <p>{tr("The rider pays nothing for this trip: an owed fee is waived, a paid fee goes back to the rider's wallet. The trip stays a no-show.")}</p>
+            <ConfirmInfo
+              what={tr("The rider pays nothing for this trip: an owed fee is waived, a paid fee goes back to the rider's wallet. The trip stays a no-show.")}
+              where={tr("Trip {0} only.", [tripId])}
+              who={takeBack ? tr("The rider of this trip, and its driver: his share of the no-show fee is taken from his earnings.") : tr("The rider of this trip. The driver keeps his share; Movera pays it.")}
+              undo={tr("Money that was sent cannot be taken back from the panel. Check the amount and the person before you confirm.")}
+              command="admin.trip.reverseNoShow"
+            />
             <label>{trn("Reason (required){0}", <textarea aria-label={tr("Reason (required)")} value={reason} maxLength={1000} required rows={3} onChange={(event) => setReason(event.target.value)} />)}</label>
             <label className="check-row">{trn("{0} Take back the driver’s share", <input type="checkbox" checked={takeBack} onChange={(event) => setTakeBack(event.target.checked)} data-testid="reverse-take-back" />)}</label>
-            <p className="op-help">{takeBack ? tr("The driver's share of the no-show fee is taken from his earnings.") : tr("The driver keeps his share of the no-show fee. Movera pays it.")}</p>
+            <p className="op-help">{takeBack ? tr("The driver's share of the no-show fee is taken from their earnings.") : tr("The driver keeps their share of the no-show fee. Movera pays it.")}</p>
             <button data-command="admin.confirm.submit" className="primary-btn" type="submit" disabled={!ready}>{tr("Confirm")}</button>
             <button data-command="admin.confirm.cancel" className="secondary-btn" type="button" onClick={() => setOpen(false)}>{tr("Cancel")}</button>
           </form>

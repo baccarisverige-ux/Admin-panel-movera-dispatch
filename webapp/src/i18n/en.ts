@@ -57,10 +57,17 @@ import { enC23PayoutRunGuard } from "./en/c23-payout-run-guard.ts";
 import { enC27StopAutoArrive } from "./en/c27-stop-auto-arrive.ts";
 import { enC24FleetCountry } from "./en/c24-fleet-country.ts";
 import { enC28OfflineReasons } from "./en/c28-offline-reasons.ts";
+import { enC19DebtModel } from "./en/c19-debt-model.ts";
 import { enC25BonusCampaigns } from "./en/c25-bonus-campaigns.ts";
 import { enC29SupportOrder } from "./en/c29-support-order.ts";
+import { enC33TipsLimitsUndo } from "./en/c33-tips-limits-undo.ts";
+import { enC35WhereItLands } from "./en/c35-where-it-lands.ts";
+import { enC38FromTo } from "./en/c38-from-to.ts";
+import { enC39ConfirmDetails } from "./en/c39-confirm-details.ts";
 import { enC31PickupSpots } from "./en/c31-pickup-spots.ts";
+import { enC39ParkedGeofence } from "./en/c39-parked-geofence.ts";
 import { enC32ShareTrip } from "./en/c32-share-trip.ts";
+import { enC37AutoOfflineOutage } from "./en/c37-auto-offline-outage.ts";
 import { enC40OneStream } from "./en/c40-one-stream.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
@@ -125,10 +132,17 @@ export const en = {
   ...enC27StopAutoArrive,
   ...enC24FleetCountry,
   ...enC28OfflineReasons,
+  ...enC19DebtModel,
   ...enC25BonusCampaigns,
   ...enC29SupportOrder,
+  ...enC33TipsLimitsUndo,
+  ...enC35WhereItLands,
+  ...enC38FromTo,
+  ...enC39ConfirmDetails,
   ...enC31PickupSpots,
+  ...enC39ParkedGeofence,
   ...enC32ShareTrip,
+  ...enC37AutoOfflineOutage,
   ...enC40OneStream,
 } as const;
 
