@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.121",
+  "version": "0.18.122",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -4026,7 +4026,8 @@
       }
     },
     "pickupSpotsOn": true,
-    "shareTripOn": true
+    "shareTripOn": true,
+    "driverOneStream": false
   },
   "realtime": {
     "envelope": [
@@ -10448,5 +10449,18 @@
     "rider": "Rider app: the share button on the live trip screen and the safety sheet 'Share trip' open one Share trip sheet: the trusted contacts with shareTrips on (one tap opens the SMS app with texts.message), 'Share with…' (the phone's share sheet), 'Stop sharing' (DELETE) and the line that the link stops at drop-off. Hidden when features.shareTrip is false and outside statuses; 403 share_trip_off mid-trip hides it.",
     "driver": "No change: the driver app calls no share route and its document gets no shareTrip key; the car and plate the page shows are already on the trip. The driver's own share is a later job (owner Q5).",
     "admin": "Dispatch › Safety per zone (and the country standard): the 'Share trip link' card; the Dispatch publish writes the rider document's shareTrip { on }. Config › Features 'Share trip' is read-only with the line 'Set per zone in Dispatch › Safety'."
+  },
+  "driverOneStream": {
+    "note": "v0.18.122 (L20 stream; owner 2026-11-17 'Yes, with switch (Rec.)', Rules decisions/session-2026-11-06.md, design audits/load/l20-1-design.md section 3): one live connection per driver phone instead of two (offers + settings), behind an admin switch per zone, off until tested. Not money, not safety. X-Api-Version stays 0.5; additive; no migration.",
+    "route": "GET /driver/stream is the offer feed and the config stream on one connection: the events of GET /driver/offers/stream and GET /driver/config/stream, unchanged. id is '<offer sequence>.<config version>'. A driver app uses it only while DriverAppConfig.realtime.oneStream is true and then opens neither of the two; false or missing: the two streams as before. The trip stream GET /trips/{tripId}/events is unchanged. The two old routes stay (older apps, Rule 21).",
+    "eventId": "Every event (offer_created / offer_updated / offer_withdrawn, config_published, driver_reservations_changed) carries the SSE id '<offer sequence>.<config version>', e.g. '41.7': the driver's newest offer sequence sent on this stream and the newest config version sent on it (0 when none yet). The data objects are the same as on the two old streams; the kind tells them apart. The JSON answer (Accept: application/json) is not served on this route.",
+    "resume": "Last-Event-ID (or ?after=) in the form '<offer sequence>.<config version>' resumes both halves: offers after that sequence are replayed exactly once in order (as ?after= on the offer feed); the newest published driver document is sent when its version is higher than the given one, else nothing. A plain number is read as the offer sequence with config version 0; a value that is not one or two whole numbers is 400 invalid_request. Without it: each half as on its old stream (offers from the newest event before this Go online, so everything since Go online is sent; config from the live version, nothing sent), and an id: line with no data gives the app its first cursor.",
+    "close": "The server closes it as it closes the config stream (realtime.reconnectClose after a LISTEN reconnect; realtime.streamClose after failed reads); the app reconnects with its id and the offer half loses nothing. Heartbeats as on every stream; it is never shed (the path ends in /stream). One open stream counts once in the live-streams count.",
+    "zone": "zoneId as on GET /driver/config/stream (driverConfigZone): the stream keeps the zone it opened with; the app reopens it on a zone change, with its id.",
+    "setting": "DriverAppConfig.realtime.oneStream (boolean, default false = configDefaults.driverOneStream) in the zone's driver document (its own, else its country standard), saved and published with PUT /admin/config/driver_app_config + POST /admin/config/driver_app_config/publish (settings.edit / settings.publish), the same draft / publish / version rule as the other documents.",
+    "server": "PUT /admin/config/driver_app_config: a realtime that is not an object, or a oneStream that is not true / false, is 400 invalid_request with reason invalid_document. GET /driver/config always serves realtime { oneStream }: the document's value, false when it is missing (a document published before v0.18.122). GET /driver/stream is served whatever the switch says (the switch only tells the app which to open). One handler over the two existing feeds; no new table, no migration.",
+    "driver": "realtime.oneStream true: open GET /driver/stream (off-trip and on a trip; the trip stream as before) and give its events to the two existing readers (offers by sequence, settings by kind); do not open the two old streams. false or missing, or GET /driver/stream answers 404 (an older server): the two streams as before, and after a 404 the app does not try the one stream again until it restarts. When the switch changes, the app closes what it holds and opens the other within one settings update.",
+    "rider": "Not affected: the rider app has no offer feed; GET /rider/config/stream and the trip stream are unchanged.",
+    "admin": "Admin › Dispatch, per zone: the switch 'One live connection per driver phone' (default off), with an 'i' text (what it does, what it saves, who it affects, when to turn it on, the way back, older apps). It is the way back without an app release."
   }
 }

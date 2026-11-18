@@ -68,6 +68,7 @@ import { enC31PickupSpots } from "./en/c31-pickup-spots.ts";
 import { enC39ParkedGeofence } from "./en/c39-parked-geofence.ts";
 import { enC32ShareTrip } from "./en/c32-share-trip.ts";
 import { enC37AutoOfflineOutage } from "./en/c37-auto-offline-outage.ts";
+import { enC40OneStream } from "./en/c40-one-stream.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -142,6 +143,7 @@ export const en = {
   ...enC39ParkedGeofence,
   ...enC32ShareTrip,
   ...enC37AutoOfflineOutage,
+  ...enC40OneStream,
 } as const;
 
 export type MessageKey = keyof typeof en;

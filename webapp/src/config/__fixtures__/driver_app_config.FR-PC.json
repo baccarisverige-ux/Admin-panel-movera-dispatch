@@ -995,6 +995,9 @@
     "beforePickup": true,
     "fixedPriceTrips": "block"
   },
+  "realtime": {
+    "oneStream": false
+  },
   "texts": {
     "byLanguage": {
       "en": {

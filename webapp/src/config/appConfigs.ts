@@ -612,6 +612,8 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
     headingCheck: { on: zone.riderCancel.on, headingPct: zone.riderCancel.headingPct, notHeadingMinutes: zone.riderCancel.notHeadingMinutes, reassign: false, notice: zone.reservation.booking.notHeadingNotice, noticeEveryMin: zone.reservation.booking.notHeadingNoticeEveryMin },
     rideCheck: rideCheck(base, state),
     routeChange: routeChange(base),
+    // v0.18.122 L20 stream (contract.json#driverOneStream.setting): Dispatch › Drivers "One live connection per driver phone", default off.
+    realtime: { oneStream: zone.oneStream?.on ?? CONFIG_DEFAULTS.driverOneStream },
     texts: driverTexts(base, state),
     notices: driverAppNotices(state.driverNotices, base.info.id),
     appUpdate: appUpdate(base, "driver"),
