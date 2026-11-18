@@ -9354,4 +9354,10 @@
 ["Riders can share a live trip link","Resenärer kan dela en livelänk till resan"],
 ["Off: the rider app hides Share trip and every live link of this zone stops. Usual value: on.","Av: resenärsappen döljer Dela resan och alla livelänkar i zonen slutar fungera. Vanligt värde: på."],
 ["{0}: set per zone in Dispatch › Safety. {1}","{0}: ställs in per zon i Trafikledning › Säkerhet. {1}"],
-["Share trip could not be read from the server for this zone. Reload the page and try again.","Dela resan kunde inte läsas från servern för den här zonen. Ladda om sidan och försök igen."]]
+["Share trip could not be read from the server for this zone. Reload the page and try again.","Dela resan kunde inte läsas från servern för den här zonen. Ladda om sidan och försök igen."],
+["Offers that ran out while the server's live link was down do not count either.","Erbjudanden som gick ut medan serverns direktlänk låg nere räknas inte heller."],
+["Let {0} Exclusive offers run out in a row","Lät {0} Exklusiva erbjudanden gå ut i rad"],
+["Let Exclusive offers run out in a row","Lät Exklusiva erbjudanden gå ut i rad"],
+["After Exclusive offers ignored in a row","Efter ignorerade Exklusiva erbjudanden i rad"],
+["A driver who lets Exclusive offers run out is set offline, so riders are not kept waiting. Declining an offer never counts.","En förare som låter Exklusiva erbjudanden gå ut sätts offline, så att resenärer inte får vänta. Att neka ett erbjudande räknas aldrig."],
+["Exclusive offers the driver let run out in a row. Declined offers and Radar offers do not count.","Exklusiva erbjudanden som föraren lät gå ut i rad. Nekade erbjudanden och Radar-erbjudanden räknas inte."]]

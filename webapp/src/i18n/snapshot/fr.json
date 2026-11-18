@@ -9354,4 +9354,10 @@
 ["Riders can share a live trip link","Les passagers peuvent partager un lien de trajet en direct"],
 ["Off: the rider app hides Share trip and every live link of this zone stops. Usual value: on.","Désactivé : l’appli passager masque Partager le trajet et tous les liens en direct de la zone s’arrêtent. Valeur habituelle : activé."],
 ["{0}: set per zone in Dispatch › Safety. {1}","{0} : réglé par zone dans Répartition › Sécurité. {1}"],
-["Share trip could not be read from the server for this zone. Reload the page and try again.","Le partage du trajet n’a pas pu être lu sur le serveur pour cette zone. Rechargez la page et réessayez."]]
+["Share trip could not be read from the server for this zone. Reload the page and try again.","Le partage du trajet n’a pas pu être lu sur le serveur pour cette zone. Rechargez la page et réessayez."],
+["Offers that ran out while the server's live link was down do not count either.","Les offres expirées pendant une coupure du lien direct du serveur ne comptent pas non plus."],
+["Let {0} Exclusive offers run out in a row","A laissé expirer {0} offres Exclusives d’affilée"],
+["Let Exclusive offers run out in a row","A laissé expirer des offres Exclusives d’affilée"],
+["After Exclusive offers ignored in a row","Après des offres Exclusives ignorées d’affilée"],
+["A driver who lets Exclusive offers run out is set offline, so riders are not kept waiting. Declining an offer never counts.","Un chauffeur qui laisse expirer des offres Exclusives est mis hors ligne, pour que les passagers n’attendent pas. Refuser une offre ne compte jamais."],
+["Exclusive offers the driver let run out in a row. Declined offers and Radar offers do not count.","Offres Exclusives que le chauffeur a laissé expirer d’affilée. Les offres refusées et les offres Radar ne comptent pas."]]

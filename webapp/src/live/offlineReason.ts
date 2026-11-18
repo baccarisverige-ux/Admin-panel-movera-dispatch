@@ -20,7 +20,7 @@ export function offlineReasonText(reason: string, extra: OfflineReasonExtra = {}
   const note = typeof extra.note === "string" && extra.note.trim() ? extra.note.trim() : null;
   switch (reason) {
     case "no_position": return minutes !== null ? tr("No position for {0} min", [minutes]) : tr("No position");
-    case "missed_offers": return count !== null ? tr("Missed or declined {0} offers in a row", [count]) : tr("Missed or declined offers in a row");
+    case "missed_offers": return count !== null ? tr("Let {0} Exclusive offers run out in a row", [count]) : tr("Let Exclusive offers run out in a row");
     case "app_restart": return tr("The driver app was restarted while online");
     case "vehicle_blocked": return note ? tr("Car blocked or rejected by an admin: {0}", [note]) : tr("Car blocked or rejected by an admin");
     case "fleet_removed": return tr("Removed from the fleet, or the fleet was blocked");
