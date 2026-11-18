@@ -428,7 +428,7 @@ export const svC1ContractV072Part3: Record<keyof typeof enC1ContractV072Part3, s
   "People who have not accepted version {0} yet will still be asked to accept the new texts.": "De som ännu inte har godkänt version {0} ombeds ändå godkänna de nya texterna.",
   "Offers sent during a trip do not count. The driver can go online again at once.": "Erbjudanden som skickas under en resa räknas inte. Föraren kan gå online igen direkt.",
   "Rider raise limit": "Högsta bud från kunden",
-  "While a rider waits for a driver they can offer more. This is the most they can offer, as times the booked price. The rider app hides the amounts above it.": "Medan kunden väntar på en förare kan hen erbjuda mer. Det här är det mesta hen kan erbjuda, som gånger det bokade priset. Kundappen döljer belopp över gränsen.",
+  "While a rider waits for a driver they can offer more. This is the most they can offer, as times the booked price. The rider app hides the amounts above it.": "Medan kunden väntar på en förare kan kunden erbjuda mer. Det här är det mesta kunden kan erbjuda, som gånger det bokade priset. Kundappen döljer belopp över gränsen.",
   "Highest price a rider can offer": "Högsta pris kunden kan erbjuda",
   "For example 2× on a trip booked at 200: at most 400. From {0} to {1}.": "Till exempel 2× på en resa bokad för 200: högst 400. Från {0} till {1}.",
   "{0} {1} rider rating": "{0} {1} kundens betyg",

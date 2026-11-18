@@ -9,7 +9,7 @@ export const svA1A: Record<keyof typeof enA1A, string> = {
   "A concert or a match: draw the area and set the time. During the event, these dispatch rules apply in that area.": "En konsert eller en match: rita området och ange tiden. Under evenemanget gäller de här trafikreglerna i området.",
   "A driver 18 min from the pickup gets Leave now {0} before pickup ({1}).": "En förare 18 min från upphämtningen får Åk nu {0} före upphämtningen ({1}).",
   "A driver about to drop off a rider can get the next request, as an Exclusive offer only. Never Radar during a trip.": "En förare som snart lämnar av en resenär kan få nästa förfrågan, bara som exklusivt erbjudande. Aldrig radar under en resa.",
-  "A driver can't hold two rides at the same or a close time. They see them all, but once they take one, the others that do not fit the smart gap leave their Scheduled rides.": "En förare kan inte ha två resor vid samma eller närliggande tid. Hen ser alla, men när hen tar en försvinner de som inte passar det smarta mellanrummet från Bokade resor.",
+  "A driver can't hold two rides at the same or a close time. They see them all, but once they take one, the others that do not fit the smart gap leave their Scheduled rides.": "En förare kan inte ha två resor vid samma eller närliggande tid. Föraren ser alla, men när föraren tar en försvinner de som inte passar det smarta mellanrummet från Bokade resor.",
   "A driver cancel this close to pickup is a late cancel. The driver still pays nothing.": "En föraravbokning så nära upphämtningen är en sen avbokning. Föraren betalar fortfarande inget.",
   "A driver ending a ride close to the pickup can take it next.": "En förare som avslutar en resa nära upphämtningen kan ta den härnäst.",
   "a driver group": "en förargrupp",

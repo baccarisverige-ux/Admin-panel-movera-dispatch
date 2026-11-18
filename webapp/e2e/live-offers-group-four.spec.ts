@@ -162,7 +162,7 @@ test("G4-E4 and decision 3: the zone's rider raise limit and rider rating switch
 test("G4-E2/E3/E7: Radar shows the contract's rule text with 10 (hand-sent offers count); Exclusive has no reasons editor", async ({ page }) => {
   await open(page, "/dispatch/radar?zone=Z001");
   const offline = page.getByRole("region", { name: "Go offline automatically" });
-  await expect(offline).toContainText("The driver goes offline after 10 missed or declined Exclusive or hand-sent offers in a row (Radar does not count).");
+  await expect(offline).toContainText("The driver goes offline after letting 10 Exclusive offers in a row run out (hand-sent ones too). A decline never counts and does not reset the count. Radar never counts.");
   await expect(page.getByLabel("Offline after offers not accepted")).toHaveValue("10");
   await page.goto("/dispatch/radar?tab=exclusive&zone=Z001");
   await expect(page.getByRole("region", { name: "Exclusive" })).toBeVisible();

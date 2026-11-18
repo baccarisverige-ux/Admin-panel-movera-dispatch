@@ -1,0 +1,20 @@
+/** French dictionary, area c33-tips-limits-undo: see ../en/c33-tips-limits-undo.ts. Same keys, same order. */
+export const frC33TipsLimitsUndo = {
+  "Undo last Tips & limits save": "Annuler le dernier enregistrement des pourboires et limites",
+  "Rider app tip rules": "Règles de pourboire de l’app passager",
+  "{0} · {1}: version {2} → back to version {3}": "{0} · {1} : version {2} → retour à la version {3}",
+  "{0} · {1}: its own version {2} → back to the Standard": "{0} · {1} : sa propre version {2} → retour au Standard",
+  "{0} · {1}: version {2} is its first version. Not touched.": "{0} · {1} : la version {2} est sa première version. Non modifié.",
+  "{0} · {1}: version {2} was changed after this save. Not touched.": "{0} · {1} : la version {2} a été modifiée après cet enregistrement. Non modifié.",
+  "Saved. These zones use the Standard and got it through the Standard, with no copy of their own: {0}.": "Enregistré. Ces zones utilisent le Standard et l’ont reçu par le Standard, sans copie propre : {0}.",
+  "Undone: {0} document(s) of the last Tips & limits save are back as before.": "Annulé : {0} document(s) du dernier enregistrement des pourboires et limites sont revenus comme avant.",
+  "Not undone: {0}": "Non annulé : {0}",
+  "Nothing to undo: no Tips & limits save that can go back was found.": "Rien à annuler : aucun enregistrement des pourboires et limites pouvant être annulé n’a été trouvé.",
+  "Another Tips & limits save was made meanwhile. Open Tips & limits again to see what Undo would do now.": "Un autre enregistrement des pourboires et limites a été fait entre-temps. Rouvrez Pourboires et limites pour voir ce que l’annulation ferait maintenant.",
+  "Nothing was undone: every document of that save was changed after it.": "Rien n’a été annulé : chaque document de cet enregistrement a été modifié depuis.",
+  "Saved {0} by {1} · {2} document(s) go back": "Enregistré {0} par {1} · {2} document(s) reviennent",
+  "No Tips & limits save to undo in {0}. Only saves made from this panel version on can be undone here.": "Aucun enregistrement des pourboires et limites à annuler pour {0}. Seuls les enregistrements faits à partir de cette version du panneau peuvent être annulés ici.",
+  "The last Tips & limits save was already undone or changed. Nothing can go back.": "Le dernier enregistrement des pourboires et limites a déjà été annulé ou modifié. Rien ne peut revenir.",
+  "Undo the Tips & limits save of {0} by {1}. Each document below goes back to the version before that save; nothing else changes.": "Annuler l’enregistrement des pourboires et limites du {0} par {1}. Chaque document ci-dessous revient à la version d’avant cet enregistrement ; rien d’autre ne change.",
+  "Looking for the last Tips & limits save.": "Recherche du dernier enregistrement des pourboires et limites.",
+};

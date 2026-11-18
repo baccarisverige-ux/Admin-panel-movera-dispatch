@@ -24,6 +24,17 @@ const SUPPLY = [
   { zoneId: "Z002", online: 1, free: 1, busy: 0, waiting: 1, level: "tight" as const, shortage: false },
 ];
 
+
+/** Owner 2026-11-16 (decisions/session-2026-11-06.md:1434): every settings confirm asks to tick the zones again (live/WhereItLands.tsx). */
+const tickWhere = async (page: Page) => {
+  const pick = page.locator(".modal.open").last().getByTestId("where-pick");
+  await expect(pick).toBeVisible();
+  const all = pick.locator('[data-command="admin.confirm.tickAll"]');
+  if (await all.count()) await all.click();
+  else await pick.getByRole("checkbox").check();
+  return pick;
+};
+
 test("G3-D5: the Dashboard rows and the shortage alert show the server's zoneSupply, same numbers", async ({ page }) => {
   // v0.18.20: the server finds the shortage alert (contract alertDesk.serverDetection) with the same numbers.
   await start(page, { zoneSupply: SUPPLY, serverAlerts: [{ alertId: "few_drivers:Z001.k1", kind: "few_drivers", level: "important", title: "Only 1 free driver in Stockholm County", titleT: { t: "Only 1 free driver in {0}", a: ["Stockholm County"] }, zoneId: "Z001", country: "SE", since: "2026-10-27T09:50:00Z", state: "open", ref: {} }] });
@@ -167,9 +178,11 @@ test("G3-D9: publishing the country Standard says who gets it and names the zone
   await page.locator("article.panel", { has: page.getByRole("heading", { name: "Features", exact: true }) }).locator("label.check-row input[type=checkbox]").first().click();
   await page.getByRole("button", { name: "Save draft" }).first().click();
   await page.getByRole("button", { name: "Publish", exact: true }).click();
-  const note = page.getByRole("dialog").getByTestId("sure-standard-publish");
-  await expect(note).toContainText("Are you sure? Drivers in all Sweden zones that follow the Standard get this change now.");
-  await expect(note).toContainText("Zones with their own settings are NOT changed: Södermalm.");
+  const pick = await tickWhere(page);
+  await expect(pick.locator("label.check-row")).toHaveText(["Standard Sweden"]);
+  const note = pick.getByTestId("where-lands");
+  await expect(note).toContainText("It is saved in Standard Sweden. These zones use the Standard: they get it through the Standard and stay on it (no copy of their own): Stockholm County.");
+  await expect(note).toContainText("These zones have settings of their own and are not ticked: they do NOT get it: Södermalm.");
   await shot(page, "sure-standard-publish");
   await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
 });

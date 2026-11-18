@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { OPEN_INCIDENTS_LIST } from "../live/incidents";
 import { isLiveData } from "../live/realData";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
-import { PublishTargetsLine, StandardBar, UsesStandardChip } from "../live/StandardBar";
+import { StandardBar, UsesStandardChip } from "../live/StandardBar";
 import { liveSurgeRows, smartChangesLastHour } from "../live/liveSurge";
 import { useLiveSurge } from "../live/useLiveSurge";
 import { useNavigate, useSearchParams } from "react-router";
@@ -74,6 +74,7 @@ import { FieldErrorScope, useFieldErrors } from "../ui/fieldErrors";
 import { Flag } from "../ui/Flag";
 import { useDirtyWarning } from "../ui/useDirtyWarning";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
+import { PRICING_WHO, pricingWhere } from "../ui/confirmInfo";
 
 const TABS = [
   { id: "prices", get label() { return tr("Prices"); }, icon: CircleDollarSign },
@@ -281,8 +282,9 @@ export function PricingPage() {
         <button data-command="admin.pricing.addCategory" type="button" className="quick-tile" onClick={() => setCatsOpen(true)}>
           <Tags size={18} aria-hidden="true" /><span><b>{tr("Categories")}</b><small>{trn("{0} active", categories.length)}</small></span>
         </button>
-        <CommandButton command="admin.pricing.undo" className="quick-tile" targetId={`pricing-rev-${store.history[0]?.rev ?? 0}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after="undo last publish" expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={undo.store} disabled={slice.loading || !canPublish || Boolean(undo.error)} title={undo.error} largeChanges={undo.error ? undefined : largeStoreChanges(store, undo.store)} onDone={() => setNotice(tr("Revision {0} undone.", [store.history[0]?.rev]))}>
-          <Undo2 size={18} aria-hidden="true" /><span><b>{tr("Undo last publish")}</b><small>{store.history[0] ? tr("Revision {0}", [store.history[0].rev]) : tr("Nothing yet")}</small></span>
+        <CommandButton command="admin.pricing.undo" className="quick-tile" targetId={`pricing-rev-${store.history[0]?.rev ?? 0}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after="undo last publish" expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={undo.store} disabled={slice.loading || !canPublish || Boolean(undo.error)} title={undo.error} largeChanges={undo.error ? undefined : largeStoreChanges(store, undo.store)} info={{ where: pricingWhere(store.history[0]?.zoneIds ?? []), who: tr(PRICING_WHO) }} onDone={() => setNotice(tr("Revision {0} undone.", [store.history[0]?.rev]))}>
+          <Undo2 size={18} aria-hidden="true" />{/* Live 2026-11-16: this tile undoes the newest pricing publish only (never Tips & limits); it says so and names the zone and version. */}
+          <span><b>{tr("Undo last pricing publish")}</b><small>{store.history[0] ? `${tr("Revision {0}", [store.history[0].rev])}${store.history[0].changes[0] ? ` · ${store.history[0].changes[0]}` : ""}` : tr("Nothing yet")}</small></span>
         </CommandButton>
       </section>
 
@@ -437,7 +439,7 @@ export function PricingPage() {
             <small>{fieldErrors.first ?? (dirtyProblems.length ? dirtyProblems[0].message : tr("{0} change{1} · riders see them after you publish", [publish.changes.length, publish.changes.length === 1 ? "" : "s"]))}</small>
           </div>
           <button data-command="admin.pricing.discard" type="button" className="dash-btn ghost" onClick={() => { setDrafts({}); setEditorKey((key) => key + 1); setNotice(tr("Changes discarded.")); }}>{tr("Discard")}</button>
-          <CommandButton command="admin.pricing.publish" summary={liveSession ? <PublishTargetsLine zoneIds={dirty.map((draft) => draft.zoneId)} doc="pricing" /> : undefined} className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={slice.loading || !canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} largeChanges={largeChanges} onDone={() => { setDrafts({}); setNotice(tr("Published as pricing revision {0}.", [publish.store.draftRev])); }}>{trn("{0} Publish changes", <Save size={15} aria-hidden="true" />)}</CommandButton>
+          <CommandButton command="admin.pricing.publish" where={liveSession ? { zoneIds: dirty.map((draft) => draft.zoneId), doc: "pricing", keepFollowers: false } : undefined} className="dash-btn publish" targetId={`pricing-rev-${store.draftRev + 1}`} confirmTarget={false} scope="all" before={`pricing rev ${store.draftRev}`} after={`pricing rev ${store.draftRev + 1}: ${publish.changes.slice(0, 3).join("; ")}`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={publish.store} disabled={slice.loading || !canPublish || Boolean(publish.error) || dirtyProblems.length > 0 || fieldErrors.count > 0} title={fieldErrors.first ?? publish.error ?? dirtyProblems[0]?.message} largeChanges={largeChanges} onDone={() => { setDrafts({}); setNotice(tr("Published as pricing revision {0}.", [publish.store.draftRev])); }}>{trn("{0} Publish changes", <Save size={15} aria-hidden="true" />)}</CommandButton>
         </div>
       ) : null}
 

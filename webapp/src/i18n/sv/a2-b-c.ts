@@ -263,7 +263,7 @@ export const svA2BC: Record<keyof typeof enA2BC, string> = {
   "Checks before a driver gets a request": "Kontroller innan en förare får en förfrågan",
   "Checks for this zone": "Kontroller för den här zonen",
   "Checks must pass": "Kontrollerna måste godkännas",
-  "Checks the driver's estimated arrival at the pickup, from Leave now until they are there.": "Kontrollerar förarens beräknade ankomst till upphämtningen, från Åk nu tills hen är där.",
+  "Checks the driver's estimated arrival at the pickup, from Leave now until they are there.": "Kontrollerar förarens beräknade ankomst till upphämtningen, från Åk nu tills föraren är där.",
   "Child seat": "Barnstol",
   "Child Seat": "Barnstol",
   "Child seat fee": "Avgift för barnstol",

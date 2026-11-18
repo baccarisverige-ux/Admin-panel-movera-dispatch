@@ -26,6 +26,7 @@ export const LIVE_COMMANDS: ReadonlySet<string> = new Set([
   "admin.payout.approveRun", "admin.payout.settings",
   "admin.safety.dismiss", "admin.safety.resolve", "admin.safety.take",
   "admin.studio.publish", "admin.studio.rollback",
+  "admin.tipsLimits.undo",
   "admin.trip.adjust", "admin.trip.assign", "admin.trip.cancel", "admin.trip.complete", "admin.trip.driverBonus", "admin.trip.noShow", "admin.trip.pinUnlock", "admin.trip.radarGroup", "admin.trip.radarZoneStop", "admin.trip.reassign", "admin.trip.refund", "admin.trip.reverseNoShow", "admin.trip.waiting", "admin.trip.waiveFee",
   "admin.vehicle.activate", "admin.vehicle.hold", "admin.vehicle.link", "admin.vehicle.update",
   "admin.zone.close", "admin.zone.create", "admin.zone.open", "admin.zone.update",
@@ -39,6 +40,7 @@ export const LIVE_COMMANDS: ReadonlySet<string> = new Set([
  * and that every such id in the code is listed.
  */
 export const SCREEN_ONLY_COMMANDS: ReadonlySet<string> = new Set([
+  "admin.confirm.info", "admin.confirm.tickAll",
   "admin.alarm.sound",
   "admin.alerts.export", "admin.alerts.view",
   "admin.auditLog.view",

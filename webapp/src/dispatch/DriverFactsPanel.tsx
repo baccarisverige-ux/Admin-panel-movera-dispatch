@@ -28,7 +28,7 @@ export function DriverFactsPanel({ zoneIds, nameOf }: Props) {
             <thead>
               <tr>
                 <th>{tr("Driver")}</th><th>{tr("State")}</th><th>{tr("Rating")}</th><th>{tr("Acceptance")}</th><th>{tr("Cancels")}</th>
-                <th>{tr("Idle (min)")}</th><th>{tr("Categories")}</th><th>{tr("Missed in a row")}</th><th>{tr("Rides this hour")}</th>
+                <th>{tr("Idle (min)")}</th><th>{tr("Categories")}</th><th title={tr("Exclusive offers the driver let run out in a row. Declined offers and Radar offers do not count.")}>{tr("Missed in a row")}</th><th>{tr("Rides this hour")}</th>
                 <th>{tr("Needs rest")}</th><th>{tr("Finishing in (min)")}</th><th>{tr("Skips in a row")}</th><th>{tr("Airport queue")}</th>
               </tr>
             </thead>
