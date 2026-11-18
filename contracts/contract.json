@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.121",
+  "version": "0.18.129",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -8347,7 +8347,53 @@
       "maxPlaces": "Admin setting per country, per person: countryLimits.savedPlacesPerPerson (default 50, 1-500).",
       "tooMany": "409 conflict, reason too_many_places, past the country's savedPlacesPerPerson (home and work count).",
       "import": "One-time upload of the places a phone kept before v0.18.26. Applied only the first time for this rider (the server remembers it); later calls change nothing and answer the server's list. Items follow the POST rules (home / work replace, others added); items past maxPlaces are dropped. The app calls it once after sign-in, then reads GET /rider/places and from then on the server's list is the one shown.",
-      "app": "Rider app: Home and Saved places read the server's list; add, edit and delete call the routes above; the phone keeps a copy only to show something while offline. Sign-out clears the phone copy (the server keeps the places)."
+      "app": "Rider app: Home and Saved places read the server's list; add, edit and delete call the routes above; the phone keeps a copy only to show something while offline. Sign-out clears the phone copy (the server keeps the places).",
+      "preferredCategory": {
+        "note": "v0.18.129 (saved-places design, owner 2026-11-18 \"Build\", Rules decisions/session-2026-11-18-saved-places-design.md steps 4-7): a saved place (home, work or any other type) may carry one fixed ride category, preferredCategoryId (CategoryId or null). Not money: it only picks which category the rider app opens with; the price, the quote and dispatch are unchanged and the trip is still made with the category the rider confirms.",
+        "field": "SavedPlace.preferredCategoryId: CategoryId | null, always sent by a v0.18.129 server (left optional in the schema so older answers still validate) in reads (GET /rider/places, POST / PUT answers, POST /rider/places/import answer, GET /admin/riders/{riderId}/saved-places); null = no fixed category (every place saved before v0.18.129).",
+        "write": "SavedPlaceRequest.preferredCategoryId (optional, CategoryId | null): on POST a new place without it gets null; a POST that replaces home / work and a PUT without the field keep the stored value (older apps never clear it by accident); null clears it; a category id sets it. An item of POST /rider/places/import may carry it too, checked the same way.",
+        "check": "The id must be a category in the admin Pricing catalog (contract.json#categories; the exact id, no alias); an unknown id is 400 invalid_request, reason unknown_category (as driverPreferences.categoriesOff). A category deactivated or removed later is NOT cleared by the server: the read still answers the id, and the rider app treats it as not available (step 6).",
+        "app": "Rider app: after a type is chosen in the save sheet the app asks to fix a category (chips + \"No thanks\"); a place with a fixed category skips the categories screen and lands on the pickup / confirm step with that category chosen and a small \"Change category\" link; when the category is not offered in the zone right then the categories screen opens with only the available ones, and the saved choice is kept. It applies to now rides and to Later (scheduled) rides alike. The texts below are the rider app's own (app_sv.arb / app_en.arb / app_fr.arb); the admin has no rider-app text editor, so they are listed here for the rider build.",
+        "texts": {
+          "saveAddress": {
+            "sv": "Spara adressen?",
+            "en": "Save this address?",
+            "fr": "Enregistrer l’adresse ?"
+          },
+          "savedAs": {
+            "sv": "Sparad som {type}",
+            "en": "Saved as {type}",
+            "fr": "Enregistrée comme {type}"
+          },
+          "undo": {
+            "sv": "Ångra",
+            "en": "Undo",
+            "fr": "Annuler"
+          },
+          "askFixCategory": {
+            "sv": "Alltid välja kategori för den här platsen?",
+            "en": "Always choose a category for this place?",
+            "fr": "Toujours choisir une catégorie pour ce lieu ?"
+          },
+          "noThanks": {
+            "sv": "Nej tack",
+            "en": "No thanks",
+            "fr": "Non merci"
+          },
+          "changeCategory": {
+            "sv": "Byt kategori",
+            "en": "Change category",
+            "fr": "Changer de catégorie"
+          },
+          "categoryNotHere": {
+            "sv": "{category} finns inte här just nu",
+            "en": "{category} is not available here right now",
+            "fr": "{category} n’est pas disponible ici pour le moment"
+          }
+        },
+        "admin": "Admin > Rider profile > Saved places (read-only, behind Show) shows each place's fixed category name, or nothing when null. No admin setting.",
+        "migration": "Server: nullable column rider_places.preferred_category_id (migration 0118); no backfill."
+      }
     },
     "driverPreferences": {
       "routes": "GET /driver/preferences -> DriverPreferences; PUT /driver/preferences DriverPreferencesUpdate -> DriverPreferences.",

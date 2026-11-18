@@ -8587,6 +8587,7 @@
 ["The rider has not added emergency contacts.","Resenären har inte lagt till några nödkontakter."],
 ["Show contacts","Visa kontakter"],
 ["The driver has not added emergency contacts.","Föraren har inte lagt till några nödkontakter."],
+["Fixed category: {0}","Fast kategori: {0}"],
 ["New price only when BOTH shorter by more than (km)","Nytt pris bara när BÅDE kortare med mer än (km)"],
 ["… and shorter by more than (minutes)","… och kortare med mer än (minuter)"],
 ["Default 10 minutes. Both must be passed for a new price.","Standard 10 minuter. Båda måste passeras för ett nytt pris."],

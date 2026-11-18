@@ -8587,6 +8587,7 @@
 ["The rider has not added emergency contacts.","The rider has not added emergency contacts."],
 ["Show contacts","Show contacts"],
 ["The driver has not added emergency contacts.","The driver has not added emergency contacts."],
+["Fixed category: {0}","Fixed category: {0}"],
 ["New price only when BOTH shorter by more than (km)","New price only when BOTH shorter by more than (km)"],
 ["… and shorter by more than (minutes)","… and shorter by more than (minutes)"],
 ["Default 10 minutes. Both must be passed for a new price.","Default 10 minutes. Both must be passed for a new price."],

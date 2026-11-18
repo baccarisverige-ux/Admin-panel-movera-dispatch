@@ -21,11 +21,13 @@ export async function readEmergencyContacts(read: (path: string) => Promise<Inci
 }
 
 /** Owner 2026-11-04 "Read-only on profile": the rider's saved places and the driver's ride preferences. */
-export type AdminRiderSavedPlaces = { riderId: string; items: { placeId: string; label: string; kind: "home" | "work" | "other"; type?: string; place: { address: string } }[] };
+export type AdminRiderSavedPlaces = { riderId: string; items: { placeId: string; label: string; kind: "home" | "work" | "other"; type?: string; place: { address: string }; preferredCategoryId?: string | null }[] };
 export type AdminDriverPreferences = { driverId: string; categoriesOff: string[]; updatedAt: string | null };
 export const riderPlacesPath = (riderId: string) => `/admin/riders/${encodeURIComponent(riderId)}/saved-places`;
 export const driverPreferencesPath = (driverId: string) => `/admin/drivers/${encodeURIComponent(driverId)}/preferences`;
 /** A category id as a readable word ("child_seat" → "Child seat"). */
 export const categoryLabel = (id: string) => (id ? id[0]!.toUpperCase() + id.slice(1).replace(/_/g, " ") : id);
+/** v0.18.129 (contract.json#phoneDataToServer.riderPlaces.preferredCategory): a saved place's fixed ride category, shown by name; null / absent (older servers) = none. */
+export const fixedCategoryOf = (p: { preferredCategoryId?: string | null }): string | null => (p.preferredCategoryId ? categoryLabel(p.preferredCategoryId) : null);
 /** Owner 2026-11-04: emergency contacts only from an OPEN safety case. */
 export const caseIsOpen = (state: string) => state !== "solved";
