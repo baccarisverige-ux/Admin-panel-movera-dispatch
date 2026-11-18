@@ -438,6 +438,11 @@ function Drivers({ zone, onChange, disabled, country, onCountry, countryName }: 
         </Row>
       </Card>
 
+      {/* L20 stream (owner 2026-11-17 "Yes, with switch (Rec.)"; contract v0.18.122 contract.json#driverOneStream): the driver document's realtime.oneStream, default off. */}
+      <Card title={tr("Live connection")} info="dispatch.zone.liveConnection" tone="blue" icon={<Smartphone size={18} />} help={tr("What it does: one live connection per driver phone instead of two: new offers and settings updates arrive on the same connection. The trip connection during a ride does not change. Who and where: drivers of the zone picked at the top (or every zone on the Standard), after Publish; their phone switches within one settings update. Riders are not affected. Range: On or off. Default: off (turn it on per zone after the test). Example: on in one test zone: each driver phone there holds 1 connection off-trip instead of 2, so one server copy can hold about a third more phones. Extremes: off = 2 connections per phone, as before; on = 1 connection. An older driver app, or an older server, keeps using 2 connections. Turning it off is the way back without an app release.")}>
+        <Row info="dispatch.zone.oneLiveConnectionPerDriverPhone" label={tr("One live connection per driver phone")} on={zone.oneStream?.on ?? CONFIG_DEFAULTS.driverOneStream} disabled={disabled} onToggle={(on) => set({ oneStream: { on } })} />
+      </Card>
+
       <Card title={tr("Saying no")} info="dispatch.zone.sayingNo" tone="orange" icon={<UserX size={18} />} help={tr("When a driver declines or ignores an offer.")} off={!zone.decline.on} aside={<Switch label={tr("Saying no rules")} on={zone.decline.on} disabled={disabled} onChange={(on) => set({ decline: { ...zone.decline, on } })} />}>
         <Row info="dispatch.zone.itLowersTheAcceptanceRate" label={tr("It lowers the acceptance rate")} help={tr("The acceptance rate counts only Exclusive and other one-driver offers. Radar trips never count.")} on={zone.decline.countsAcceptance} disabled={disabled || !zone.decline.on} onToggle={(countsAcceptance) => set({ decline: { ...zone.decline, countsAcceptance } })} />
         <Row info="dispatch.zone.pauseAfterNoSInA" label={tr("Pause after no's in a row")}>

@@ -91,6 +91,12 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   // v0.18.30 (owner Q9): "Shortest ride (m)" as the zone's drivers and the server get it (booking.samePointWarnMeters, 0–1000).
   const samePoint = validSamePoint((driver?.["booking"] as { samePointWarnMeters?: unknown } | undefined)?.samePointWarnMeters);
   if (samePoint !== null) zone.samePoint = { warnMeters: samePoint };
+  // v0.18.122 L20 stream (contract.json#driverOneStream.server): the switch as the zone's drivers get it; a driver
+  // document without it (published before v0.18.122) is served off, so it reads off. No driver document: the rules' own value.
+  if (driver) {
+    const one = (driver["realtime"] as { oneStream?: unknown } | undefined)?.oneStream;
+    zone.oneStream = { on: typeof one === "boolean" ? one : false };
+  }
   // One rider document read serves both rider switches below; no rider document (not read, or the read failed) keeps the
   // rules' own values.
   if (rider) {
