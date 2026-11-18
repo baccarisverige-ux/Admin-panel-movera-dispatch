@@ -1,11 +1,11 @@
-# Movera API v0.18.121 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.122 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.121
+  version: 0.18.122
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.121 in this folder; this file must agree with them.
+    v0.18.122 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.121
+  version: 0.18.122
   source: contract.json
 paths:
   /auth/otp/request:
@@ -19345,6 +19345,80 @@ paths:
       servers:
       - url: https://api.dev.movera.invalid
         description: The server's origin, outside /api/v1.
+  /driver/stream:
+    get:
+      operationId: streamDriverOneStream
+      summary: Offer feed + driver config stream on one connection
+      description: 'v0.18.122 (contract.json#driverOneStream): GET /driver/stream is the offer feed and the config stream
+        on one connection: the events of GET /driver/offers/stream and GET /driver/config/stream, unchanged. id is ''<offer
+        sequence>.<config version>''. A driver app uses it only while DriverAppConfig.realtime.oneStream is true and then
+        opens neither of the two; false or missing: the two streams as before. The trip stream GET /trips/{tripId}/events
+        is unchanged. The two old routes stay (older apps, Rule 21). Every event (offer_created / offer_updated / offer_withdrawn,
+        config_published, driver_reservations_changed) carries the SSE id ''<offer sequence>.<config version>'', e.g. ''41.7'':
+        the driver''s newest offer sequence sent on this stream and the newest config version sent on it (0 when none yet).
+        The data objects are the same as on the two old streams; the kind tells them apart. The JSON answer (Accept: application/json)
+        is not served on this route. Last-Event-ID (or ?after=) in the form ''<offer sequence>.<config version>'' resumes
+        both halves: offers after that sequence are replayed exactly once in order (as ?after= on the offer feed); the newest
+        published driver document is sent when its version is higher than the given one, else nothing. A plain number is read
+        as the offer sequence with config version 0; a value that is not one or two whole numbers is 400 invalid_request.
+        Without it: each half as on its old stream (offers from the newest event before this Go online, so everything since
+        Go online is sent; config from the live version, nothing sent), and an id: line with no data gives the app its first
+        cursor. The server closes it as it closes the config stream (realtime.reconnectClose after a LISTEN reconnect; realtime.streamClose
+        after failed reads); the app reconnects with its id and the offer half loses nothing. Heartbeats as on every stream;
+        it is never shed (the path ends in /stream). One open stream counts once in the live-streams count. zoneId as on GET
+        /driver/config/stream (driverConfigZone): the stream keeps the zone it opened with; the app reopens it on a zone change,
+        with its id. PUT /admin/config/driver_app_config: a realtime that is not an object, or a oneStream that is not true
+        / false, is 400 invalid_request with reason invalid_document. GET /driver/config always serves realtime { oneStream
+        }: the document''s value, false when it is missing (a document published before v0.18.122). GET /driver/stream is
+        served whatever the switch says (the switch only tells the app which to open). One handler over the two existing feeds;
+        no new table, no migration. realtime.oneStream true: open GET /driver/stream (off-trip and on a trip; the trip stream
+        as before) and give its events to the two existing readers (offers by sequence, settings by kind); do not open the
+        two old streams. false or missing, or GET /driver/stream answers 404 (an older server): the two streams as before,
+        and after a 404 the app does not try the one stream again until it restarts. When the switch changes, the app closes
+        what it holds and opens the other within one settings update.'
+      tags:
+      - Realtime
+      x-actor:
+      - driver
+      parameters:
+      - name: zoneId
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/Id'
+        description: 'As on GET /driver/config/stream (v0.18.72 §89). zoneId as on GET /driver/config/stream (driverConfigZone):
+          the stream keeps the zone it opened with; the app reopens it on a zone change, with its id.'
+      - $ref: '#/components/parameters/After'
+      - $ref: '#/components/parameters/LastEventId'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: 'Server-sent events: the OfferEvent and ConfigEvent objects of the two old streams, unchanged.
+                  Each SSE `data:` line is one JSON OfferEvent; `id:` is the sequence; heartbeat comments every 15 s.'
+              x-sse-data: '#/components/schemas/OfferEvent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
 components:
   securitySchemes:
     bearerAuth:
@@ -26864,6 +26938,26 @@ components:
             connected:
               type: boolean
               description: An SMS company is connected on this server.
+        realtime:
+          type: object
+          description: 'v0.18.122 (L20 stream; owner 2026-11-17 ''Yes, with switch (Rec.)'', Rules decisions/session-2026-11-06.md,
+            design audits/load/l20-1-design.md section 3): one live connection per driver phone instead of two (offers + settings),
+            behind an admin switch per zone, off until tested. Not money, not safety. X-Api-Version stays 0.5; additive; no
+            migration. DriverAppConfig.realtime.oneStream (boolean, default false = configDefaults.driverOneStream) in the
+            zone''s driver document (its own, else its country standard), saved and published with PUT /admin/config/driver_app_config
+            + POST /admin/config/driver_app_config/publish (settings.edit / settings.publish), the same draft / publish /
+            version rule as the other documents. Admin › Dispatch, per zone: the switch ''One live connection per driver phone''
+            (default off), with an ''i'' text (what it does, what it saves, who it affects, when to turn it on, the way back,
+            older apps). It is the way back without an app release.'
+          properties:
+            oneStream:
+              type: boolean
+              description: 'realtime.oneStream true: open GET /driver/stream (off-trip and on a trip; the trip stream as before)
+                and give its events to the two existing readers (offers by sequence, settings by kind); do not open the two
+                old streams. false or missing, or GET /driver/stream answers 404 (an older server): the two streams as before,
+                and after a 404 the app does not try the one stream again until it restarts. When the switch changes, the
+                app closes what it holds and opens the other within one settings update.'
+              default: false
     CategoryPricingWaiting:
       type: object
       description: Waiting at pickup for one category; RiderAppConfig / DriverAppConfig waiting.byCategory carry the same
