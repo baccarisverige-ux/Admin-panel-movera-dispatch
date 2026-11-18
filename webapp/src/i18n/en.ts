@@ -65,6 +65,7 @@ import { enC35WhereItLands } from "./en/c35-where-it-lands.ts";
 import { enC38FromTo } from "./en/c38-from-to.ts";
 import { enC39ConfirmDetails } from "./en/c39-confirm-details.ts";
 import { enC31PickupSpots } from "./en/c31-pickup-spots.ts";
+import { enC39ParkedGeofence } from "./en/c39-parked-geofence.ts";
 import { enC32ShareTrip } from "./en/c32-share-trip.ts";
 import { enC37AutoOfflineOutage } from "./en/c37-auto-offline-outage.ts";
 
@@ -138,6 +139,7 @@ export const en = {
   ...enC38FromTo,
   ...enC39ConfirmDetails,
   ...enC31PickupSpots,
+  ...enC39ParkedGeofence,
   ...enC32ShareTrip,
   ...enC37AutoOfflineOutage,
 } as const;

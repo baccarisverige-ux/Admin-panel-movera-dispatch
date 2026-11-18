@@ -66,6 +66,7 @@ import { svC35WhereItLands } from "./sv/c35-where-it-lands.ts";
 import { svC38FromTo } from "./sv/c38-from-to.ts";
 import { svC39ConfirmDetails } from "./sv/c39-confirm-details.ts";
 import { svC31PickupSpots } from "./sv/c31-pickup-spots.ts";
+import { svC39ParkedGeofence } from "./sv/c39-parked-geofence.ts";
 import { svC32ShareTrip } from "./sv/c32-share-trip.ts";
 import { svC37AutoOfflineOutage } from "./sv/c37-auto-offline-outage.ts";
 
@@ -139,6 +140,7 @@ export const sv: Record<MessageKey, string> = {
   ...svC38FromTo,
   ...svC39ConfirmDetails,
   ...svC31PickupSpots,
+  ...svC39ParkedGeofence,
   ...svC32ShareTrip,
   ...svC37AutoOfflineOutage,
 };

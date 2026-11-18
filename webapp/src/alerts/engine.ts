@@ -2,6 +2,7 @@ import { isLiveData } from "../live/realData.ts";
 import type { Role } from "../auth/permissions.ts";
 import { csvCell } from "../reports/csv.ts";
 import { tr, trx } from "../i18n/core.ts";
+import { parkedJobDetail } from "./parkedJobs.ts";
 
 /** Alerts: one list of everything that needs an admin, with levels, who gets it, and who works on it. */
 
@@ -343,7 +344,8 @@ export function alertsFromServer(found: readonly FoundAlert[], zones: readonly {
         group: def?.group ?? "system",
         level: item.level,
         title: foundText(item.titleT, item.title),
-        detail: foundText(item.detailT, item.detail ?? ""),
+        // S4 B1.1 SF-1 (contract v0.18.121): a parked pickup_geofence job is named in plain words.
+        detail: parkedJobDetail(item.kind, item.detailT) ?? foundText(item.detailT, item.detail ?? ""),
         zoneId: item.zoneId ?? null,
         since: Date.parse(item.since),
         path,

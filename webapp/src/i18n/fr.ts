@@ -66,6 +66,7 @@ import { frC35WhereItLands } from "./fr/c35-where-it-lands.ts";
 import { frC38FromTo } from "./fr/c38-from-to.ts";
 import { frC39ConfirmDetails } from "./fr/c39-confirm-details.ts";
 import { frC31PickupSpots } from "./fr/c31-pickup-spots.ts";
+import { frC39ParkedGeofence } from "./fr/c39-parked-geofence.ts";
 import { frC32ShareTrip } from "./fr/c32-share-trip.ts";
 import { frC37AutoOfflineOutage } from "./fr/c37-auto-offline-outage.ts";
 
@@ -139,6 +140,7 @@ export const fr: Record<MessageKey, string> = {
   ...frC38FromTo,
   ...frC39ConfirmDetails,
   ...frC31PickupSpots,
+  ...frC39ParkedGeofence,
   ...frC32ShareTrip,
   ...frC37AutoOfflineOutage,
 };
