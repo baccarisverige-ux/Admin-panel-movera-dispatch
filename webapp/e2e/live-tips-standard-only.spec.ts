@@ -52,6 +52,8 @@ test("Tips & limits: a zone shown + the Standard chosen: the save does not reset
   expect(document["maxRiderDebt"]).toEqual(SEK(300));
   expect(document["driverOwesLimit"]).toEqual({ enabled: true, max: SEK(800) });
   // The zone's own document never carries a Standard-only key.
-  const zone = server.sent.find((call) => call.method === "PUT" && call.path.includes("country_rules") && call.body?.["zoneId"] === "Z002")!.body!["document"] as Record<string, unknown>;
+  const sentToZone = () => server.sent.filter((call) => call.method === "PUT" && call.path.includes("country_rules") && call.body?.["zoneId"] === "Z002").map((call) => call.body!["document"] as Record<string, unknown>);
+  await expect.poll(() => sentToZone().length).toBe(1);
+  const zone = sentToZone()[0]!;
   for (const key of Object.keys(STANDARD_ONLY)) expect(key in zone).toBe(false);
 });
