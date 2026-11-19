@@ -433,8 +433,9 @@ export const COUNTRY_RULES_PANEL_KEYS = ["version", "publishedAt", "country", "c
  * driverOwesLimit: "the country standard only; a zone's own value is ignored") and refuses the SOS / emergency keys
  * on a zone (400 *_country_only). The panel's own Standard-only keys (walletCreditMax, emergencyNumbers,
  * sosContactsSms) are in COUNTRY_RULES_PANEL_KEYS and only sent on the Standard by the caller.
+ * v0.18.133 payoutLinesOn (contract.json#payoutLines.switch, Finance › Payouts settings): read from the Standard only, kept likewise.
  */
-export const COUNTRY_RULES_STANDARD_ONLY_KEPT = ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit"] as const;
+export const COUNTRY_RULES_STANDARD_ONLY_KEPT = ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit", "payoutLinesOn"] as const;
 
 /** Never stored in a document: the server's marks on a read. */
 const COUNTRY_RULES_READ_MARKS = ["usesStandard", "zoneId"] as const;

@@ -844,12 +844,12 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     }
     // v0.18.29 A2 (fix job 0) (owner Q4 + G10-2): the country's payout mode and schedule, in its Standard's CountryRules (kept otherwise).
     if (input.action === "admin.payout.settings") {
-      const { country, mode, schedule } = (input.value ?? {}) as { country?: string; mode?: string; schedule?: unknown };
+      const { country, mode, schedule, linesOn } = (input.value ?? {}) as { country?: string; mode?: string; schedule?: unknown; linesOn?: unknown };
       if (!country || (mode !== "automatic" && mode !== "manual") || !schedule) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });
       const http = { json: <T,>(path: string) => client.json<T>(path), put: <T,>(path: string, body: unknown) => client.put<T>(path, body), post: <T,>(path: string, body: unknown) => client.post<T>(path, body), del: <T,>(path: string) => client.del<T>(path) };
       const key = standardKey(country);
       const draft = await readDraft(http, "country_rules", key).catch(explained);
-      await savePublish(http, "country_rules", key, draft, { ...(draft?.document ?? {}), country, payoutMode: mode, payoutSchedule: schedule }).catch(explained);
+      await savePublish(http, "country_rules", key, draft, { ...(draft?.document ?? {}), country, payoutMode: mode, payoutSchedule: schedule, ...(typeof linesOn === "boolean" ? { payoutLinesOn: linesOn } : {}) }).catch(explained);
       return done("Payout settings published.");
     }
     // Owner 2026-11-11 (AUDIT-A16 §7): lift a rider's / driver's wrong-code sign-in lock. The Driver record carries no

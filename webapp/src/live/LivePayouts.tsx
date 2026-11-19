@@ -15,6 +15,7 @@ import { CommandButton } from "../ui/CommandButton";
 import { DateInput } from "../ui/DateInput";
 import { payoutSummaryLines, runSummaryRows, type PayoutSummary, type SummaryLine } from "./moneyRows";
 import { approveRunValue, freshCardLine, freshRunCard, type PayoutRunCard } from "./payoutRunGuard";
+import { payoutPartLines, runCardOf, runPartLines, serverRunsOf, type PayoutParts } from "./payoutParts";
 
 /**
  * Live builds only, in the demo Payouts page (contract v0.9.0 §16, owner real-data decisions part 3): the server's
@@ -40,13 +41,13 @@ export type LivePayout = {
   note?: string;
   /** v0.18.92 (BQ-M22, contract.json#priceDisplay.payoutSummary): the admin's two numbers; absent from an older server. */
   summary?: PayoutSummary;
-};
+} & PayoutParts;
 
 /** The payout card's two lines (owner 2026-11-14 "how much driver get and how much movera get thats all no details"). */
-function SummaryLines({ lines, testId }: { lines: SummaryLine[]; testId: string }) {
+function SummaryLines({ lines, testId }: { lines: (SummaryLine | { key: string; label: string; text: string; amount?: LiveMoney })[]; testId: string }) {
   return (
     <dl className="op-split-lines" data-testid={testId}>
-      {lines.map((line) => <div key={line.key} className={line.amount.amountMinor < 0 ? "minus" : undefined} data-line={line.key}><dt>{line.label}</dt><dd>{line.text}</dd></div>)}
+      {lines.map((line) => <div key={line.key} className={line.amount && line.amount.amountMinor < 0 ? "minus" : undefined} data-line={line.key}><dt>{line.label}</dt><dd>{line.text}</dd></div>)}
     </dl>
   );
 }
@@ -57,9 +58,12 @@ export { PAYOUT_LINE_LABEL, payoutLineLabel };
 
 const day = (iso: string) => iso.slice(0, 10);
 
-/** The payout list's money cell: the summary's 2 lines when sent, else Payout.amount (an older server). */
+/** v0.18.133 (payoutLines): a payout with its parts shows Earned · Owed to Movera · Paid out (+ Moves to next week); else the summary's 2 lines. */
+const cardLines = (item: LivePayout) => payoutPartLines(item) ?? payoutSummaryLines(item);
+
+/** The payout list's money cell: the parts or the summary's 2 lines when sent, else Payout.amount (an older server). */
 function payoutCell(item: LivePayout) {
-  const lines = payoutSummaryLines(item);
+  const lines = cardLines(item);
   if (!lines) return liveMoney(item.amount);
   return <span className="po-summary-cell" data-testid="live-payout-row-summary">{lines.map((line) => <span key={line.key} data-line={line.key}>{line.label} {line.text}<br /></span>)}</span>;
 }
@@ -83,6 +87,9 @@ export function LivePayouts() {
   const zoneQuery = new URLSearchParams(zoneFilter.params).toString();
   const payouts = useQuery({ queryKey: ["live", "payouts", zoneQuery], queryFn: () => (zoneFilter.denied ? Promise.resolve({ items: [], nextCursor: null } as Page<LivePayout>) : readUncounted<Page<LivePayout>>(client, `/admin/payouts?limit=100${zoneQuery ? `&${zoneQuery}` : ""}`)) });
   const refunds = useQuery({ queryKey: ["live", "refund-payouts"], queryFn: () => client.json<Page<RefundToSend>>("/admin/refunds/payouts?payoutStatus=pending") });
+  // v0.18.133 J14 (contract.json#payoutLines.runs): the waiting runs with the server's own count and totals (every
+  // payout, not the first page). An older server (404, or no such answer) → null: the card counts its page as before.
+  const serverRuns = useQuery({ queryKey: ["live", "payouts", "runs", scope.market.id], queryFn: async () => serverRunsOf(await client.json<unknown>(`/admin/payouts/runs?country=${encodeURIComponent(scope.market.id)}`).catch(() => null)) });
   const drivers = useQuery({ queryKey: ["live", "payout-drivers"], queryFn: () => readUncounted<Page<Driver>>(client, "/admin/drivers?limit=200") });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
@@ -93,13 +100,22 @@ export function LivePayouts() {
   const [freshCards, setFreshCards] = useState<Record<string, PayoutRunCard>>({});
   const items = payouts.data?.items ?? [];
   // v0.18.29 A2 (fix job 0) (owner Q4): a manual country's runs wait for one admin's approval, one run per period end.
-  const waitingRuns = [...new Set(items.filter((item) => item.status === "pending_approval").map((item) => item.periodEnd))].sort().map((periodEnd) => {
+  const fromServer = serverRuns.data ?? null;
+  const pageRuns = [...new Set(items.filter((item) => item.status === "pending_approval").map((item) => item.periodEnd))].sort().map((periodEnd) => {
     const rows = items.filter((item) => item.status === "pending_approval" && item.periodEnd === periodEnd);
     const totals = new Map<string, number>();
     for (const row of rows) totals.set(row.amount.currency, (totals.get(row.amount.currency) ?? 0) + row.amount.amountMinor);
     // BQ-M22: each payout's own 2 lines (the server's summary), nothing added up here; an older server: today's totals.
-    return { periodEnd, periodStart: rows[0]!.periodStart, rows, count: rows.length, totals: [...totals].map(([currency, amountMinor]) => ({ amountMinor, currency }) as LiveMoney), summaries: runSummaryRows(rows) };
+    return { periodEnd, periodStart: rows[0]!.periodStart, rows, count: rows.length, totals: [...totals].map(([currency, amountMinor]) => ({ amountMinor, currency }) as LiveMoney), summaries: runSummaryRows(rows), server: null as ReturnType<typeof runCardOf> | null, serverLines: null as ReturnType<typeof runPartLines> | null };
   });
+  // v0.18.133 J14: with the runs route the card's count, total and lines are the server's (B2.7: never the first 100);
+  // the driver rows below them are the payouts of the page (each with its own server lines).
+  const waitingRuns = fromServer
+    ? fromServer.map((serverRun) => {
+        const rows = items.filter((item) => item.status === "pending_approval" && item.periodEnd === serverRun.periodEnd);
+        return { periodEnd: serverRun.periodEnd, periodStart: serverRun.periodStart, rows, count: serverRun.count, totals: serverRun.total, summaries: runSummaryRows(rows), server: runCardOf(serverRun), serverLines: runPartLines(serverRun) };
+      })
+    : pageRuns;
   const selected = items.find((item) => item.payoutId === selectedId) ?? items[0];
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["live", "payouts"] });
@@ -136,10 +152,12 @@ export function LivePayouts() {
           <ul className="pm-list">
             {waitingRuns.map((runRow) => (
               <li key={runRow.periodEnd} data-run={runRow.periodEnd}>
-                <span className="pm-main"><b>{day(runRow.periodStart)} – {day(runRow.periodEnd)}</b><small>{tr("{0} drivers", [runRow.count])}{runRow.summaries ? "" : ` · ${runRow.totals.map(liveMoney).join(" + ")}`}</small>
-                  {runRow.summaries ? runRow.summaries.map((row) => <span key={row.payoutId} className="po-run-driver" data-payout={row.payoutId}><small>{row.who}</small><SummaryLines lines={row.lines} testId="live-payout-run-summary" /></span>) : null}</span>
+                <span className="pm-main"><b>{day(runRow.periodStart)} – {day(runRow.periodEnd)}</b><small>{tr("{0} drivers", [runRow.count])}{runRow.summaries && !runRow.server ? "" : ` · ${runRow.totals.map(liveMoney).join(" + ")}`}</small>
+                  {runRow.serverLines ? <SummaryLines lines={runRow.serverLines} testId="live-payout-run-total-lines" /> : null}
+                  {runRow.server && runRow.rows.length < runRow.count ? <small className="op-help" data-testid="live-payout-run-shown">{tr("Showing {0} of {1} drivers; the count and total are the server's.", [runRow.rows.length, runRow.count])}</small> : null}
+                  {runRow.rows.map((row) => { const lines = cardLines(row); return lines ? <span key={row.payoutId} className="po-run-driver" data-payout={row.payoutId}><small>{row.driverName ?? row.driverId}</small><SummaryLines lines={lines} testId="live-payout-run-summary" /></span> : null; })}</span>
                 {freshCards[`${scope.market.id}|${runRow.periodEnd}`] ? <small className="po-run-fresh" data-testid="live-payout-run-fresh">{freshCardLine(freshCards[`${scope.market.id}|${runRow.periodEnd}`]!)}</small> : null}
-                <CommandButton command="admin.payout.approveRun" className="dash-btn small" targetId={`${scope.market.id} ${day(runRow.periodEnd)}`} confirmTarget={false} before={tr("Waiting for approval")} after={tr("To pay")} value={approveRunValue({ country: scope.market.id, periodEnd: runRow.periodEnd }, runRow.rows, freshCards[`${scope.market.id}|${runRow.periodEnd}`] ?? null)} disabled={!can("finance.edit")}
+                <CommandButton command="admin.payout.approveRun" className="dash-btn small" targetId={`${scope.market.id} ${day(runRow.periodEnd)}`} confirmTarget={false} before={tr("Waiting for approval")} after={tr("To pay")} value={approveRunValue({ country: scope.market.id, periodEnd: runRow.periodEnd }, runRow.rows, freshCards[`${scope.market.id}|${runRow.periodEnd}`] ?? runRow.server)} disabled={!can("finance.edit")}
                   onError={(failure) => { const card = freshRunCard(failure); if (card) setFreshCards((cards) => ({ ...cards, [`${card.country}|${card.periodEnd}`]: card })); refresh(); }}
                   onDone={() => { setFreshCards((cards) => { const next = { ...cards }; delete next[`${scope.market.id}|${runRow.periodEnd}`]; return next; }); setNotice(tr("Run approved: the payouts can be paid.")); refresh(); }}>{tr("Approve run")}</CommandButton>
               </li>
@@ -151,6 +169,7 @@ export function LivePayouts() {
       <section className="panel fn-panel" aria-label={tr("Payouts")}>
         <h3>{tr("Payouts")}</h3>
         <p className="op-help">{tr("Every week (Monday to Monday) the server makes one payout per driver. Amount = trips + waiting + pickup pay + bonus + tips + fees − cash collected; below zero, the driver owes Movera.")}</p>
+        <p className="op-help" data-testid="live-payout-lines-help">{tr("With payout lines on: each payout shows Earned, Owed to Movera and Paid out. A week below zero pays 0 and the rest moves to the driver's next payout.")}</p>
         {payouts.isLoading ? <p className="state-line">{tr("Loading.")}</p> : payouts.error ? <ErrorLine error={payouts.error} onRetry={() => void payouts.refetch()} /> : items.length === 0 ? <p className="dx-calm">{tr("No payouts yet.")}</p> : (
           <table className="data-table" data-testid="live-payout-list">
             <thead><tr><th scope="col">{tr("Period")}</th><th scope="col">{tr("Driver")}</th><th scope="col">{tr("Trips")}</th><th scope="col">{tr("Amount")}</th><th scope="col">{tr("Status")}</th><th scope="col">{tr("Made by")}</th></tr></thead>
@@ -175,7 +194,7 @@ export function LivePayouts() {
           <h3>{selected.driverName ?? selected.driverId} · {day(selected.periodStart)} – {day(selected.periodEnd)}</h3>
           {/* BQ-M22 (contract.json#priceDisplay.payoutSummary.display): exactly the 2 lines of Payout.summary, no other detail.
               An older server (no summary) keeps today's card (the server's lines and Payout.amount), nothing worked out. */}
-          {payoutSummaryLines(selected) ? <SummaryLines lines={payoutSummaryLines(selected)!} testId="live-payout-summary" /> : (
+          {payoutPartLines(selected) ? <SummaryLines lines={payoutPartLines(selected)!} testId="live-payout-parts" /> : payoutSummaryLines(selected) ? <SummaryLines lines={payoutSummaryLines(selected)!} testId="live-payout-summary" /> : (
             <dl className="op-split-lines" data-testid="live-payout-lines">
               {selected.lines.map((line) => (
                 <div key={line.code} className={line.amount.amountMinor < 0 ? "minus" : undefined} data-line={line.code}>

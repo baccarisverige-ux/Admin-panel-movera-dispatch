@@ -169,7 +169,7 @@ test("v0.18.29 A2 (fix job 0): the rider's warning / pause / ban comes through o
 
 test("v0.18.29 A2 (fix job 0) (owner Q4): payout settings read the Standard's mode and schedule, bad values fall back to the defaults", async () => {
   const { payoutSettingsOf } = await import("./payoutSettings.ts");
-  assert.deepEqual(payoutSettingsOf(null), { mode: "automatic", schedule: { frequency: "weekly", day: "monday", time: "08:00" } });
-  assert.deepEqual(payoutSettingsOf({ payoutMode: "manual", payoutSchedule: { frequency: "every_2_weeks", day: "friday", time: "16:30" } }), { mode: "manual", schedule: { frequency: "every_2_weeks", day: "friday", time: "16:30" } });
-  assert.deepEqual(payoutSettingsOf({ payoutMode: "weird", payoutSchedule: { frequency: "daily", day: "someday", time: "25:00" } }), { mode: "automatic", schedule: { frequency: "weekly", day: "monday", time: "08:00" } });
+  assert.deepEqual(payoutSettingsOf(null), { mode: "automatic", schedule: { frequency: "weekly", day: "monday", time: "08:00" }, linesOn: false });
+  assert.deepEqual(payoutSettingsOf({ payoutMode: "manual", payoutSchedule: { frequency: "every_2_weeks", day: "friday", time: "16:30" } }), { mode: "manual", schedule: { frequency: "every_2_weeks", day: "friday", time: "16:30" }, linesOn: false });
+  assert.deepEqual(payoutSettingsOf({ payoutMode: "weird", payoutSchedule: { frequency: "daily", day: "someday", time: "25:00" } }), { mode: "automatic", schedule: { frequency: "weekly", day: "monday", time: "08:00" }, linesOn: false });
 });

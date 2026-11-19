@@ -9372,4 +9372,12 @@
 ["Server trip timers are running {0} s late","Serverns resetimrar ligger {0} s efter"],
 ["Server dispatch rounds are running {0} s late","Serverns utskicksrundor ligger {0} s efter"],
 ["{0} trip timers overdue","{0} resetimrar försenade"],
-["{0} dispatch rounds overdue","{0} utskicksrundor försenade"]]
+["{0} dispatch rounds overdue","{0} utskicksrundor försenade"],
+["Earned","Intjänat"],
+["Paid out","Utbetalt"],
+["Moves to next week","Flyttas till nästa vecka"],
+["Showing {0} of {1} drivers; the count and total are the server's.","Visar {0} av {1} förare; antal och summa är serverns."],
+["With payout lines on: each payout shows Earned, Owed to Movera and Paid out. A week below zero pays 0 and the rest moves to the driver's next payout.","Med utbetalningsrader på: varje utbetalning visar Intjänat, Skuld till Movera och Utbetalt. En vecka under noll betalar 0 och resten flyttas till förarens nästa utbetalning."],
+["Payout lines and move a minus to next week","Utbetalningsrader och flytta minus till nästa vecka"],
+["Payout lines on","Utbetalningsrader på"],
+["Payout lines off","Utbetalningsrader av"]]

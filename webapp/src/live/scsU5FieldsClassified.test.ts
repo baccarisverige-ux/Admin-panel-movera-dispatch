@@ -146,7 +146,7 @@ const ENTRIES: Entry[] = [
   {
     schema: "CountryRules",
     built: countryRulesOf("SE", "SEK", countryInput, null),
-    kept: ["payoutMode", "payoutSchedule", "calls.adminCallRoles", "calls.phoneProvider"],
+    kept: ["payoutMode", "payoutSchedule", "payoutLinesOn", "calls.adminCallRoles", "calls.phoneProvider"],
     save: (stored) => countryRulesOf("SE", "SEK", countryInput, stored),
   },
   {
