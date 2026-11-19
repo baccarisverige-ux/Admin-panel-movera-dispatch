@@ -1,11 +1,11 @@
-# Movera API v0.18.131 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.133 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.131
+  version: 0.18.133
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.131 in this folder; this file must agree with them.
+    v0.18.133 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.131
+  version: 0.18.133
   source: contract.json
 paths:
   /auth/otp/request:
@@ -101,11 +101,14 @@ paths:
         token that ran out but carries the server''s signature, at most the refresh lifetime (auth.tokens.refreshExpiresDays)
         ago: still its user, on a key of its own apart from the live one, at the user budget; the answer is still 401 (the
         app refreshes), not 429 from a shared address budget, and it gets no safety-write pass (safetyWrites needs a valid
-        token). A forged token, a changed sub or an older token: the client address. Without a token, POST /auth/otp/request
-        and /auth/otp/verify: the phone in the body + the client address; POST /auth/refresh and /admin/auth/refresh: the
-        refresh token''s session + the client address (an unknown token, a body without a valid phone or a failed look-up:
-        the client address); each at the address budget. On these four calls the phone alone and the address alone are only
-        ceilings of 10 × the address budget (a fixed server factor, not an admin setting); the address ceiling is counted
+        token). A forged token, a changed sub or an older token: the client address. v0.18.132 (follow-up SF-1 + SF-2, Rules
+        audits/impact/s7-q117-followup.md): POST /auth/otp/request and /auth/otp/verify: the phone in the body + the client
+        address; POST /auth/refresh and /admin/auth/refresh: the refresh token''s session + the client address (an unknown
+        token, a body without a valid phone or a failed look-up: the client address); each at the address budget, whether
+        or not an access token is sent (a valid or expired token is not read on these four calls). A call on these four whose
+        body cannot be read (not valid JSON, too large, wrong media type) counts against the client address at the address
+        budget: over it, 429 rate_limited instead of the 400. On these four calls the phone alone and the address alone are
+        only ceilings of 10 × the address budget (a fixed server factor, not an admin setting); the address ceiling is counted
         before the body is read, and a call refused on its phone + address key adds nothing to the phone''s ceiling, so one
         address alone never fills a number''s ceiling. So one address may cause up to 10 × the address budget refresh look-ups
         a minute (one indexed read each). The two code calls are counted in production only (signInOutsideProduction). Every
@@ -171,11 +174,14 @@ paths:
         token that ran out but carries the server''s signature, at most the refresh lifetime (auth.tokens.refreshExpiresDays)
         ago: still its user, on a key of its own apart from the live one, at the user budget; the answer is still 401 (the
         app refreshes), not 429 from a shared address budget, and it gets no safety-write pass (safetyWrites needs a valid
-        token). A forged token, a changed sub or an older token: the client address. Without a token, POST /auth/otp/request
-        and /auth/otp/verify: the phone in the body + the client address; POST /auth/refresh and /admin/auth/refresh: the
-        refresh token''s session + the client address (an unknown token, a body without a valid phone or a failed look-up:
-        the client address); each at the address budget. On these four calls the phone alone and the address alone are only
-        ceilings of 10 × the address budget (a fixed server factor, not an admin setting); the address ceiling is counted
+        token). A forged token, a changed sub or an older token: the client address. v0.18.132 (follow-up SF-1 + SF-2, Rules
+        audits/impact/s7-q117-followup.md): POST /auth/otp/request and /auth/otp/verify: the phone in the body + the client
+        address; POST /auth/refresh and /admin/auth/refresh: the refresh token''s session + the client address (an unknown
+        token, a body without a valid phone or a failed look-up: the client address); each at the address budget, whether
+        or not an access token is sent (a valid or expired token is not read on these four calls). A call on these four whose
+        body cannot be read (not valid JSON, too large, wrong media type) counts against the client address at the address
+        budget: over it, 429 rate_limited instead of the 400. On these four calls the phone alone and the address alone are
+        only ceilings of 10 × the address budget (a fixed server factor, not an admin setting); the address ceiling is counted
         before the body is read, and a call refused on its phone + address key adds nothing to the phone''s ceiling, so one
         address alone never fills a number''s ceiling. So one address may cause up to 10 × the address budget refresh look-ups
         a minute (one indexed read each). The two code calls are counted in production only (signInOutsideProduction). Every
@@ -317,11 +323,14 @@ paths:
         token that ran out but carries the server''s signature, at most the refresh lifetime (auth.tokens.refreshExpiresDays)
         ago: still its user, on a key of its own apart from the live one, at the user budget; the answer is still 401 (the
         app refreshes), not 429 from a shared address budget, and it gets no safety-write pass (safetyWrites needs a valid
-        token). A forged token, a changed sub or an older token: the client address. Without a token, POST /auth/otp/request
-        and /auth/otp/verify: the phone in the body + the client address; POST /auth/refresh and /admin/auth/refresh: the
-        refresh token''s session + the client address (an unknown token, a body without a valid phone or a failed look-up:
-        the client address); each at the address budget. On these four calls the phone alone and the address alone are only
-        ceilings of 10 × the address budget (a fixed server factor, not an admin setting); the address ceiling is counted
+        token). A forged token, a changed sub or an older token: the client address. v0.18.132 (follow-up SF-1 + SF-2, Rules
+        audits/impact/s7-q117-followup.md): POST /auth/otp/request and /auth/otp/verify: the phone in the body + the client
+        address; POST /auth/refresh and /admin/auth/refresh: the refresh token''s session + the client address (an unknown
+        token, a body without a valid phone or a failed look-up: the client address); each at the address budget, whether
+        or not an access token is sent (a valid or expired token is not read on these four calls). A call on these four whose
+        body cannot be read (not valid JSON, too large, wrong media type) counts against the client address at the address
+        budget: over it, 429 rate_limited instead of the 400. On these four calls the phone alone and the address alone are
+        only ceilings of 10 × the address budget (a fixed server factor, not an admin setting); the address ceiling is counted
         before the body is read, and a call refused on its phone + address key adds nothing to the phone''s ceiling, so one
         address alone never fills a number''s ceiling. So one address may cause up to 10 × the address budget refresh look-ups
         a minute (one indexed read each). The two code calls are counted in production only (signInOutsideProduction). Every
@@ -9388,9 +9397,9 @@ paths:
         pricing with invalid CategoryPricing.commissionSteps → invalid_request, reason commission_steps_invalid, details ["step:<index>",
         "problem:<code>"] (not_a_list, too_many_steps, pct_or_amount, up_to_missing, pct_out_of_range, amount_out_of_range,
         above_not_last, last_not_above, up_to_out_of_range, up_to_not_increasing); nothing is saved. v0.18.123 (configDocs.keptKeys;
-        country_rules: payoutMode, payoutSchedule, maxRiderDebt, driverOwesLimit, calls.adminCallRoles, calls.phoneProvider;
-        dispatch: radar.reaskAfterSeconds, exclusive.reaskAfterSeconds): v0.18.123 (SF-F1-3 safe config saves; owner 2026-11-17
-        Q-SCS-1 "Keep values, save rest (Rec.)", 2026-11-16 Q-SCS-2 "No, keep current (Rec.)", Rules audits/impact/safe-config-saves.md
+        country_rules: payoutMode, payoutSchedule, maxRiderDebt, driverOwesLimit, calls.adminCallRoles, calls.phoneProvider,
+        payoutLinesOn; dispatch: radar.reaskAfterSeconds, exclusive.reaskAfterSeconds): v0.18.123 (SF-F1-3 safe config saves;
+        owner 2026-11-17 Q-SCS-1 "Keep values, save rest (Rec.)", 2026-11-16 Q-SCS-2 "No, keep current (Rec.)", Rules audits/impact/safe-config-saves.md
         §3, decisions/session-2026-11-06.md): PUT /admin/config/{doc} replaces the draft, except the kept keys of the document
         listed here (dotted paths). A kept key that the stored document (the scope''s draft, else the scope''s own live document)
         has and the sent document leaves out is kept by the server: its stored value is copied into the draft, the rest is
@@ -9407,7 +9416,13 @@ paths:
         so the one-live-connection switch never falls back to off by a save from another screen. offers.autoOffline is not
         listed: every admin save of the driver document starts from the server document and writes offers whole from the Dispatch
         page that owns it. Publish and Restore are unchanged (Restore names a removed kept key in removeKeys, as for the other
-        documents).'
+        documents). v0.18.133 (payoutLines): country_rules keeps payoutLinesOn (configDocs.keptKeys.country_rules): CountryRules.payoutLinesOn
+        (boolean, default false = configDefaults.payoutLinesOn) on the country standard (a zone''s own value is ignored),
+        saved and published with PUT /admin/config/country_rules?country + publish (finance.edit), Admin > Finance > Payouts
+        settings. It is read when a payout is made; the way back without a release is to switch it off (later payouts are
+        made as before; payouts already made keep their parts). A kept key of country_rules (configDocs.keptKeys.country_rules,
+        review M1): a whole-document save that leaves it out keeps the stored value, and a Restore or Undo last publish keeps
+        today''s live value (pricingHistory.restoreKeeps), so no other screen or older admin build switches it off by a save.'
       tags:
       - Admin · Config
       x-actor:
@@ -10136,16 +10151,18 @@ paths:
         that ran out but carries the server''s signature, at most the refresh lifetime (auth.tokens.refreshExpiresDays) ago:
         still its user, on a key of its own apart from the live one, at the user budget; the answer is still 401 (the app
         refreshes), not 429 from a shared address budget, and it gets no safety-write pass (safetyWrites needs a valid token).
-        A forged token, a changed sub or an older token: the client address. Without a token, POST /auth/otp/request and /auth/otp/verify:
-        the phone in the body + the client address; POST /auth/refresh and /admin/auth/refresh: the refresh token''s session
-        + the client address (an unknown token, a body without a valid phone or a failed look-up: the client address); each
-        at the address budget. On these four calls the phone alone and the address alone are only ceilings of 10 × the address
-        budget (a fixed server factor, not an admin setting); the address ceiling is counted before the body is read, and
-        a call refused on its phone + address key adds nothing to the phone''s ceiling, so one address alone never fills a
-        number''s ceiling. So one address may cause up to 10 × the address budget refresh look-ups a minute (one indexed read
-        each). The two code calls are counted in production only (signInOutsideProduction). Every other call without a valid
-        token: the client address (the address the trusted proxy saw, TRUST_PROXY_HOPS). The wrong-code locks are not this
-        limit: auth.otp.note.'
+        A forged token, a changed sub or an older token: the client address. v0.18.132 (follow-up SF-1 + SF-2, Rules audits/impact/s7-q117-followup.md):
+        POST /auth/otp/request and /auth/otp/verify: the phone in the body + the client address; POST /auth/refresh and /admin/auth/refresh:
+        the refresh token''s session + the client address (an unknown token, a body without a valid phone or a failed look-up:
+        the client address); each at the address budget, whether or not an access token is sent (a valid or expired token
+        is not read on these four calls). A call on these four whose body cannot be read (not valid JSON, too large, wrong
+        media type) counts against the client address at the address budget: over it, 429 rate_limited instead of the 400.
+        On these four calls the phone alone and the address alone are only ceilings of 10 × the address budget (a fixed server
+        factor, not an admin setting); the address ceiling is counted before the body is read, and a call refused on its phone
+        + address key adds nothing to the phone''s ceiling, so one address alone never fills a number''s ceiling. So one address
+        may cause up to 10 × the address budget refresh look-ups a minute (one indexed read each). The two code calls are
+        counted in production only (signInOutsideProduction). Every other call without a valid token: the client address (the
+        address the trusted proxy saw, TRUST_PROXY_HOPS). The wrong-code locks are not this limit: auth.otp.note.'
       tags:
       - Admin · Auth
       x-actor:
@@ -12082,7 +12099,9 @@ paths:
         now, and one the live document lacks is left out of the restored document (calls.on and the other calls fields are
         restored as before). The four payout/debt keys are changed in Finance › Payouts settings only. Every other field,
         and every other document, is restored as before. The restored document is saved through the same draft path, so configDocs.keptKeys
-        applies to it too.'
+        applies to it too. v0.18.133 (review M1): CountryRules.payoutLinesOn is kept the same way (today''s live value; absent
+        stays absent), so a Restore never switches the payout lines on or off. v0.18.133 (payoutLines): Restore keeps payoutLinesOn
+        (pricingHistory.restoreKeeps).'
       tags:
       - Admin · Config
       x-actor:
@@ -17157,7 +17176,8 @@ paths:
         (an admin older than v0.18.102) = 400 invalid_request, reason expected_total_required: a run is never approved blind.
         A match approves as before (answer PayoutRunApproved, total = what he saw; audit payout.run_approve also keeps expectedCount
         and expectedTotal). A second click after a success still gets 409 nothing_to_approve. The other checks keep their
-        order: reason_required, nothing_to_approve, zone_out_of_scope, then this guard.'
+        order: reason_required, nothing_to_approve, zone_out_of_scope, then this guard. v0.18.133 (payoutLines): approve with
+        the count and total of GET /admin/payouts/runs.'
       tags:
       - Admin · Finance
       x-actor:
@@ -19566,6 +19586,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DriverTripHistoryPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /admin/payouts/runs:
+    get:
+      operationId: adminListPayoutRuns
+      summary: Payout runs waiting for approval (server count and total)
+      description: 'v0.18.133 (payoutLines): GET /admin/payouts/runs?country (finance.read; the admin''s zones): the runs
+        that wait for approval in that country, each { country, periodStart, periodEnd, count, total[], earned[], owedToMovera[],
+        paidOut[], carriedOut[] } (one Money per currency; kr, EUR and DT are never added), counted by the server over every
+        payout of the run (not the first page). Approve run sends that count and total (payoutMode.approveGuard, unchanged).
+        One weekly payout per driver, period and currency (payouts_weekly_once, unchanged); a re-run never pays twice and
+        never carries twice.'
+      tags:
+      - Admin · Finance
+      x-actor:
+      - admin
+      x-permission: finance.read
+      x-read-only: true
+      parameters:
+      - name: country
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^[A-Z]{2}$
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutRunList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -24222,6 +24291,8 @@ components:
           - cash_collected
           - fees
           - paid_to_movera
+          - carried_in
+          - carried_out
           description: contract.json#payouts.lines
         amount:
           allOf:
@@ -24299,6 +24370,68 @@ components:
           allOf:
           - $ref: '#/components/schemas/PayoutSummary'
           description: 'v0.18.89: driver and admin views: the 2 lines Driver gets / Movera gets (contract.json#priceDisplay.payoutSummary).'
+        earned:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.133 (payoutLines): Earned: what Movera holds for him in this payout. Present only on a payout
+            made while CountryRules.payoutLinesOn was on; driver and admin. earned = the parts of the period Movera holds
+            for him (each earnings entry''s amount less the cash he kept for it, counted when that is above 0: card / wallet
+            trips, waiting, pickup pay, bonus, tips, fee shares); owedToMovera = carriedIn + what each entry left him owing
+            (the cash he kept above his share, e.g. the commission of a pay-in-car trip) less ''Driver paid Movera'' money
+            in the payout (never below 0; any rest counts as earned); paidOut = max(0, earned - owedToMovera); carriedOut
+            = max(0, owedToMovera - earned). Always earned - owedToMovera = paidOut - carriedOut, and Payout.amount = paidOut
+            (never below 0). Integers only. The stored Payout.lines of a switched-on payout add up to Payout.amount: a line
+            carried_in (minus carriedIn) and a line carried_out (plus carriedOut) are added when not 0 (contract.json#payouts.lines;
+            review S2).'
+        owedToMovera:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.133 (payoutLines): Owed to Movera, incl. carriedIn. Present only on a payout made while CountryRules.payoutLinesOn
+            was on; driver and admin. earned = the parts of the period Movera holds for him (each earnings entry''s amount
+            less the cash he kept for it, counted when that is above 0: card / wallet trips, waiting, pickup pay, bonus, tips,
+            fee shares); owedToMovera = carriedIn + what each entry left him owing (the cash he kept above his share, e.g.
+            the commission of a pay-in-car trip) less ''Driver paid Movera'' money in the payout (never below 0; any rest
+            counts as earned); paidOut = max(0, earned - owedToMovera); carriedOut = max(0, owedToMovera - earned). Always
+            earned - owedToMovera = paidOut - carriedOut, and Payout.amount = paidOut (never below 0). Integers only. The
+            stored Payout.lines of a switched-on payout add up to Payout.amount: a line carried_in (minus carriedIn) and a
+            line carried_out (plus carriedOut) are added when not 0 (contract.json#payouts.lines; review S2).'
+        paidOut:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.133 (payoutLines): Paid out (= amount, never below 0). Present only on a payout made while CountryRules.payoutLinesOn
+            was on; driver and admin. earned = the parts of the period Movera holds for him (each earnings entry''s amount
+            less the cash he kept for it, counted when that is above 0: card / wallet trips, waiting, pickup pay, bonus, tips,
+            fee shares); owedToMovera = carriedIn + what each entry left him owing (the cash he kept above his share, e.g.
+            the commission of a pay-in-car trip) less ''Driver paid Movera'' money in the payout (never below 0; any rest
+            counts as earned); paidOut = max(0, earned - owedToMovera); carriedOut = max(0, owedToMovera - earned). Always
+            earned - owedToMovera = paidOut - carriedOut, and Payout.amount = paidOut (never below 0). Integers only. The
+            stored Payout.lines of a switched-on payout add up to Payout.amount: a line carried_in (minus carriedIn) and a
+            line carried_out (plus carriedOut) are added when not 0 (contract.json#payouts.lines; review S2).'
+        carriedIn:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.133 (payoutLines): Taken from an earlier payout (moved to this one). Present only on a payout
+            made while CountryRules.payoutLinesOn was on; driver and admin. earned = the parts of the period Movera holds
+            for him (each earnings entry''s amount less the cash he kept for it, counted when that is above 0: card / wallet
+            trips, waiting, pickup pay, bonus, tips, fee shares); owedToMovera = carriedIn + what each entry left him owing
+            (the cash he kept above his share, e.g. the commission of a pay-in-car trip) less ''Driver paid Movera'' money
+            in the payout (never below 0; any rest counts as earned); paidOut = max(0, earned - owedToMovera); carriedOut
+            = max(0, owedToMovera - earned). Always earned - owedToMovera = paidOut - carriedOut, and Payout.amount = paidOut
+            (never below 0). Integers only. The stored Payout.lines of a switched-on payout add up to Payout.amount: a line
+            carried_in (minus carriedIn) and a line carried_out (plus carriedOut) are added when not 0 (contract.json#payouts.lines;
+            review S2).'
+        carriedOut:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.133 (payoutLines): Moves to next week (shown only when > 0). Present only on a payout made while
+            CountryRules.payoutLinesOn was on; driver and admin. earned = the parts of the period Movera holds for him (each
+            earnings entry''s amount less the cash he kept for it, counted when that is above 0: card / wallet trips, waiting,
+            pickup pay, bonus, tips, fee shares); owedToMovera = carriedIn + what each entry left him owing (the cash he kept
+            above his share, e.g. the commission of a pay-in-car trip) less ''Driver paid Movera'' money in the payout (never
+            below 0; any rest counts as earned); paidOut = max(0, earned - owedToMovera); carriedOut = max(0, owedToMovera
+            - earned). Always earned - owedToMovera = paidOut - carriedOut, and Payout.amount = paidOut (never below 0). Integers
+            only. The stored Payout.lines of a switched-on payout add up to Payout.amount: a line carried_in (minus carriedIn)
+            and a line carried_out (plus carriedOut) are added when not 0 (contract.json#payouts.lines; review S2).'
       description: 'v0.18.13: v0.18.13 (audit M1): one payout is in ONE currency: the unpaid entries of a driver''s period
         are paid per currency (a driver with kr and € entries gets two payouts); amounts of different currencies are never
         added.'
@@ -25112,6 +25245,16 @@ components:
             amount of one bonus campaign (CountryRules.bonusCampaignMax, per country standard or zone, Admin › Pricing › Tips
             & limits, settings.publish). Builder default values (plan §12 D13), admin-changeable. Defaults SE 2 000,00 kr
             (200000 SEK), FR 200,00 € (20000 EUR), TN 200.000 DT (200000 TND). Optional: absent → configDefaults.bonusCampaignMax.'
+        payoutLinesOn:
+          type: boolean
+          description: 'v0.18.133 (payoutLines): CountryRules.payoutLinesOn (boolean, default false = configDefaults.payoutLinesOn)
+            on the country standard (a zone''s own value is ignored), saved and published with PUT /admin/config/country_rules?country
+            + publish (finance.edit), Admin > Finance > Payouts settings. It is read when a payout is made; the way back without
+            a release is to switch it off (later payouts are made as before; payouts already made keep their parts). A kept
+            key of country_rules (configDocs.keptKeys.country_rules, review M1): a whole-document save that leaves it out
+            keeps the stored value, and a Restore or Undo last publish keeps today''s live value (pricingHistory.restoreKeeps),
+            so no other screen or older admin build switches it off by a save.'
+          default: false
       x-server-only: true
     FeeRule:
       type: object
@@ -31357,11 +31500,12 @@ components:
             - driverOwesLimit
             - exclusive.reaskAfterSeconds
             - maxRiderDebt
+            - payoutLinesOn
             - payoutMode
             - payoutSchedule
             - radar.reaskAfterSeconds
             - realtime.oneStream
-          maxItems: 9
+          maxItems: 10
           description: 'v0.18.123 (configDocs.keptKeys.removeKeys): ConfigDraftUpdate.removeKeys (optional, array of dotted
             paths): each must be a kept key of that document, else 400 invalid_request, reason unknown_kept_key, details ["key:<path>"],
             nothing saved. A named key that the sent document carries is saved as sent (removeKeys only stops the keep).'
@@ -38764,6 +38908,28 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Money'
+        periodStart:
+          $ref: '#/components/schemas/Timestamp'
+        earned:
+          type: array
+          items:
+            $ref: '#/components/schemas/Money'
+          description: 'v0.18.133 (payoutLines): summed per currency over every payout of the run.'
+        owedToMovera:
+          type: array
+          items:
+            $ref: '#/components/schemas/Money'
+          description: 'v0.18.133 (payoutLines): summed per currency over every payout of the run.'
+        paidOut:
+          type: array
+          items:
+            $ref: '#/components/schemas/Money'
+          description: 'v0.18.133 (payoutLines): summed per currency over every payout of the run.'
+        carriedOut:
+          type: array
+          items:
+            $ref: '#/components/schemas/Money'
+          description: 'v0.18.133 (payoutLines): summed per currency over every payout of the run.'
     TripShareItem:
       type: object
       description: 'v0.18.116 (contract.json#shareTrip): GET /rider/trips/{tripId}/share → TripShareList { items: [TripShareItem
@@ -39076,3 +39242,16 @@ components:
           - string
           - 'null'
           description: Opaque; null on the last page.
+    PayoutRunList:
+      type: object
+      description: 'v0.18.133 (payoutLines): GET /admin/payouts/runs?country (finance.read; the admin''s zones): the runs
+        that wait for approval in that country, each { country, periodStart, periodEnd, count, total[], earned[], owedToMovera[],
+        paidOut[], carriedOut[] } (one Money per currency; kr, EUR and DT are never added), counted by the server over every
+        payout of the run (not the first page). Approve run sends that count and total (payoutMode.approveGuard, unchanged).'
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PayoutRunCard'

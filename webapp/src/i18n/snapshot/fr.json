@@ -9372,4 +9372,13 @@
 ["Server trip timers are running {0} s late","Les minuteurs de course du serveur ont {0} s de retard"],
 ["Server dispatch rounds are running {0} s late","Les tours d'envoi du serveur ont {0} s de retard"],
 ["{0} trip timers overdue","{0} minuteurs de course en retard"],
-["{0} dispatch rounds overdue","{0} tours d'envoi en retard"]]
+["{0} dispatch rounds overdue","{0} tours d'envoi en retard"],
+["Earned","Gagné"],
+["Paid out","Versé"],
+["Moves to next week","Reporté à la semaine prochaine"],
+["Showing {0} of {1} drivers; the count and total are the server's.","{0} chauffeurs affichés sur {1} ; le nombre et le total sont ceux du serveur."],
+["With payout lines on: each payout shows Earned, Owed to Movera and Paid out. A week below zero pays 0 and the rest moves to the driver's next payout.","Avec les lignes de versement activées : chaque versement affiche Gagné, Dû à Movera et Versé. Une semaine en dessous de zéro verse 0 et le reste passe au prochain versement du chauffeur."],
+["Payout lines and move a minus to next week","Lignes de versement et report d'un solde négatif à la semaine suivante"],
+["Payout lines on","Lignes de versement activées"],
+["Payout lines off","Lignes de versement désactivées"],
+["Moved from last week","Reporté de la semaine dernière"]]

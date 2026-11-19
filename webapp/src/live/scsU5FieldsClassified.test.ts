@@ -146,7 +146,7 @@ const ENTRIES: Entry[] = [
   {
     schema: "CountryRules",
     built: countryRulesOf("SE", "SEK", countryInput, null),
-    kept: ["payoutMode", "payoutSchedule", "calls.adminCallRoles", "calls.phoneProvider"],
+    kept: ["payoutMode", "payoutSchedule", "payoutLinesOn", "calls.adminCallRoles", "calls.phoneProvider"],
     save: (stored) => countryRulesOf("SE", "SEK", countryInput, stored),
   },
   {
@@ -222,4 +222,20 @@ for (const entry of ENTRIES) {
 test("SCS U5 CountryRules: the top level is exactly the panel keys + the Standard-only kept keys (the F1 by-hand count 17 + 4 = 21)", () => {
   const top = contractPaths("CountryRules").filter((path) => !path.includes("."));
   assert.deepEqual([...top].sort(), [...new Set([...COUNTRY_RULES_PANEL_KEYS, ...COUNTRY_RULES_STANDARD_ONLY_KEPT])].sort());
+});
+
+/**
+ * v0.18.133 review M1 (contract.json#configDocs.keptKeys): every key the server keeps on a whole-document save of
+ * country_rules (payoutLinesOn included) is kept or owned by the admin's own save too, and payoutLinesOn is kept, not
+ * owned: Tips & limits never writes it (Finance › Payouts settings does).
+ */
+test("SCS U5 CountryRules: every server kept key (configDocs.keptKeys.country_rules) is kept or owned by the admin save; payoutLinesOn is kept", () => {
+  const contract = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8")) as { configDocs: { keptKeys: { country_rules: string[] } } };
+  const serverKept = contract.configDocs.keptKeys.country_rules;
+  assert.ok(serverKept.includes("payoutLinesOn"), "the contract keeps payoutLinesOn");
+  const entry = ENTRIES.find((e) => e.schema === "CountryRules")!;
+  const owned = ownedOf(entry);
+  const missing = serverKept.filter((path) => !entry.kept.includes(path) && !owned.has(path) && !(COUNTRY_RULES_STANDARD_ONLY_KEPT as readonly string[]).includes(path));
+  assert.deepEqual(missing, []);
+  assert.ok(entry.kept.includes("payoutLinesOn") && !owned.has("payoutLinesOn"), "payoutLinesOn kept, not owned");
 });

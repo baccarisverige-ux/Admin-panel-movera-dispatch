@@ -13,7 +13,7 @@ const C = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", im
 const M = readFileSync(new URL("../../../contracts/CONTRACT.md", import.meta.url), "utf8");
 
 test("the admin pins the contract it carries (0.18.88; §87 landed in 0.18.66)", () => {
-  assert.equal(C.version, "0.18.131");
+  assert.equal(C.version, "0.18.133");
   assert.equal(CONTRACT_VERSION, C.version);
 });
 
