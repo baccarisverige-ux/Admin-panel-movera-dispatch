@@ -14,7 +14,7 @@ import { sv } from "../i18n/sv.ts";
 import { countryRulesOf, COUNTRY_RULES_PANEL_KEYS } from "../live/configDocs.ts";
 import { SETTING_INFO } from "../ui/settingInfoTexts.ts";
 import { foundText } from "../alerts/engine.ts";
-import { COUNTRY_WIDE_FIELDS, completeCountrySettings, countrySettingsIssues, countrySettingsLines, defaultCountrySettings, PRICING_FIELDS, zoneValuesForSave, type CountrySettings } from "./countrySettings.ts";
+import { COUNTRY_WIDE_FIELDS, completeCountrySettings, draftForShownScope, countrySettingsIssues, countrySettingsLines, defaultCountrySettings, PRICING_FIELDS, zoneValuesForSave, type CountrySettings } from "./countrySettings.ts";
 import { SMS_DAILY_CAP, SMS_SIGN_IN_DEFAULT, smsSignInLines, smsSignInOf } from "./smsSignIn.ts";
 
 const src = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
@@ -76,6 +76,26 @@ test("a save for several scopes with a ZONE shown never changes the Standard's c
   assert.deepEqual(fromStandard["standard-SE"]!.smsSignIn, { enabled: false, dailyCap: 300 });
   assert.deepEqual([...COUNTRY_WIDE_FIELDS], ["smsSignIn", "emergencyNumbers", "sosContactsSms"]);
   assert.match(src("../pricing/CountryExtrasPanel.tsx"), /zoneValuesForSave\(shown, targets, \(id\) => zoneSettingsOf\(zoneBook, country, id\), zoneId\)/);
+});
+
+test("a draft started on a zone never carries the zone's country-wide values to the Standard when the shown scope is switched", () => {
+  const base = defaultCountrySettings("SE");
+  const standard: CountrySettings = { ...base, smsSignIn: { enabled: true, dailyCap: 5000 }, sosContactsSms: false };
+  // Zone Z002 shown, a tip edited: the draft holds the zone's country-wide values (the defaults: off / 200).
+  const draft: CountrySettings = { ...base, tips: [{ id: "tip-1", amount: 40, enabled: true }] };
+  assert.equal(draftForShownScope(draft, "Z002", "Z002", base), draft, "same scope: the draft as it is");
+  // The admin picks the Standard at the top (same chosen zones, so the panel and its draft stay).
+  const shown = draftForShownScope(draft, "Z002", "standard-SE", standard);
+  assert.deepEqual(shown.smsSignIn, { enabled: true, dailyCap: 5000 }, "the Standard's switch and limit, not the zone's defaults");
+  assert.equal(shown.sosContactsSms, false);
+  assert.equal(shown.tips[0]!.amount, 40, "the other edits stay in the draft");
+  assert.deepEqual(countrySettingsLines("SE", standard, shown).filter((line) => /SMS/.test(line)), [], "no SMS line in the save dialog");
+  // The other way: an SMS edit made on the Standard is not shown as a zone's own when a zone is picked.
+  const onStandard: CountrySettings = { ...standard, smsSignIn: { enabled: false, dailyCap: 300 } };
+  assert.deepEqual(draftForShownScope(onStandard, "standard-SE", "Z002", base).smsSignIn, base.smsSignIn);
+  const panel = src("../pricing/CountryExtrasPanel.tsx");
+  assert.match(panel, /const shown = draft \? draftForShownScope\(draft, draftScope, zoneId, saved\) : saved;/);
+  assert.match(panel, /setDraft\(\{ \.\.\.shown, \.\.\.patch \}\); setDraftScope\(zoneId\);/);
 });
 
 test("the server's SMS-limit alert reaches the admin translated (template + numbers, as the server sends it)", () => {

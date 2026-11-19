@@ -17,6 +17,7 @@ import {
   mixedTipAcross,
   mixedCashInCarAcross,
   zoneValuesForSave,
+  draftForShownScope,
   TIP_CASH_IN_CAR_MINUTES,
   TIP_FLAGS,
   type MixedTipRules,
@@ -151,8 +152,10 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
   const mixedMinutes = targets && targets.length > 1 ? mixedCashInCarAcross(targets.map((id) => [zoneById(id)?.name ?? id, zoneSettingsOf(zoneBook, country, id).tipRules] as const)) : undefined;
   const saved: CountrySettings = { ...first, mixedTipRules: mixedTip, mixedCashInCar: mixedMinutes, tipRules: { ...first.tipRules, ...Object.fromEntries(TIP_FLAGS.filter((flag) => mixedTip?.[flag]).map((flag) => [flag, false])) } };
   const [draft, setDraft] = useState<CountrySettings | null>(null);
-  const shown = draft ?? saved;
-  const dirty = draft !== null && JSON.stringify(sectionPart(draft, "pricing")) !== JSON.stringify(sectionPart(saved, "pricing"));
+  // The scope the draft was made on: its country-wide values (SMS sign-in, emergency numbers) never follow to another shown scope.
+  const [draftScope, setDraftScope] = useState(zoneId);
+  const shown = draft ? draftForShownScope(draft, draftScope, zoneId, saved) : saved;
+  const dirty = draft !== null && JSON.stringify(sectionPart(shown, "pricing")) !== JSON.stringify(sectionPart(saved, "pricing"));
   const fieldErrors = useFieldErrors();
   const issues = dirty ? countrySettingsIssues(country, shown) : [];
   const lines = dirty ? countrySettingsLines(country, saved, shown) : [];
@@ -161,7 +164,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
   const name = market(country).name;
   const zoneNames = (targets ?? []).map((id) => zoneById(id)?.name ?? id).join(", ");
   const hardMax = driverBonusHardMax(country);
-  const edit = (patch: Partial<CountrySettings>) => setDraft({ ...shown, ...patch });
+  const edit = (patch: Partial<CountrySettings>) => { setDraft({ ...shown, ...patch }); setDraftScope(zoneId); };
 
   useEffect(() => {
     onDirty(dirty);

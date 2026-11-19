@@ -339,6 +339,15 @@ export function zoneValuesForSave(shown: CountrySettings, targets: readonly stri
 export const COUNTRY_WIDE_FIELDS = ["smsSignIn", "emergencyNumbers", "sosContactsSms"] as const satisfies readonly (keyof CountrySettings)[];
 const countryWideOf = (settings: CountrySettings): Pick<CountrySettings, (typeof COUNTRY_WIDE_FIELDS)[number]> => ({ smsSignIn: settings.smsSignIn, emergencyNumbers: settings.emergencyNumbers, sosContactsSms: settings.sosContactsSms });
 
+/**
+ * Security review of the SMS switch (2026-11-19, should-fix): an unsaved draft started while ANOTHER scope was shown
+ * (same chosen zones, another zone picked at the top) carries that scope's country-wide values — a zone's are the
+ * defaults (SMS sign-in off / 200). Shown on the Standard they would be saved to it. The draft keeps its other
+ * edits; the country-wide values are the newly shown scope's saved ones until the admin edits there.
+ */
+export function draftForShownScope(draft: CountrySettings, madeOn: string | undefined, shownId: string | undefined, saved: CountrySettings): CountrySettings {
+  return madeOn === shownId ? draft : { ...draft, ...countryWideOf(saved) };
+}
 
 /** Live G8 round 3 item 1: the tip switches the given zones disagree on, with the zones where each is off. */
 export function mixedTipAcross(zones: ReadonlyArray<readonly [string, TipRules]>): MixedTipRules | undefined {
