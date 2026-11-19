@@ -8,4 +8,5 @@ export const svC42PayoutLines = {
   "Payout lines and move a minus to next week": "Utbetalningsrader och flytta minus till nästa vecka",
   "Payout lines on": "Utbetalningsrader på",
   "Payout lines off": "Utbetalningsrader av",
+  "Moved from last week": "Flyttat från förra veckan",
 } as const;

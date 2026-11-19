@@ -9380,4 +9380,5 @@
 ["With payout lines on: each payout shows Earned, Owed to Movera and Paid out. A week below zero pays 0 and the rest moves to the driver's next payout.","Avec les lignes de versement activées : chaque versement affiche Gagné, Dû à Movera et Versé. Une semaine en dessous de zéro verse 0 et le reste passe au prochain versement du chauffeur."],
 ["Payout lines and move a minus to next week","Lignes de versement et report d'un solde négatif à la semaine suivante"],
 ["Payout lines on","Lignes de versement activées"],
-["Payout lines off","Lignes de versement désactivées"]]
+["Payout lines off","Lignes de versement désactivées"],
+["Moved from last week","Reporté de la semaine dernière"]]

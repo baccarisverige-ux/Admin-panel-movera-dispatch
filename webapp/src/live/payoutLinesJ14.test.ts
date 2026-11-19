@@ -51,3 +51,12 @@ test("sv / fr / en texts for every new line", () => {
     assert.notEqual(sv[key], en[key], key);
   }
 });
+
+test("review S2: every contract payout line code (carried_in / carried_out included) has a label in sv / fr / en", async () => {
+  const contract = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8")) as { payouts: { lines: string[] } };
+  const { PAYOUT_LINE_LABEL } = await import("./payoutLines.ts");
+  assert.deepEqual(contract.payouts.lines.filter((code) => !PAYOUT_LINE_LABEL[code]), []);
+  assert.equal(PAYOUT_LINE_LABEL["carried_in"], "Moved from last week");
+  assert.equal(PAYOUT_LINE_LABEL["carried_out"], "Moves to next week");
+  for (const [lang, dict] of [["sv", sv], ["fr", fr], ["en", en]] as const) assert.ok((dict as Record<string, string>)["Moved from last week"], `${lang}: Moved from last week`);
+});

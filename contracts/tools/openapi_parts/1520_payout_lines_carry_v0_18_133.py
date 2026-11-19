@@ -17,3 +17,10 @@ op("get", "/admin/payouts/runs", "adminListPayoutRuns", "Payout runs waiting for
    params=[q("country", s(pattern="^[A-Z]{2}$"))], ok=(200, "PayoutRunList"), permission="finance.read", read_only=True,
    desc=_V133 + _PL["runs"] + " " + _PL["once"])
 PATHS["/admin/payouts/runs/approve"]["post"]["description"] += " " + _V133 + "approve with the count and total of GET /admin/payouts/runs."
+# Review M1: payoutLinesOn is a kept key of country_rules (save and Restore keep it); removeKeys may name it.
+_rk133 = S["ConfigDraftUpdate"]["properties"]["removeKeys"]
+assert "payoutLinesOn" in C["configDocs"]["keptKeys"]["country_rules"], "payoutLinesOn is a kept key"
+_rk133["items"]["enum"] = sorted(set(_rk133["items"]["enum"]) | {"payoutLinesOn"})
+_rk133["maxItems"] = len(_rk133["items"]["enum"])
+PATHS["/admin/config/{doc}"]["put"]["description"] += " " + _V133 + "country_rules keeps payoutLinesOn (configDocs.keptKeys.country_rules): " + _PL["switch"]
+PATHS["/admin/config/{doc}/restore"]["post"]["description"] += " " + _V133 + "Restore keeps payoutLinesOn (pricingHistory.restoreKeeps)."

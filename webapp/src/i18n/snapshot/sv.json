@@ -9380,4 +9380,5 @@
 ["With payout lines on: each payout shows Earned, Owed to Movera and Paid out. A week below zero pays 0 and the rest moves to the driver's next payout.","Med utbetalningsrader på: varje utbetalning visar Intjänat, Skuld till Movera och Utbetalt. En vecka under noll betalar 0 och resten flyttas till förarens nästa utbetalning."],
 ["Payout lines and move a minus to next week","Utbetalningsrader och flytta minus till nästa vecka"],
 ["Payout lines on","Utbetalningsrader på"],
-["Payout lines off","Utbetalningsrader av"]]
+["Payout lines off","Utbetalningsrader av"],
+["Moved from last week","Flyttat från förra veckan"]]

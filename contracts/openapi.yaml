@@ -9397,9 +9397,9 @@ paths:
         pricing with invalid CategoryPricing.commissionSteps → invalid_request, reason commission_steps_invalid, details ["step:<index>",
         "problem:<code>"] (not_a_list, too_many_steps, pct_or_amount, up_to_missing, pct_out_of_range, amount_out_of_range,
         above_not_last, last_not_above, up_to_out_of_range, up_to_not_increasing); nothing is saved. v0.18.123 (configDocs.keptKeys;
-        country_rules: payoutMode, payoutSchedule, maxRiderDebt, driverOwesLimit, calls.adminCallRoles, calls.phoneProvider;
-        dispatch: radar.reaskAfterSeconds, exclusive.reaskAfterSeconds): v0.18.123 (SF-F1-3 safe config saves; owner 2026-11-17
-        Q-SCS-1 "Keep values, save rest (Rec.)", 2026-11-16 Q-SCS-2 "No, keep current (Rec.)", Rules audits/impact/safe-config-saves.md
+        country_rules: payoutMode, payoutSchedule, maxRiderDebt, driverOwesLimit, calls.adminCallRoles, calls.phoneProvider,
+        payoutLinesOn; dispatch: radar.reaskAfterSeconds, exclusive.reaskAfterSeconds): v0.18.123 (SF-F1-3 safe config saves;
+        owner 2026-11-17 Q-SCS-1 "Keep values, save rest (Rec.)", 2026-11-16 Q-SCS-2 "No, keep current (Rec.)", Rules audits/impact/safe-config-saves.md
         §3, decisions/session-2026-11-06.md): PUT /admin/config/{doc} replaces the draft, except the kept keys of the document
         listed here (dotted paths). A kept key that the stored document (the scope''s draft, else the scope''s own live document)
         has and the sent document leaves out is kept by the server: its stored value is copied into the draft, the rest is
@@ -9416,7 +9416,13 @@ paths:
         so the one-live-connection switch never falls back to off by a save from another screen. offers.autoOffline is not
         listed: every admin save of the driver document starts from the server document and writes offers whole from the Dispatch
         page that owns it. Publish and Restore are unchanged (Restore names a removed kept key in removeKeys, as for the other
-        documents).'
+        documents). v0.18.133 (payoutLines): country_rules keeps payoutLinesOn (configDocs.keptKeys.country_rules): CountryRules.payoutLinesOn
+        (boolean, default false = configDefaults.payoutLinesOn) on the country standard (a zone''s own value is ignored),
+        saved and published with PUT /admin/config/country_rules?country + publish (finance.edit), Admin > Finance > Payouts
+        settings. It is read when a payout is made; the way back without a release is to switch it off (later payouts are
+        made as before; payouts already made keep their parts). A kept key of country_rules (configDocs.keptKeys.country_rules,
+        review M1): a whole-document save that leaves it out keeps the stored value, and a Restore or Undo last publish keeps
+        today''s live value (pricingHistory.restoreKeeps), so no other screen or older admin build switches it off by a save.'
       tags:
       - Admin · Config
       x-actor:
@@ -12093,7 +12099,9 @@ paths:
         now, and one the live document lacks is left out of the restored document (calls.on and the other calls fields are
         restored as before). The four payout/debt keys are changed in Finance › Payouts settings only. Every other field,
         and every other document, is restored as before. The restored document is saved through the same draft path, so configDocs.keptKeys
-        applies to it too.'
+        applies to it too. v0.18.133 (review M1): CountryRules.payoutLinesOn is kept the same way (today''s live value; absent
+        stays absent), so a Restore never switches the payout lines on or off. v0.18.133 (payoutLines): Restore keeps payoutLinesOn
+        (pricingHistory.restoreKeeps).'
       tags:
       - Admin · Config
       x-actor:
@@ -24283,6 +24291,8 @@ components:
           - cash_collected
           - fees
           - paid_to_movera
+          - carried_in
+          - carried_out
           description: contract.json#payouts.lines
         amount:
           allOf:
@@ -24370,7 +24380,9 @@ components:
             (the cash he kept above his share, e.g. the commission of a pay-in-car trip) less ''Driver paid Movera'' money
             in the payout (never below 0; any rest counts as earned); paidOut = max(0, earned - owedToMovera); carriedOut
             = max(0, owedToMovera - earned). Always earned - owedToMovera = paidOut - carriedOut, and Payout.amount = paidOut
-            (never below 0). Integers only.'
+            (never below 0). Integers only. The stored Payout.lines of a switched-on payout add up to Payout.amount: a line
+            carried_in (minus carriedIn) and a line carried_out (plus carriedOut) are added when not 0 (contract.json#payouts.lines;
+            review S2).'
         owedToMovera:
           allOf:
           - $ref: '#/components/schemas/Money'
@@ -24380,7 +24392,9 @@ components:
             fee shares); owedToMovera = carriedIn + what each entry left him owing (the cash he kept above his share, e.g.
             the commission of a pay-in-car trip) less ''Driver paid Movera'' money in the payout (never below 0; any rest
             counts as earned); paidOut = max(0, earned - owedToMovera); carriedOut = max(0, owedToMovera - earned). Always
-            earned - owedToMovera = paidOut - carriedOut, and Payout.amount = paidOut (never below 0). Integers only.'
+            earned - owedToMovera = paidOut - carriedOut, and Payout.amount = paidOut (never below 0). Integers only. The
+            stored Payout.lines of a switched-on payout add up to Payout.amount: a line carried_in (minus carriedIn) and a
+            line carried_out (plus carriedOut) are added when not 0 (contract.json#payouts.lines; review S2).'
         paidOut:
           allOf:
           - $ref: '#/components/schemas/Money'
@@ -24390,7 +24404,9 @@ components:
             fee shares); owedToMovera = carriedIn + what each entry left him owing (the cash he kept above his share, e.g.
             the commission of a pay-in-car trip) less ''Driver paid Movera'' money in the payout (never below 0; any rest
             counts as earned); paidOut = max(0, earned - owedToMovera); carriedOut = max(0, owedToMovera - earned). Always
-            earned - owedToMovera = paidOut - carriedOut, and Payout.amount = paidOut (never below 0). Integers only.'
+            earned - owedToMovera = paidOut - carriedOut, and Payout.amount = paidOut (never below 0). Integers only. The
+            stored Payout.lines of a switched-on payout add up to Payout.amount: a line carried_in (minus carriedIn) and a
+            line carried_out (plus carriedOut) are added when not 0 (contract.json#payouts.lines; review S2).'
         carriedIn:
           allOf:
           - $ref: '#/components/schemas/Money'
@@ -24401,7 +24417,9 @@ components:
             (the cash he kept above his share, e.g. the commission of a pay-in-car trip) less ''Driver paid Movera'' money
             in the payout (never below 0; any rest counts as earned); paidOut = max(0, earned - owedToMovera); carriedOut
             = max(0, owedToMovera - earned). Always earned - owedToMovera = paidOut - carriedOut, and Payout.amount = paidOut
-            (never below 0). Integers only.'
+            (never below 0). Integers only. The stored Payout.lines of a switched-on payout add up to Payout.amount: a line
+            carried_in (minus carriedIn) and a line carried_out (plus carriedOut) are added when not 0 (contract.json#payouts.lines;
+            review S2).'
         carriedOut:
           allOf:
           - $ref: '#/components/schemas/Money'
@@ -24412,7 +24430,8 @@ components:
             above his share, e.g. the commission of a pay-in-car trip) less ''Driver paid Movera'' money in the payout (never
             below 0; any rest counts as earned); paidOut = max(0, earned - owedToMovera); carriedOut = max(0, owedToMovera
             - earned). Always earned - owedToMovera = paidOut - carriedOut, and Payout.amount = paidOut (never below 0). Integers
-            only.'
+            only. The stored Payout.lines of a switched-on payout add up to Payout.amount: a line carried_in (minus carriedIn)
+            and a line carried_out (plus carriedOut) are added when not 0 (contract.json#payouts.lines; review S2).'
       description: 'v0.18.13: v0.18.13 (audit M1): one payout is in ONE currency: the unpaid entries of a driver''s period
         are paid per currency (a driver with kr and € entries gets two payouts); amounts of different currencies are never
         added.'
@@ -25231,7 +25250,10 @@ components:
           description: 'v0.18.133 (payoutLines): CountryRules.payoutLinesOn (boolean, default false = configDefaults.payoutLinesOn)
             on the country standard (a zone''s own value is ignored), saved and published with PUT /admin/config/country_rules?country
             + publish (finance.edit), Admin > Finance > Payouts settings. It is read when a payout is made; the way back without
-            a release is to switch it off (later payouts are made as before; payouts already made keep their parts).'
+            a release is to switch it off (later payouts are made as before; payouts already made keep their parts). A kept
+            key of country_rules (configDocs.keptKeys.country_rules, review M1): a whole-document save that leaves it out
+            keeps the stored value, and a Restore or Undo last publish keeps today''s live value (pricingHistory.restoreKeeps),
+            so no other screen or older admin build switches it off by a save.'
           default: false
       x-server-only: true
     FeeRule:
@@ -31478,11 +31500,12 @@ components:
             - driverOwesLimit
             - exclusive.reaskAfterSeconds
             - maxRiderDebt
+            - payoutLinesOn
             - payoutMode
             - payoutSchedule
             - radar.reaskAfterSeconds
             - realtime.oneStream
-          maxItems: 9
+          maxItems: 10
           description: 'v0.18.123 (configDocs.keptKeys.removeKeys): ConfigDraftUpdate.removeKeys (optional, array of dotted
             paths): each must be a kept key of that document, else 400 invalid_request, reason unknown_kept_key, details ["key:<path>"],
             nothing saved. A named key that the sent document carries is saved as sent (removeKeys only stops the keep).'

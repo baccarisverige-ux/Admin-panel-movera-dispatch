@@ -14,6 +14,10 @@ export const PAYOUT_LINE_LABEL: Record<string, string> = {
   cash_collected: "Cash collected",
   fees: "Cancel and no-show fees",
   paid_to_movera: "Paid to Movera",
+  // v0.18.133 review S2 (contract.json#payoutLines.lines): a switched-on payout's stored lines carry the rest taken
+  // from the last payout (minus) and the rest moved to the next one (plus), so the lines add up to the amount.
+  carried_in: "Moved from last week",
+  carried_out: "Moves to next week",
 };
 
 export function payoutLineLabel(code: string): string {

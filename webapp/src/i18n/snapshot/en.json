@@ -9380,4 +9380,5 @@
 ["With payout lines on: each payout shows Earned, Owed to Movera and Paid out. A week below zero pays 0 and the rest moves to the driver's next payout.","With payout lines on: each payout shows Earned, Owed to Movera and Paid out. A week below zero pays 0 and the rest moves to the driver's next payout."],
 ["Payout lines and move a minus to next week","Payout lines and move a minus to next week"],
 ["Payout lines on","Payout lines on"],
-["Payout lines off","Payout lines off"]]
+["Payout lines off","Payout lines off"],
+["Moved from last week","Moved from last week"]]

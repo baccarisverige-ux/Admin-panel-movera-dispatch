@@ -8,4 +8,5 @@ export const frC42PayoutLines = {
   "Payout lines and move a minus to next week": "Lignes de versement et report d'un solde négatif à la semaine suivante",
   "Payout lines on": "Lignes de versement activées",
   "Payout lines off": "Lignes de versement désactivées",
+  "Moved from last week": "Reporté de la semaine dernière",
 } as const;

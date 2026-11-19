@@ -8,4 +8,5 @@ export const enC42PayoutLines = {
   "Payout lines and move a minus to next week": "Payout lines and move a minus to next week",
   "Payout lines on": "Payout lines on",
   "Payout lines off": "Payout lines off",
+  "Moved from last week": "Moved from last week",
 } as const;
