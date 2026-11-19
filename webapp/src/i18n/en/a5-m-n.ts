@@ -427,4 +427,5 @@ export const enA5MN = {
   "Now: {0} requests per free driver": "Now: {0} requests per free driver",
   "Number of riders": "Number of riders",
   "Numbers": "Numbers",
+  "More alerts than shown. The oldest are left out; every safety alert is shown.": "More alerts than shown. The oldest are left out; every safety alert is shown.",
 } as const;

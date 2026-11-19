@@ -105,6 +105,7 @@ export function OpenView({ old = false }: { old?: boolean } = {}) {
           })}
           {view.left > 0 ? <li className="al-more"><button data-command="admin.alerts.view" type="button" className="dash-btn small ghost" onClick={() => setPaging({ key: filterKey, pages: pages + 1 })}>{trn("Show more ({0} left)", view.left)}</button></li> : null}
         </ul>
+        {data.book.more ? <p className="al-more-note" role="note">{tr("More alerts than shown. The oldest are left out; every safety alert is shown.")}</p> : null}
         {current ? <Detail alert={current} onClose={() => setSelected(null)} onNotice={setNotice} /> : null}
       </div>
     </div>

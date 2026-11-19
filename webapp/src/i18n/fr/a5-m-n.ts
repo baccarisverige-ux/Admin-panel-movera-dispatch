@@ -429,4 +429,5 @@ export const frA5MN: Record<keyof typeof enA5MN, string> = {
   "Now: {0} requests per free driver": "Maintenant : {0} demandes par chauffeur disponible",
   "Number of riders": "Nombre de passagers",
   "Numbers": "Chiffres",
+  "More alerts than shown. The oldest are left out; every safety alert is shown.": "Il y a plus d'alertes que celles affichées. Les plus anciennes ne sont pas affichées ; toutes les alertes de sécurité sont affichées.",
 };

@@ -17,6 +17,8 @@ export type AlertBookState = {
   people: { adminId: string; name?: string }[];
   /** v0.18.20 (contract.json#alertDesk.serverDetection): the alerts the server found. */
   alerts?: FoundAlert[];
+  /** v0.18.131 (contract.json#alertDesk.serverDetection.liveList.more, MF3): sent only when the server left alerts out. */
+  alertsMore?: { open: boolean; solved: boolean };
 };
 
 /**
@@ -63,6 +65,7 @@ export function bookFromServer(state: AlertBookState, me: string | null): AlertB
   }
   return {
     found: state.alerts ?? [],
+    ...(state.alertsMore && (state.alertsMore.open || state.alertsMore.solved) ? { more: { open: state.alertsMore.open === true, solved: state.alertsMore.solved === true } } : {}),
     draftRev: state.rev,
     settings: state.settings as AlertBook["settings"],
     rules: state.rules as AlertBook["rules"],

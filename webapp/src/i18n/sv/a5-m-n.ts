@@ -429,4 +429,5 @@ export const svA5MN: Record<keyof typeof enA5MN, string> = {
   "Now: {0} requests per free driver": "Nu: {0} förfrågningar per ledig förare",
   "Number of riders": "Antal resenärer",
   "Numbers": "Siffror",
+  "More alerts than shown. The oldest are left out; every safety alert is shown.": "Det finns fler larm än som visas. De äldsta visas inte; alla säkerhetslarm visas.",
 };

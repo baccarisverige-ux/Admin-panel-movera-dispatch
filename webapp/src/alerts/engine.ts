@@ -197,6 +197,8 @@ export type FoundAlert = {
 export type AlertBook = {
   /** Live: the alerts the server found (open, or solved by itself). */
   found?: FoundAlert[];
+  /** v0.18.131 (contract.json#alertDesk.serverDetection.liveList.more, MF3): the server left the oldest alerts out. */
+  more?: { open: boolean; solved: boolean };
   draftRev: number;
   settings: AlertSettings;
   rules: AlertRule[];
@@ -240,6 +242,7 @@ export function normalizeAlertBook(value: unknown): AlertBook {
   return {
     // v0.18.20: the server's alerts (live) pass through unchanged.
     ...(Array.isArray(raw.found) ? { found: raw.found } : {}),
+    ...(raw.more && typeof raw.more === "object" && (raw.more.open || raw.more.solved) ? { more: { open: raw.more.open === true, solved: raw.more.solved === true } } : {}),
     draftRev: typeof raw.draftRev === "number" && raw.draftRev > 0 ? raw.draftRev : 1,
     // U3 (Rules audits/impact/safe-config-saves.md, SAFETY): start from the stored settings, so kinds.rule, kinds this
     // panel does not know and other top-level keys go back to the server unchanged on Save.
