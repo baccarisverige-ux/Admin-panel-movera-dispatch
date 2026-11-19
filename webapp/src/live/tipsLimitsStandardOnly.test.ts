@@ -144,6 +144,13 @@ test("a zone that uses the Standard shown + the Standard chosen: nothing of the 
   assert.equal(server.live("country_rules:Z001"), 0, "Z001 still uses the Standard");
 });
 
+test("the Standard-only list is the five settings the server takes from the Standard alone", () => {
+  assert.deepEqual([...countrySettings.STANDARD_ONLY_FIELDS], ["walletCreditMax", "maxRiderDebt", "driverOwesLimit", "emergencyNumbers", "sosContactsSms"]);
+  // The save sends exactly these on the Standard only (live/liveSettings.ts saveCountries).
+  const saveLine = readFileSync(new URL("./liveSettings.ts", import.meta.url), "utf8").split("\n").find((line) => line.includes("id === standardKey(market.id) ? {")) ?? "";
+  for (const field of countrySettings.STANDARD_ONLY_FIELDS) assert.ok(saveLine.includes(`${field}: next.${field}`), field);
+});
+
 test("only the zone chosen: the Standard is not written at all", async () => {
   const { server, settings, book } = await open();
   await save(settings, panelSave(book, ["Z002"], "Z002", NEW_TIP).value, ["Z002"]);
