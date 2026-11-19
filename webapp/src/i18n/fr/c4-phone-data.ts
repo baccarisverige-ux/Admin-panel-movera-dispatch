@@ -32,6 +32,6 @@ export const frC4PhoneData: Record<keyof typeof enC4PhoneData, string> = {
   "The rider has not added emergency contacts.": "Le passager n'a pas ajouté de contacts d'urgence.",
   "Show contacts": "Afficher les contacts",
   "The driver has not added emergency contacts.": "Le chauffeur n'a pas ajouté de contacts d'urgence.",
-  // v0.18.129 (contract.json#phoneDataToServer.riderPlaces.preferredCategory): a saved place's fixed ride category.
+  // v0.18.131 (contract.json#phoneDataToServer.riderPlaces.preferredCategory): a saved place's fixed ride category.
   "Fixed category: {0}": "Catégorie fixe : {0}",
 };

@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.129",
+  "version": "0.18.131",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -1345,6 +1345,10 @@
         "radar.reaskAfterSeconds",
         "exclusive.reaskAfterSeconds"
       ],
+      "driver_app_config": [
+        "realtime.oneStream"
+      ],
+      "driverAppConfigNote": "v0.18.130 (SCS guard re-check follow-up, owner Q-SCS-1 \"Keep values, save rest (Rec.)\"): the driver document keeps realtime.oneStream (driverOneStream, v0.18.122) when a save leaves out realtime, so the one-live-connection switch never falls back to off by a save from another screen. offers.autoOffline is not listed: every admin save of the driver document starts from the server document and writes offers whole from the Dispatch page that owns it. Publish and Restore are unchanged (Restore names a removed kept key in removeKeys, as for the other documents).",
       "removeKeys": "ConfigDraftUpdate.removeKeys (optional, array of dotted paths): each must be a kept key of that document, else 400 invalid_request, reason unknown_kept_key, details [\"key:<path>\"], nothing saved. A named key that the sent document carries is saved as sent (removeKeys only stops the keep)."
     },
     "standard": "v0.8.0 (owner 2026-10-27): every country has one standard rider_app_config, driver_app_config, pricing and dispatch, set in the admin, in the country's currency. A zone with no own published document of a kind uses its country's standard of that kind: the server serves it (GET /rider/config, /driver/config) and prices and dispatches with it, with zoneId set to the zone's id and usesStandard: true; its version is the standard's version. A zone with its own published document never uses the standard. Publishing a standard sends config_published (app documents) for every zone of the country that uses it. A zone's first own publish gets version max(own live, standard live) + 1. A standard document carries zoneId \"standard-<CC>\" (e.g. standard-SE) and its country's currency, country and timeZone. GET /admin/config/{doc}?zoneId returns usesStandard: true and the standard as the draft's starting point while the zone has nothing of its own.",
@@ -4890,12 +4894,14 @@
       "commands": "take / pass / snooze / done on a server alert: the kind, zone and title stored by the server win over what the call sends. done closes it (state done).",
       "apps": "Rider and driver apps: no change. The alerts are for admins only; the riders' and drivers' own notices (reservation_no_driver, reservation_late_risk, ...) stay as they are.",
       "liveList": {
-        "note": "v0.18.117 (S7 alert cap, supervisor MF3 + N2, Rules audits/impact/alert-cap-safety-supervisor.md; server branch claude/rules-email-key-browserstack-f5y0p3-alertcap 1865554, src/admin/alerts.ts liveAlerts; merged to server main as ccb26e4, PR #254, 2026-11-16; v0.18.118 correction): the limit and the order of AlertBookState.alerts. Before v0.18.117 the contract named neither. Additive wording; no field changes.",
-        "open": "Every open alert of the admin's zones and kind groups is sent: no limit, never cut.",
+        "note": "v0.18.117 (S7 alert cap, supervisor MF3 + N2, Rules audits/impact/alert-cap-safety-supervisor.md; server branch claude/rules-email-key-browserstack-f5y0p3-alertcap 1865554, src/admin/alerts.ts liveAlerts; merged to server main as ccb26e4, PR #254, 2026-11-16; v0.18.118 correction): the limit and the order of AlertBookState.alerts. Before v0.18.117 the contract named neither. Additive wording; no field changes. v0.18.131 (MF3, Rules plan/NUMBERS.md; Rule A safety): open non-safety alerts are bounded (openOtherCap) and AlertBookState.alertsMore says when a part was cut (more).",
+        "open": "Every open alert of the safety kinds (kindGroups group safety: sos, car_lost, ride_check, sos_slow) of the admin's zones and kind groups is sent: no limit, never cut. v0.18.131: of the other open alerts at most openOtherCap (1000) are sent: level critical, important, info, then the newest since, then alertId; the rest are left out.",
         "solvedCap": 1000,
         "solved": "After the open ones, at most solvedCap (1000) solved alerts: per kind the 1000 newest by solvedAt, then, over all kinds, the first 1000 with the safety kinds first and then the newest solvedAt.",
         "order": "Open before solved. Open: the safety kinds first (kindGroups group safety: sos, car_lost, ride_check, sos_slow), then level critical, important, info, then the newest since, then alertId. Solved: the safety kinds first, then the newest solvedAt (an alert without solvedAt last), then alertId.",
-        "more": "Not built yet: past solvedCap the older solved alerts are left out and nothing in the answer says so (no 'more' marker, no count). A marker and a limit for open non-safety alerts are a later job (MF3)."
+        "more": "v0.18.131: AlertBookState.alertsMore { open: boolean, solved: boolean } is sent only when a part was cut: open true when open non-safety alerts past openOtherCap were left out, solved true when solved alerts past solvedCap were left out. Missing = nothing was left out. No count is sent. The admin panel shows a line at the end of the list when it is there (alertDesk.serverDetection.liveList.adminLine); it never hides or cuts a safety alert.",
+        "openOtherCap": 1000,
+        "adminLine": "Admin alert desk: when alertsMore is present, a line under the list: en 'More alerts than shown. The oldest are left out; every safety alert is shown.' / sv 'Det finns fler larm än som visas. De äldsta visas inte; alla säkerhetslarm visas.' / fr 'Il y a plus d'alertes que celles affichées. Les plus anciennes ne sont pas affichées ; toutes les alertes de sécurité sont affichées.' Driver and rider apps: no change."
       }
     },
     "kindGroups": {

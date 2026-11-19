@@ -7,7 +7,7 @@ import { sv } from "../i18n/sv.ts";
 import { fr } from "../i18n/fr.ts";
 
 /**
- * v0.18.129 (owner 2026-11-18 "Build", Rules decisions/session-2026-11-18-saved-places-design.md steps 4-7): the rider
+ * v0.18.131 (owner 2026-11-18 "Build", Rules decisions/session-2026-11-18-saved-places-design.md steps 4-7): the rider
  * profile's read-only Saved places shows each place's fixed ride category (contract.json#phoneDataToServer.riderPlaces
  * .preferredCategory.admin). Before this change the list showed only the name and address.
  */

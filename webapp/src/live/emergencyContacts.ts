@@ -27,7 +27,7 @@ export const riderPlacesPath = (riderId: string) => `/admin/riders/${encodeURICo
 export const driverPreferencesPath = (driverId: string) => `/admin/drivers/${encodeURIComponent(driverId)}/preferences`;
 /** A category id as a readable word ("child_seat" → "Child seat"). */
 export const categoryLabel = (id: string) => (id ? id[0]!.toUpperCase() + id.slice(1).replace(/_/g, " ") : id);
-/** v0.18.129 (contract.json#phoneDataToServer.riderPlaces.preferredCategory): a saved place's fixed ride category, shown by name; null / absent (older servers) = none. */
+/** v0.18.131 (contract.json#phoneDataToServer.riderPlaces.preferredCategory): a saved place's fixed ride category, shown by name; null / absent (older servers) = none. */
 export const fixedCategoryOf = (p: { preferredCategoryId?: string | null }): string | null => (p.preferredCategoryId ? categoryLabel(p.preferredCategoryId) : null);
 /** Owner 2026-11-04: emergency contacts only from an OPEN safety case. */
 export const caseIsOpen = (state: string) => state !== "solved";

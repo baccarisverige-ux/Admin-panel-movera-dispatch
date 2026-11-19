@@ -30,6 +30,6 @@ export const enC4PhoneData = {
   "The rider has not added emergency contacts.": "The rider has not added emergency contacts.",
   "Show contacts": "Show contacts",
   "The driver has not added emergency contacts.": "The driver has not added emergency contacts.",
-  // v0.18.129 (contract.json#phoneDataToServer.riderPlaces.preferredCategory): a saved place's fixed ride category.
+  // v0.18.131 (contract.json#phoneDataToServer.riderPlaces.preferredCategory): a saved place's fixed ride category.
   "Fixed category: {0}": "Fixed category: {0}",
 } as const;

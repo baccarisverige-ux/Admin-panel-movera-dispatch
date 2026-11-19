@@ -44,7 +44,7 @@ function PlacesList({ riderId, enabled, read }: { riderId: string; enabled: bool
   if (q.error) return q.error instanceof ApiError && q.error.status === 403 ? <p className="op-help">{tr("Your role cannot see this.")}</p> : <ErrorLine error={q.error} onRetry={() => void q.refetch()} />;
   const items = q.data?.items ?? [];
   if (!items.length) return <p className="op-help">{tr("No saved places.")}</p>;
-  // v0.18.129: a place's fixed ride category (null / absent = none, nothing shown).
+  // v0.18.131: a place's fixed ride category (null / absent = none, nothing shown).
   return <ul className="op-past">{items.map((p) => <li key={p.placeId}>{p.kind === "home" ? tr("Home") : p.kind === "work" ? tr("Work") : p.label} · {p.place.address}{fixedCategoryOf(p) ? <> · <span data-testid="saved-place-category">{tr("Fixed category: {0}", [fixedCategoryOf(p)])}</span></> : null}</li>)}</ul>;
 }
 
