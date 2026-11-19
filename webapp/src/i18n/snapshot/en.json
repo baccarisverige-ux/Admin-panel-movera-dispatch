@@ -2799,6 +2799,7 @@
 ["Now: {0} requests per free driver","Now: {0} requests per free driver"],
 ["Number of riders","Number of riders"],
 ["Numbers","Numbers"],
+["More alerts than shown. The oldest are left out; every safety alert is shown.","More alerts than shown. The oldest are left out; every safety alert is shown."],
 ["of {0}","of {0}"],
 ["of riders who joined lately","of riders who joined lately"],
 ["of which app fee","of which app fee"],

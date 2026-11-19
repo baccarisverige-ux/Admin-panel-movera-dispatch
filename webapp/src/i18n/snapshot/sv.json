@@ -2799,6 +2799,7 @@
 ["Now: {0} requests per free driver","Nu: {0} förfrågningar per ledig förare"],
 ["Number of riders","Antal resenärer"],
 ["Numbers","Siffror"],
+["More alerts than shown. The oldest are left out; every safety alert is shown.","Det finns fler larm än som visas. De äldsta visas inte; alla säkerhetslarm visas."],
 ["of {0}","av {0}"],
 ["of riders who joined lately","av resenärer som nyligen gått med"],
 ["of which app fee","varav appavgift"],
