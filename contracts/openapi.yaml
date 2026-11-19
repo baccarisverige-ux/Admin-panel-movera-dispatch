@@ -132,10 +132,10 @@ paths:
         the request is refused: 503 unavailable, reason sms_daily_limit, Retry-After = until the oldest leaves the 24 h window
         (at most 24 h); no code is made and nothing is sent (fail closed). Test numbers are not counted and not stopped. The
         code is stored first, then the SMS is handed to the SMS company (one try, short time limit) before the answer. Accepted:
-        200 as before (requestId, sessionId, expiresAt, retryAfterSeconds). Refused by the company, answered with an error,
-        or not answered (a time-out or a broken connection): the code is void at once and the answer is 503 unavailable, reason
-        sms_not_sent, Retry-After = auth.otp.retryAfterSeconds; the app may ask again after that wait. The try still counts
-        on the hourly limits.'
+        200 as before (requestId, sessionId, expiresAt, retryAfterSeconds) plus codeLength (codeLengthNote). Refused by the
+        company, answered with an error, or not answered (a time-out or a broken connection): the code is void at once and
+        the answer is 503 unavailable, reason sms_not_sent, Retry-After = auth.otp.retryAfterSeconds; the app may ask again
+        after that wait. The try still counts on the hourly limits.'
       tags:
       - Auth
       x-actor:
@@ -26301,7 +26301,8 @@ components:
           $ref: '#/components/schemas/Language'
     OtpChallenge:
       type: object
-      description: The code is 4 digits and lives 300 s; at most 5 attempts.
+      description: 'The code lives 300 s; at most 5 attempts. v0.18.135 (contract.json#smsSignIn): it is 4 digits for a test
+        number and 6 digits when sent by SMS (codeLength).'
       required:
       - requestId
       - sessionId
@@ -26318,6 +26319,13 @@ components:
           type: integer
           minimum: 0
           default: 30
+        codeLength:
+          type: integer
+          enum:
+          - 4
+          - 6
+          description: 'v0.18.135 (contract.json#smsSignIn): how many digits this code has: 4 for a test number (auth.otp.codeLength),
+            6 for a code sent by SMS (smsSignIn.codeLength). Missing = 4.'
     OtpVerifyRequest:
       type: object
       required:
@@ -26331,7 +26339,7 @@ components:
           $ref: '#/components/schemas/Id'
         code:
           type: string
-          pattern: ^[0-9]{4}$
+          pattern: ^([0-9]{4}|[0-9]{6})$
         linkToken:
           type: string
           minLength: 1
@@ -36238,7 +36246,7 @@ components:
           $ref: '#/components/schemas/Id'
         code:
           type: string
-          pattern: ^[0-9]{4}$
+          pattern: ^([0-9]{4}|[0-9]{6})$
     AccountEmailChange:
       type: object
       required:
