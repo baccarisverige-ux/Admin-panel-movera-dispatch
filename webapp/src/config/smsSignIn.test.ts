@@ -127,6 +127,15 @@ test("the card is on Tips & limits, editable on the Standard only, with the two 
   assert.match(SETTING_INFO["tips.smsSignIn.enabled"]!.default, /^Off\b/);
   assert.match(SETTING_INFO["tips.smsSignIn.dailyCap"]!.default, /^200\b/);
   assert.match(SETTING_INFO["tips.smsSignIn.dailyCap"]!.range, /10 to 100 000/);
+  // Owner 2026-11-19 "6 digits (Rec.)" (contract smsSignIn.codeLength): the example SMS in the "i" text shows a code of
+  // that length, written as in the Swedish SMS text of the contract.
+  const contract = JSON.parse(src("../../../contracts/contract.json")) as { smsSignIn: { codeLength: number; texts: { sms: { sv: string } } }; auth: { otp: { codeLength: number } } };
+  assert.equal(contract.smsSignIn.codeLength, 6);
+  assert.equal(contract.auth.otp.codeLength, 4);
+  const shown = /Movera: din inloggningskod är ([0-9]+)\./.exec(Object.values(SETTING_INFO["tips.smsSignIn.enabled"]!).join(" "));
+  assert.ok(shown, "the example SMS is in the i text");
+  assert.equal(shown![1]!.length, contract.smsSignIn.codeLength);
+  assert.ok(contract.smsSignIn.texts.sms.sv.startsWith("Movera: din inloggningskod är {code}."));
   // No key, password or key name of the SMS company anywhere in the panel.
   assert.doesNotMatch(card + src("./smsSignIn.ts") + src("../ui/settingInfo/tips.ts"), /ELKS_|API_PASSWORD|API_USERNAME/);
 });

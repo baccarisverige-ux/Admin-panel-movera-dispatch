@@ -354,7 +354,7 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     `${STANDARD_ONLY} Rider and driver apps, mobile numbers of this country (+46 Sweden, +33 France, +216 Tunisia). It works only when the SMS company's two keys are also set on the server; each SMS costs money.`,
     "On or off.",
     "Off.",
-    "On for Sweden: rider Sara types +46 70 123 45 67 and gets an SMS with the words Movera: din inloggningskod är 4821.",
+    "On for Sweden: rider Sara types +46 70 123 45 67 and gets an SMS with the words Movera: din inloggningskod är 482193.",
     "Off: no real person can sign in, no SMS is sent; On: every real number of this country can ask for a code, up to the daily limit.",
   ),
   "tips.smsSignIn.dailyCap": t(
