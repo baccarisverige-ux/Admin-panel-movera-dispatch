@@ -348,7 +348,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
             after={pricingSummary(country, shown)}
             info={{ changeOf: { kind: "tipsLimits", country, before: saved, after: shown } }}
             sliceKey={COUNTRY_SETTINGS_KEY}
-            value={targets ? { ...book, draftRev: book.draftRev + 1, zones: { ...zoneRules.value, ...zoneValuesForSave(shown, targets, (id) => zoneSettingsOf(zoneBook, country, id)) } } : { ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
+            value={targets ? { ...book, draftRev: book.draftRev + 1, zones: { ...zoneRules.value, ...zoneValuesForSave(shown, targets, (id) => zoneSettingsOf(zoneBook, country, id), zoneId) } } : { ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
             expectedSliceRev={book.draftRev}
             disabled={loading || !canEdit || !dirty || issues.length > 0 || fieldErrors.count > 0}
             title={!canEdit ? tr("Your role cannot change this.") : !dirty ? tr("No unsaved change.") : fieldErrors.first ?? issues[0]}

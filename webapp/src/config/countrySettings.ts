@@ -323,10 +323,22 @@ export function mixedCashInCarAcross(zones: ReadonlyArray<readonly [string, TipR
  * v0.18.91 job C8 (supervisor must-fix 1): what Save writes for each chosen zone — the shown settings, but while the
  * cash-tip time is still mixed (not edited) each zone keeps its own time. The mixed note itself is never saved.
  */
-export function zoneValuesForSave(shown: CountrySettings, targets: readonly string[], own: (zoneId: string) => CountrySettings): Record<string, CountrySettings> {
+export function zoneValuesForSave(shown: CountrySettings, targets: readonly string[], own: (zoneId: string) => CountrySettings, shownId?: string): Record<string, CountrySettings> {
   const { mixedCashInCar, ...rest } = shown;
-  return Object.fromEntries(targets.map((id) => [id, mixedCashInCar ? { ...rest, tipRules: { ...rest.tipRules, cashInCarMinutes: own(id).tipRules.cashInCarMinutes } } : rest]));
+  return Object.fromEntries(targets.map((id) => {
+    const values = mixedCashInCar ? { ...rest, tipRules: { ...rest.tipRules, cashInCarMinutes: own(id).tipRules.cashInCarMinutes } } : rest;
+    // Security review of the SMS switch (2026-11-19): the country-wide values can only be edited while the Standard
+    // is the shown scope. Saved for several scopes with a ZONE shown, the Standard got the zone's values (the
+    // defaults: SMS sign-in off / 200, the default emergency numbers, SOS SMS on) without a word in the confirm.
+    // Every scope that is not the shown one keeps its own.
+    return [id, shownId !== undefined && id !== shownId ? { ...values, ...countryWideOf(own(id)) } : values];
+  }));
 }
+
+/** The values that belong to the country Standard alone (the server refuses them on a zone's own rules). */
+export const COUNTRY_WIDE_FIELDS = ["smsSignIn", "emergencyNumbers", "sosContactsSms"] as const satisfies readonly (keyof CountrySettings)[];
+const countryWideOf = (settings: CountrySettings): Pick<CountrySettings, (typeof COUNTRY_WIDE_FIELDS)[number]> => ({ smsSignIn: settings.smsSignIn, emergencyNumbers: settings.emergencyNumbers, sosContactsSms: settings.sosContactsSms });
+
 
 /** Live G8 round 3 item 1: the tip switches the given zones disagree on, with the zones where each is off. */
 export function mixedTipAcross(zones: ReadonlyArray<readonly [string, TipRules]>): MixedTipRules | undefined {

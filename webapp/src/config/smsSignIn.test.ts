@@ -13,7 +13,8 @@ import { fr } from "../i18n/fr.ts";
 import { sv } from "../i18n/sv.ts";
 import { countryRulesOf, COUNTRY_RULES_PANEL_KEYS } from "../live/configDocs.ts";
 import { SETTING_INFO } from "../ui/settingInfoTexts.ts";
-import { completeCountrySettings, countrySettingsIssues, countrySettingsLines, defaultCountrySettings, PRICING_FIELDS } from "./countrySettings.ts";
+import { foundText } from "../alerts/engine.ts";
+import { COUNTRY_WIDE_FIELDS, completeCountrySettings, countrySettingsIssues, countrySettingsLines, defaultCountrySettings, PRICING_FIELDS, zoneValuesForSave, type CountrySettings } from "./countrySettings.ts";
 import { SMS_DAILY_CAP, SMS_SIGN_IN_DEFAULT, smsSignInLines, smsSignInOf } from "./smsSignIn.ts";
 
 const src = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
@@ -53,6 +54,39 @@ test("saved on the country standard only: the document carries it when given, ne
   const live = src("../live/liveSettings.ts");
   assert.match(live, /id === standardKey\(market\.id\) \? \{[^}]*smsSignIn: next\.smsSignIn/);
   assert.match(live, /smsSignIn: smsSignInOf\(/);
+});
+
+test("a save for several scopes with a ZONE shown never changes the Standard's country-wide values (SMS switch, emergency numbers, SOS SMS)", () => {
+  const base = defaultCountrySettings("SE");
+  const customNumbers = [{ kind: "police" as const, number: "114 14", label: { sv: "Polis", fr: "Police", en: "Police" } }];
+  const standard: CountrySettings = { ...base, smsSignIn: { enabled: true, dailyCap: 5000 }, emergencyNumbers: customNumbers, sosContactsSms: false };
+  const zone: CountrySettings = { ...base };
+  const own: Record<string, CountrySettings> = { "standard-SE": standard, Z002: zone };
+  // The admin looks at zone Z002, both scopes are chosen at the top, and one tip changes.
+  const shown: CountrySettings = { ...zone, tips: [{ id: "tip-1", amount: 40, enabled: true }] };
+  const saved = zoneValuesForSave(shown, ["Z002", "standard-SE"], (id) => own[id]!, "Z002");
+  assert.deepEqual(saved["standard-SE"]!.smsSignIn, { enabled: true, dailyCap: 5000 }, "the Standard's SMS switch and limit stay");
+  assert.deepEqual(saved["standard-SE"]!.emergencyNumbers, customNumbers, "the Standard's emergency numbers stay");
+  assert.equal(saved["standard-SE"]!.sosContactsSms, false, "the Standard's SOS SMS switch stays");
+  assert.equal(saved["standard-SE"]!.tips[0]!.amount, 40, "the edited field still goes to every chosen scope");
+  assert.equal(saved.Z002!.tips[0]!.amount, 40);
+  // With the Standard shown, what the admin set on the card is what the Standard gets.
+  const onStandard: CountrySettings = { ...standard, smsSignIn: { enabled: false, dailyCap: 300 } };
+  const fromStandard = zoneValuesForSave(onStandard, ["Z002", "standard-SE"], (id) => own[id]!, "standard-SE");
+  assert.deepEqual(fromStandard["standard-SE"]!.smsSignIn, { enabled: false, dailyCap: 300 });
+  assert.deepEqual([...COUNTRY_WIDE_FIELDS], ["smsSignIn", "emergencyNumbers", "sosContactsSms"]);
+  assert.match(src("../pricing/CountryExtrasPanel.tsx"), /zoneValuesForSave\(shown, targets, \(id\) => zoneSettingsOf\(zoneBook, country, id\), zoneId\)/);
+});
+
+test("the server's SMS-limit alert reaches the admin translated (template + numbers, as the server sends it)", () => {
+  registerDictionary("sv", sv);
+  registerDictionary("fr", fr);
+  setLanguage("sv");
+  assert.equal(foundText({ t: C.smsSignIn.alert.titles.reached, a: [200, 200] }, "fallback"), "Gränsen för inloggnings-sms är nådd: 200 av 200 de senaste 24 timmarna. Nya inloggningskoder är stoppade");
+  assert.equal(foundText({ t: C.smsSignIn.alert.titles.near, a: [160, 200] }, "fallback"), "Inloggnings-sms: 160 av 200 skickade de senaste 24 timmarna");
+  setLanguage("fr");
+  assert.equal(foundText({ t: C.smsSignIn.alert.detail, a: [] }, "fallback"), "Augmentez la limite par jour dans Pourboires et limites par pays s'il s'agit de vraies personnes");
+  setLanguage("en");
 });
 
 test("the card is on Tips & limits, editable on the Standard only, with the two blue i texts in six parts", () => {

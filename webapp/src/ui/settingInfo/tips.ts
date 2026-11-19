@@ -359,10 +359,10 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
   ),
   "tips.smsSignIn.dailyCap": t(
     "The most sign-in SMS sent to this country's numbers in 24 hours. It protects against someone making the server send thousands of paid SMS. At the limit new sign-in codes stop and an alert opens; from 80 % an earlier alert warns.",
-    `${STANDARD_ONLY} Rider and driver apps: at the limit they say We cannot send more SMS codes right now. Admins get the alert (System). Test numbers are never counted.`,
+    `${STANDARD_ONLY} Rider and driver apps: at the limit they say We cannot send more SMS codes right now. Admins get the alert (System) when the System health alert is on for the country. Test numbers are never counted.`,
     "10 to 100 000 SMS per 24 hours, whole numbers.",
     "200.",
-    "200: the 201st person in 24 hours must wait until the oldest SMS is a day old, or until an admin raises the limit.",
-    "10: only ten people can sign in per day; 100 000: almost no protection against SMS cost.",
+    "200: the 201st SMS in 24 hours is not sent; that person must wait until the oldest SMS is a day old, or until an admin raises the limit. A code asked for twice counts twice.",
+    "10: only ten SMS per day, so about ten people can sign in; 100 000: almost no protection against SMS cost.",
   ),
 };
