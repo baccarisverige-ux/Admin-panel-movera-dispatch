@@ -28,7 +28,7 @@ export const SETTING_FILES: Readonly<Record<string, readonly string[]>> = {
     "pricing/FeesPanel.tsx", "pricing/HistoryPanel.tsx", "pricing/PickupPayPanel.tsx", "pricing/PriceTable.tsx", "pricing/SurgePanel.tsx",
     "pricing/SurgeQuickPopup.tsx", "pricing/SurgeSlider.tsx", "pricing/TestRide.tsx",
   ],
-  "Tips & limits": ["pricing/CountryExtrasPanel.tsx", "pricing/ChatSettingsCard.tsx", "pricing/EmergencyNumbersEditor.tsx"],
+  "Tips & limits": ["pricing/CountryExtrasPanel.tsx", "pricing/ChatSettingsCard.tsx", "pricing/EmergencyNumbersEditor.tsx", "pricing/SmsSignInCard.tsx"],
   "Settings": ["pages/ConfigPage.tsx", "config/CountryAppsPanel.tsx", "config/RequestLimitsPanel.tsx", "platform/SettingsParts.tsx"],
   "Dispatch": [
     "pages/DispatchPage.tsx", "pages/DispatchSectionPage.tsx", "dispatch/ActivityView.tsx", "dispatch/AllFeaturesView.tsx", "dispatch/AssignPanel.tsx",
@@ -123,6 +123,8 @@ function defaultSample(): [id: string, value: number | boolean | string][] {
     ["tips.savedPlacesPerPerson", se.personLimits.savedPlacesPerPerson],
     ["tips.emergencyContactsPerPerson", se.personLimits.emergencyContactsPerPerson],
     ["tips.sosContactsSms", se.sosContactsSms],
+    ["tips.smsSignIn.enabled", se.smsSignIn.enabled],
+    ["tips.smsSignIn.dailyCap", se.smsSignIn.dailyCap],
     ["tips.driverBonusLimit", se.driverBonusLimit],
     ["tips.walletCreditMax", se.walletCreditMax],
     ["tips.bonusCampaignMax", se.bonusCampaignMax],

@@ -17,6 +17,7 @@ import {
   mixedTipAcross,
   mixedCashInCarAcross,
   zoneValuesForSave,
+  draftForShownScope,
   TIP_CASH_IN_CAR_MINUTES,
   TIP_FLAGS,
   type MixedTipRules,
@@ -36,6 +37,7 @@ import { useSlice } from "../api/hooks";
 import { CommandButton } from "../ui/CommandButton";
 import { FieldErrorScope, useFieldErrors } from "../ui/fieldErrors";
 import { NumberField } from "./NumberField";
+import { SmsSignInCard } from "./SmsSignInCard";
 import { EmergencyNumbersEditor } from "./EmergencyNumbersEditor";
 import { ChatSettingsCard } from "./ChatSettingsCard";
 import { currencySymbol, fromSek, money, tipMax } from "./zonePricing";
@@ -150,8 +152,10 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
   const mixedMinutes = targets && targets.length > 1 ? mixedCashInCarAcross(targets.map((id) => [zoneById(id)?.name ?? id, zoneSettingsOf(zoneBook, country, id).tipRules] as const)) : undefined;
   const saved: CountrySettings = { ...first, mixedTipRules: mixedTip, mixedCashInCar: mixedMinutes, tipRules: { ...first.tipRules, ...Object.fromEntries(TIP_FLAGS.filter((flag) => mixedTip?.[flag]).map((flag) => [flag, false])) } };
   const [draft, setDraft] = useState<CountrySettings | null>(null);
-  const shown = draft ?? saved;
-  const dirty = draft !== null && JSON.stringify(sectionPart(draft, "pricing")) !== JSON.stringify(sectionPart(saved, "pricing"));
+  // The scope the draft was made on: its country-wide values (SMS sign-in, emergency numbers) never follow to another shown scope.
+  const [draftScope, setDraftScope] = useState(zoneId);
+  const shown = draft ? draftForShownScope(draft, draftScope, zoneId, saved) : saved;
+  const dirty = draft !== null && JSON.stringify(sectionPart(shown, "pricing")) !== JSON.stringify(sectionPart(saved, "pricing"));
   const fieldErrors = useFieldErrors();
   const issues = dirty ? countrySettingsIssues(country, shown) : [];
   const lines = dirty ? countrySettingsLines(country, saved, shown) : [];
@@ -160,7 +164,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
   const name = market(country).name;
   const zoneNames = (targets ?? []).map((id) => zoneById(id)?.name ?? id).join(", ");
   const hardMax = driverBonusHardMax(country);
-  const edit = (patch: Partial<CountrySettings>) => setDraft({ ...shown, ...patch });
+  const edit = (patch: Partial<CountrySettings>) => { setDraft({ ...shown, ...patch }); setDraftScope(zoneId); };
 
   useEffect(() => {
     onDirty(dirty);
@@ -318,6 +322,10 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
           <div id="extras-emergency-numbers" className="cx-anchor">
             <EmergencyNumbersEditor rows={onStandard ? shown.emergencyNumbers : countrySettingsOf(book, country).emergencyNumbers} canEdit={canEdit} onStandard={onStandard} onChange={(emergencyNumbers) => edit({ emergencyNumbers })} sosSms={onStandard ? shown.sosContactsSms : countrySettingsOf(book, country).sosContactsSms} onSosSms={(sosContactsSms) => edit({ sosContactsSms })} />
           </div>
+          {/* v0.18.135 (contract.json#smsSignIn): CountryRules.smsSignIn, country standard only (a zone shows the country's, read-only). */}
+          <div id="extras-sms-sign-in" className="cx-anchor">
+            <SmsSignInCard value={onStandard ? shown.smsSignIn : countrySettingsOf(book, country).smsSignIn} saved={onStandard ? saved.smsSignIn : countrySettingsOf(book, country).smsSignIn} canEdit={canEdit} onStandard={onStandard} onChange={(smsSignIn) => edit({ smsSignIn })} />
+          </div>
           <div id="extras-person-limits" className="cx-anchor">
             <div className="fee-card" data-testid="person-limits">
               <div>
@@ -343,7 +351,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
             after={pricingSummary(country, shown)}
             info={{ changeOf: { kind: "tipsLimits", country, before: saved, after: shown } }}
             sliceKey={COUNTRY_SETTINGS_KEY}
-            value={targets ? { ...book, draftRev: book.draftRev + 1, zones: { ...zoneRules.value, ...zoneValuesForSave(shown, targets, (id) => zoneSettingsOf(zoneBook, country, id)) } } : { ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
+            value={targets ? { ...book, draftRev: book.draftRev + 1, zones: { ...zoneRules.value, ...zoneValuesForSave(shown, targets, (id) => zoneSettingsOf(zoneBook, country, id), zoneId) } } : { ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
             expectedSliceRev={book.draftRev}
             disabled={loading || !canEdit || !dirty || issues.length > 0 || fieldErrors.count > 0}
             title={!canEdit ? tr("Your role cannot change this.") : !dirty ? tr("No unsaved change.") : fieldErrors.first ?? issues[0]}
