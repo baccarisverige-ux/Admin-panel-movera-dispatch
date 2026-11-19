@@ -36,6 +36,7 @@ import { useSlice } from "../api/hooks";
 import { CommandButton } from "../ui/CommandButton";
 import { FieldErrorScope, useFieldErrors } from "../ui/fieldErrors";
 import { NumberField } from "./NumberField";
+import { SmsSignInCard } from "./SmsSignInCard";
 import { EmergencyNumbersEditor } from "./EmergencyNumbersEditor";
 import { ChatSettingsCard } from "./ChatSettingsCard";
 import { currencySymbol, fromSek, money, tipMax } from "./zonePricing";
@@ -317,6 +318,10 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
           {/* v0.18.57 §79 (owner 2026-11-10): CountryRules.emergencyNumbers; v0.18.101 §92 (BQ-V34): CountryRules.sosContactsSms; both country standard only. */}
           <div id="extras-emergency-numbers" className="cx-anchor">
             <EmergencyNumbersEditor rows={onStandard ? shown.emergencyNumbers : countrySettingsOf(book, country).emergencyNumbers} canEdit={canEdit} onStandard={onStandard} onChange={(emergencyNumbers) => edit({ emergencyNumbers })} sosSms={onStandard ? shown.sosContactsSms : countrySettingsOf(book, country).sosContactsSms} onSosSms={(sosContactsSms) => edit({ sosContactsSms })} />
+          </div>
+          {/* v0.18.135 (contract.json#smsSignIn): CountryRules.smsSignIn, country standard only (a zone shows the country's, read-only). */}
+          <div id="extras-sms-sign-in" className="cx-anchor">
+            <SmsSignInCard value={onStandard ? shown.smsSignIn : countrySettingsOf(book, country).smsSignIn} saved={onStandard ? saved.smsSignIn : countrySettingsOf(book, country).smsSignIn} canEdit={canEdit} onStandard={onStandard} onChange={(smsSignIn) => edit({ smsSignIn })} />
           </div>
           <div id="extras-person-limits" className="cx-anchor">
             <div className="fee-card" data-testid="person-limits">

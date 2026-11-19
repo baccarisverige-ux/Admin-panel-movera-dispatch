@@ -415,7 +415,7 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; bonusCampaignMax?: number; maxRiderDebt?: number; driverOwesLimit?: { enabled: boolean; max: number | null }; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number; connectTimeoutSeconds?: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }>; sosContactsSms?: boolean };
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; bonusCampaignMax?: number; maxRiderDebt?: number; driverOwesLimit?: { enabled: boolean; max: number | null }; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number; connectTimeoutSeconds?: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }>; sosContactsSms?: boolean; smsSignIn?: { enabled: boolean; dailyCap: number } };
 
 /**
  * F1 (MONEY, Rules audits/impact/f1-tips-save-payout-mode.md): the keys of a country_rules document the Tips & limits
@@ -424,7 +424,7 @@ export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBo
  * fixed list and the server stores what it is sent, so Finance › Payouts settings' payoutMode and payoutSchedule (same
  * document) were dropped by every Tips & limits Save: a manual country went back to automatic, Monday 08:00.
  */
-export const COUNTRY_RULES_PANEL_KEYS = ["version", "publishedAt", "country", "currency", "tips", "raiseSteps", "driverBonus", "driverPayChangeMax", "onTripOffers", "limits", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms"] as const;
+export const COUNTRY_RULES_PANEL_KEYS = ["version", "publishedAt", "country", "currency", "tips", "raiseSteps", "driverBonus", "driverPayChangeMax", "onTripOffers", "limits", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms", "smsSignIn"] as const;
 
 /**
  * Kept from the stored document on a country Standard only. A zone's base can be its Standard's document (a zone
@@ -432,7 +432,7 @@ export const COUNTRY_RULES_PANEL_KEYS = ["version", "publishedAt", "country", "c
  * Standard only (contract payoutSchedule "read from the country standard only"; J9 v0.18.84 maxRiderDebt and
  * driverOwesLimit: "the country standard only; a zone's own value is ignored") and refuses the SOS / emergency keys
  * on a zone (400 *_country_only). The panel's own Standard-only keys (walletCreditMax, emergencyNumbers,
- * sosContactsSms) are in COUNTRY_RULES_PANEL_KEYS and only sent on the Standard by the caller.
+ * sosContactsSms, smsSignIn) are in COUNTRY_RULES_PANEL_KEYS and only sent on the Standard by the caller.
  */
 export const COUNTRY_RULES_STANDARD_ONLY_KEPT = ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit"] as const;
 
@@ -492,6 +492,8 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     ...(input.emergencyNumbers ? { emergencyNumbers: input.emergencyNumbers.map((row) => ({ kind: row.kind, number: row.number, label: { ...row.label } })) } : {}),
     // v0.18.101 §92 (BQ-V34): the SMS to the driver's emergency contacts on SOS, on the country standard only (a zone's own rules → 400 sos_sms_country_only).
     ...(input.sosContactsSms !== undefined ? { sosContactsSms: input.sosContactsSms } : {}),
+    // v0.18.135 (contract.json#smsSignIn): real SMS sign-in codes and the daily SMS limit, on the country standard only (a zone's own rules → 400 sms_sign_in_country_only).
+    ...(input.smsSignIn !== undefined ? { smsSignIn: { enabled: input.smsSignIn.enabled === true, dailyCap: input.smsSignIn.dailyCap } } : {}),
   };
 }
 
