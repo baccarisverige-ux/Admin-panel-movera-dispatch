@@ -125,12 +125,13 @@ paths:
         (3) CountryRules.smsSignIn.enabled of that country''s standard is true. Otherwise the answer is 403 forbidden, reason
         sign_in_restricted, exactly as before (the apps offer the waiting list). A test number (outside production) never
         gets an SMS and keeps the fixed test code, whatever the switch says. Cost guard (SMS pumping): per country, the sign-in
-        SMS handed to the SMS company in the last 24 hours (accepted or still being sent) are counted before each new one.
-        At dailyCap the request is refused: 503 unavailable, reason sms_daily_limit, Retry-After = until the oldest leaves
-        the 24 h window (at most 24 h); no code is made and nothing is sent (fail closed). Test numbers are not counted and
-        not stopped. The code is stored first, then the SMS is handed to the SMS company (one try, short time limit) before
-        the answer. Accepted: 200 as before (requestId, sessionId, expiresAt, retryAfterSeconds). Refused, failed or timed
-        out: the code is void at once and the answer is 503 unavailable, reason sms_not_sent, Retry-After = auth.otp.retryAfterSeconds;
+        SMS handed to the SMS company in the last 24 hours are counted before each new one: accepted, still being sent, and
+        those the company did not answer in time (it may still have sent and billed them); only an SMS the company refused
+        is not counted. At dailyCap the request is refused: 503 unavailable, reason sms_daily_limit, Retry-After = until the
+        oldest leaves the 24 h window (at most 24 h); no code is made and nothing is sent (fail closed). Test numbers are
+        not counted and not stopped. The code is stored first, then the SMS is handed to the SMS company (one try, short time
+        limit) before the answer. Accepted: 200 as before (requestId, sessionId, expiresAt, retryAfterSeconds). Refused, failed
+        or timed out: the code is void at once and the answer is 503 unavailable, reason sms_not_sent, Retry-After = auth.otp.retryAfterSeconds;
         the app may ask again after that wait. The try still counts on the hourly limits.'
       tags:
       - Auth
