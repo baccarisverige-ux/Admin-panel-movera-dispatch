@@ -8,7 +8,7 @@ import { ADMIN, fakeSettings, fakeTripServer, signIn } from "./live-fake";
  * tip only.
  */
 const SEK = (kr: number) => ({ amountMinor: kr * 100, currency: "SEK" });
-const NUMBERS = [{ kind: "police", number: "114 14", label: { sv: "Polis", fr: "Police", en: "Police" } }];
+const NUMBERS = [{ kind: "police", number: "11414", label: { sv: "Polis", fr: "Police", en: "Police" } }];
 const STANDARD_ONLY = { emergencyNumbers: NUMBERS, sosContactsSms: false, walletCreditMax: SEK(5000), maxRiderDebt: SEK(300), driverOwesLimit: { enabled: true, max: SEK(800) } };
 
 test("Tips & limits: a zone shown + the Standard chosen: the save does not reset the Standard's emergency numbers, SOS SMS or money limits", async ({ page }) => {
@@ -25,7 +25,7 @@ test("Tips & limits: a zone shown + the Standard chosen: the save does not reset
   await expect(panel.getByLabel("Tip 2", { exact: true })).toHaveValue("35");
   // The country's emergency number is shown read-only on the zone.
   await expect(panel.getByTestId("emergency-numbers-country-only")).toBeVisible();
-  await expect(panel.getByLabel("Emergency number 1", { exact: true })).toHaveValue("114 14");
+  await expect(panel.getByLabel("Emergency number 1", { exact: true })).toHaveValue("11414");
   await expect(panel.getByLabel("Emergency number 1", { exact: true })).toBeDisabled();
 
   await panel.getByLabel("Tip 1", { exact: true }).fill("12");

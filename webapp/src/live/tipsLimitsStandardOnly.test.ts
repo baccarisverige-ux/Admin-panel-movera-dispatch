@@ -20,7 +20,7 @@ import { createLiveSettings } from "./liveSettings.ts";
  */
 const sample = (name: string) => JSON.parse(readFileSync(new URL(`../../../contracts/fixtures/config/${name}.json`, import.meta.url), "utf8")) as Doc;
 const panel = readFileSync(new URL("../pricing/CountryExtrasPanel.tsx", import.meta.url), "utf8");
-const CUSTOM_NUMBERS = [{ kind: "police", number: "114 14", label: { sv: "Polis", fr: "Police", en: "Police" } }];
+const CUSTOM_NUMBERS = [{ kind: "police", number: "11414", label: { sv: "Polis", fr: "Police", en: "Police" } }];
 const SEK = (kr: number) => ({ amountMinor: kr * 100, currency: "SEK" });
 
 /** The Standard of Sweden with its own emergency number, SOS SMS off, and its own three money limits. */
