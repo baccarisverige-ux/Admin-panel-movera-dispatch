@@ -29,3 +29,9 @@ test("en/sv/fr have the new text", () => {
     assert.ok(t.includes(`"The pickup zone's rules always apply": "${want[l]}"`), l);
   }
 });
+
+test("the Whose rules help says the pickup zone always applies", () => {
+  const info = readFileSync(new URL("../ui/settingInfo/dispatchZone.ts", import.meta.url), "utf8");
+  assert.ok(info.includes("the pickup zone's rules always apply"));
+  assert.ok(!info.includes("Driver's zone: the driver's home rules decide"));
+});
