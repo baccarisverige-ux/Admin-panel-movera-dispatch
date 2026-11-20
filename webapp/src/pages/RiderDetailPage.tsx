@@ -61,6 +61,7 @@ import { LiveRiderSavedPlaces } from "../live/LiveProfileData";
 import { LiveRiderModeration } from "../live/LiveRiderModeration";
 import { LiveBlockedPairs } from "../live/LiveBlockedPairs";
 import { LiveWalletCredit } from "../live/LiveWalletCredit";
+import { LiveStripeFeePayments } from "../live/LiveStripeFeePayments";
 import { LiveUnlockSignIn } from "../live/LiveUnlockSignIn";
 import { LiveMessagePerson } from "../live/LiveMessagePerson";
 import { feeKindOf, owedByCurrency, owedText, tripMoney, walletByCurrency, walletText } from "../live/tripLive";
@@ -373,6 +374,7 @@ export function RiderDetailPage() {
 
         <TabPanel id="wallet" activeId={tab}>
           <div className="rd-money">
+            {liveData ? <LiveStripeFeePayments riderId={rider.id} /> : null}
             {liveData ? <LiveWalletCredit riderId={rider.id} version={rider.version} walletMinor={liveRiderOf(rider)?.walletMinor ?? null} currency={liveRiderOf(rider)?.currency ?? null} /> : (
             <section className="fd-box rd-wallet">
               <h3>{trn("{0} Movera wallet", <Wallet size={16} aria-hidden="true" />)}</h3>
