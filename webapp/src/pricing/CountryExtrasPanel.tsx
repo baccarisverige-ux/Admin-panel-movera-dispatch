@@ -13,6 +13,7 @@ import {
   countrySettingsIssues,
   countrySettingsLines,
   countrySettingsOf,
+  shownSettingsOf,
   zoneSettingsOf,
   mixedTipAcross,
   mixedCashInCarAcross,
@@ -143,7 +144,9 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
   // Supervisor MF-A1: a document that could not be read is named in the dialog and Confirm stays off.
   const blocked = undoBlocked(lastSave.value);
   const savedAt = lastSave.value ? shortDateTime(lastSave.value.at, market(country).timeZone) : "";
-  const first = zoneId ? zoneSettingsOf(zoneBook, country, zoneId) : countrySettingsOf(book, country);
+  // A zone shows the Standard's values for the Standard-only fields, so a save for several scopes never sends the
+  // zone's own (defaults) to the Standard.
+  const first = zoneId ? shownSettingsOf(zoneBook, country, zoneId) : countrySettingsOf(book, country);
   // Live G8 round 3 item 1: the chosen zones that disagree on a tip switch show it mixed, with the zones where it is off.
   const mixedTip = targets && targets.length > 1 ? mixedTipAcross(targets.map((id) => [zoneById(id)?.name ?? id, zoneSettingsOf(zoneBook, country, id).tipRules] as const)) : first.mixedTipRules;
   // v0.18.91 job C8 (supervisor must-fix 1): chosen zones with different cash-tip times show them; Save keeps each one's.
