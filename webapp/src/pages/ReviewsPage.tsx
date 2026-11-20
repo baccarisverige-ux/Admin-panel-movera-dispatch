@@ -1,6 +1,7 @@
 import { useDirtyWarning } from "../ui/useDirtyWarning";
 import { isLiveData } from "../live/realData";
 import { LiveReviewQueue } from "../live/LiveReviewQueue";
+import { LiveDriverReviews } from "../live/LiveDriverReviews";
 import { RATING_TAGS, ratingTagLabel } from "../live/ratingTags";
 import { tr, trn, trx } from "../i18n";
 import { useMemo, useState } from "react";
@@ -196,6 +197,7 @@ function LiveRules({ ops, country, editable, onNotice }: { ops: ReviewOps; count
           <p className="gr-tags">{RATING_TAGS.aboutRider.map((tag) => <span key={tag}>{ratingTagLabel(tag)}</span>)}</p>
         </Card>
         <LiveReviewQueue />
+        <LiveDriverReviews />
       </div>
     </div>
   );

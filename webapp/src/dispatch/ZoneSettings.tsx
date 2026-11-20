@@ -504,6 +504,11 @@ function Safety({ zone, onChange, disabled, country, countryName }: Props) {
       <Card title={tr("Share trip link")} tone="green" icon={<Shield size={18} />} help={tr("During a trip the rider can send a live link to someone they trust. The page shows the car, the plate and the arrival time. The car’s position shows only while the rider is in the car, and never near the pickup, a stop or the drop-off. The link stops at drop-off.")}>
         <Row info="dispatch.zone.ridersCanShareALiveTripLink" label={tr("Riders can share a live trip link")} help={tr("Off: the rider app hides Share trip and every live link of this zone stops. Usual value: on.")} on={zone.shareTrip?.on ?? CONFIG_DEFAULTS.shareTripOn} disabled={disabled} onToggle={(on) => onChange({ ...zone, shareTrip: { on } })} />
       </Card>
+      {/* v0.18.147 driver profile (owner 2026-11-20 "Now build all"; contract.json#driverProfile.setting): the rider document's driverProfile { on, reviews }. */}
+      <Card title={tr("Driver profile")} tone="blue" icon={<Shield size={18} />} help={tr("Riders tap the driver card to see the driver's profile: photo, languages, trips, rating, compliments and the latest approved review. Riders' own details are never shown.")}>
+        <Row info="dispatch.zone.ridersSeeTheDriverProfile" label={tr("Riders see the driver profile")} help={tr("Off: the card opens only the simple driver page. Usual value: on.")} on={zone.driverProfile?.on ?? CONFIG_DEFAULTS.driverProfileOn} disabled={disabled} onToggle={(on) => onChange({ ...zone, driverProfile: { on, reviews: zone.driverProfile?.reviews ?? CONFIG_DEFAULTS.driverReviewsOn } })} />
+        <Row info="dispatch.zone.writtenReviewsOnTheDriverProfile" label={tr("Written reviews on the driver profile")} help={tr("On: riders may write a short review after the trip; each one shows only after an admin approves it in Reviews › Driver reviews. Usual value: off until someone moderates.")} on={zone.driverProfile?.reviews ?? CONFIG_DEFAULTS.driverReviewsOn} disabled={disabled} onToggle={(reviews) => onChange({ ...zone, driverProfile: { on: zone.driverProfile?.on ?? CONFIG_DEFAULTS.driverProfileOn, reviews } })} />
+      </Card>
     </div>
   );
 }
