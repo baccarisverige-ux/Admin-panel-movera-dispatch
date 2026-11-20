@@ -493,7 +493,8 @@ export function countrySettingsIssues(country: MarketId, settings: CountrySettin
   const ask = settings.driverPayRequest;
   if (!Number.isInteger(ask.dayOfMonth) || ask.dayOfMonth < 1 || ask.dayOfMonth > 28) issues.push(tr("{0}: the day of the monthly pay request must be 1 to 28.", [name]));
   if (ask.payLink !== "" && !isPayLink(ask.payLink)) issues.push(tr("{0}: the payment link must start with https:// and have no spaces (at most {1} characters).", [name, PAY_LINK_MAX]));
-  else if (ask.enabled && ask.payLink === "") issues.push(tr("{0}: set the payment link to switch the monthly pay request on.", [name]));
+  // Owner 2026-11-20 "So we use stripe ... for the driver to pay his monthly invoice": Stripe replaces the link; no link is
+  // needed to switch it on. A stored link stays hidden legacy (Rule D) and is still checked above.
   if (ask.minAmount !== null && (!finite(ask.minAmount) || ask.minAmount < 0)) issues.push(tr("{0}: the smallest amount to ask for must be 0 or above.", [name]));
   else if (ask.enabled && ask.minAmount === null) issues.push(tr("{0}: set the smallest amount to ask for to switch the monthly pay request on.", [name]));
   else if (ask.minAmount !== null && hasMoreDecimals(ask.minAmount, country)) issues.push(tr("{0}: the smallest amount to ask for has too many decimals.", [name]));
