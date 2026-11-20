@@ -140,6 +140,8 @@ function defaultSample(): [id: string, value: number | boolean | string][] {
     ["dispatch.res.aDriverSLateCancel", zone.reservation.driverLateCancelHours],
     ["dispatch.zone.pickupEntranceChipsApproximate", CONFIG_DEFAULTS.pickupSpotsOn],
     ["dispatch.zone.ridersCanShareALiveTripLink", CONFIG_DEFAULTS.shareTripOn],
+    ["dispatch.zone.ridersAndDriversCanShareLiveLocation", CONFIG_DEFAULTS.liveLocationShare],
+    ["dispatch.zone.adjustPickupBannerFrom", CONFIG_DEFAULTS.adjustPickupMeters],
     ["pricing.price.base", movera.base],
     ["pricing.price.perKm", movera.perKm],
     ["pricing.price.perMin", movera.perMin],
