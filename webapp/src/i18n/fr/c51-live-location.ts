@@ -1,7 +1,7 @@
-/** French dictionary, area c50-live-location: contract v0.18.144 (contract.json#liveLocation): Dispatch › Safety switch "Live location" (default off) and the adjust-pickup banner distance. Add new keys at the end of this file. Merged in ../fr.ts in this order. */
-import type { enC50LiveLocation } from "../en/c50-live-location.ts";
+/** French dictionary, area c51-live-location: contract v0.18.144 (contract.json#liveLocation): Dispatch › Safety switch "Live location" (default off) and the adjust-pickup banner distance. Add new keys at the end of this file. Merged in ../fr.ts in this order. */
+import type { enC51LiveLocation } from "../en/c51-live-location.ts";
 
-export const frC50LiveLocation: Record<keyof typeof enC50LiveLocation, string> = {
+export const frC51LiveLocation: Record<keyof typeof enC51LiveLocation, string> = {
   "Live location": "Position en direct",
   "During a ride the rider and the driver can each turn on Share my location, so they see each other on the map until pickup. Positions are passed on live and never saved. Off by default until the load test passes.": "Pendant une course, le passager et le chauffeur peuvent chacun activer Partager ma position pour se voir sur la carte jusqu'à la prise en charge. Les positions sont transmises en direct et jamais enregistrées. Désactivé par défaut jusqu'à la réussite du test de charge.",
   "Riders and drivers can share their live location": "Les passagers et les chauffeurs peuvent partager leur position en direct",
