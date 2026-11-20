@@ -1,7 +1,7 @@
 import { localDay } from "../dashboard/time";
 import { isLiveData } from "../live/realData";
 import { logExport } from "../reports/activityLog";
-import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { listQueryOf, setListQuery, subscribeLists } from "../live/liveLists";
@@ -50,6 +50,9 @@ import { useDialogFocus } from "../ui/useDialogFocus";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { DateInput } from "../ui/DateInput";
 import { ListCount } from "../live/ListCount";
+
+// v0.18.140 (contract.json#accountDeletion): Riders › Account deletion requests (riders and drivers), live builds only.
+const LiveDeletionRequests = lazy(() => import("../live/LiveDeletionRequests").then((module) => ({ default: module.LiveDeletionRequests })));
 
 type View = "riders" | "promotions" | "insights";
 
@@ -179,6 +182,7 @@ export function RidersPage() {
 
       {view === "riders" ? (
         <>
+          {isLiveData() ? <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}><LiveDeletionRequests /></Suspense> : null}
           <section className="rd-segments" aria-label={tr("Rider categories")}>
             {SEGMENTS.map((item) => (
               <button data-command="admin.table.filter" key={item.id} type="button" className={`rd-seg tone-${TONE[item.id]}${segment === item.id ? " active" : ""}`} aria-pressed={segment === item.id} title={trx(item.hint)} onClick={() => go({ seg: item.id })}>
