@@ -277,7 +277,7 @@ export type Trip = {
   adminFlag?: AdminTripFlag;
 };
 export type TripRideCheck = { checkId: string; trigger: string; askedAt: string; answerBy: string; answers: { rider?: "ok" | "need_help"; driver?: "ok" | "need_help" }; alertedAt?: string };
-export type TripRouteChange = { changeId: string; status: "pending" | "accepted" | "refused" | "expired" | "withdrawn"; dropoff: TripPlace; stops: TripPlace[]; total: LiveMoney; difference: LiveMoney; askedAt: string; answerBy: string; answeredAt?: string; answeredBy?: "driver" | "rider" | "system"; driverEarnings?: LiveMoney; earningsDifference?: LiveMoney; /** v0.18.89 §90 (priceDisplay.routeChange): what the driver gets for the whole trip with the new route; optional. */ driverTotal?: LiveMoney };
+export type TripRouteChange = { changeId: string; status: "pending" | "accepted" | "refused" | "expired" | "withdrawn"; dropoff: TripPlace; stops: TripPlace[]; total: LiveMoney; difference: LiveMoney; askedAt: string; answerBy: string; answeredAt?: string; answeredBy?: "driver" | "rider" | "system"; driverEarnings?: LiveMoney; earningsDifference?: LiveMoney; /** v0.18.89 §90 (priceDisplay.routeChange): what the driver gets for the whole trip with the new route; optional. */ driverTotal?: LiveMoney; /** v0.18.143 (whileSearching) */ pickup?: TripPlace; reason?: "rider_changed_route" };
 export type AdminTripFlag = { flagged: boolean; reason?: string; by?: string; at?: string };
 export type AdminTripNote = { noteId: string; tripId: string; text: string; adminId: string; adminName?: string; at: string };
 /** GET /admin/ride-checks rows (contract.json#onTrip.rideCheck.adminList). */
