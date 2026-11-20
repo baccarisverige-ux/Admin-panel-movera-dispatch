@@ -45,7 +45,6 @@ test("pay request: ON needs the https link and the smallest amount; a wrong day 
   assert.deepEqual(countrySettingsIssues("SE", withAsk("SE", { enabled: true, dayOfMonth: 28, payLink: LINK, minAmount: 100 })), []);
   assert.deepEqual(countrySettingsIssues("SE", withAsk("SE", { enabled: false, payLink: LINK, minAmount: null })), [], "off may keep a link and have no amount");
   const one = (ask: Partial<Ask>, why: string) => assert.equal(countrySettingsIssues("SE", withAsk("SE", ask)).length, 1, why);
-  one({ enabled: true, payLink: "", minAmount: 0 }, "on without a link");
   one({ enabled: true, payLink: LINK, minAmount: null }, "on without an amount");
   one({ enabled: false, payLink: "http://pay.sumup.com/x" }, "http is refused");
   one({ enabled: false, payLink: "javascript:alert(1)" }, "not a web link");
@@ -133,4 +132,14 @@ test("pay request: the server's refusals and every text in sv / fr / en; the set
   const panel = readFileSync(new URL("../pricing/CountryExtrasPanel.tsx", import.meta.url), "utf8");
   assert.ok(panel.includes('data-testid="driver-pay-request"') && panel.includes('<SettingInfo id="tips.driverPayRequest" />'), "the card with its 'i'");
   assert.ok(/data-testid="driver-pay-request"[\s\S]{0,400}disabled=\{!canEdit \|\| !onStandard\}/.test(panel), "country Standard only");
+});
+
+test("owner 2026-11-20 \"So we use stripe ... for the driver to pay his monthly invoice\": Stripe replaces the link: on needs no link; the link field is hidden (stored value kept)", () => {
+  const withAsk = (ask: Record<string, unknown>) => ({ ...defaultCountrySettings("SE"), driverPayRequest: { ...defaultCountrySettings("SE").driverPayRequest, ...ask } });
+  assert.deepEqual(countrySettingsIssues("SE", withAsk({ enabled: true, payLink: "", minAmount: 0 }) as never), [], "on with no link is fine");
+  assert.equal(countrySettingsIssues("SE", withAsk({ enabled: true, payLink: "http://x", minAmount: 0 }) as never).length, 1, "a stored bad link is still refused");
+  const panel = readFileSync(new URL("../pricing/CountryExtrasPanel.tsx", import.meta.url), "utf8");
+  assert.ok(!panel.includes('data-testid="driver-pay-request-link"'), "no link field in the panel");
+  const stored = completeCountrySettings("SE", { driverPayRequest: { enabled: true, dayOfMonth: 1, payLink: "https://pay.sumup.com/b2c/X", minAmount: 0 } });
+  assert.equal(stored.driverPayRequest.payLink, "https://pay.sumup.com/b2c/X", "the stored link is kept");
 });
