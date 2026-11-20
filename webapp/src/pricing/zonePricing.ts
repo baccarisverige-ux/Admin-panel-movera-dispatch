@@ -430,7 +430,7 @@ export function normalizeStore(value: unknown): PricingStore {
  * Launch fix 2026-11-20 (audit admin-every-control): the zones whose prices are not published, so Start surge says so
  * before the server refuses it (503 pricing_not_published, contracts/CONTRACT.md "production has no seeds"). A zone
  * has prices when its own document is published, or it uses its country's standard and that standard is published.
- * A zone that was not read (no answer) is not marked.
+ * A zone that was not read (no answer), or that uses a standard that was not read, is not marked.
  */
 export function unpublishedPriceZones(
   markets: readonly { id: string; zones: readonly { id: string }[] }[],
@@ -443,7 +443,9 @@ export function unpublishedPriceZones(
       const own = draftOf(zone.id);
       if (!own) return false;
       if (own.liveVersion >= 1) return false;
-      return !(own.usesStandard && (standard?.liveVersion ?? 0) >= 1);
+      // A zone on its country's standard is marked only when that standard was read and is not published.
+      if (own.usesStandard) return Boolean(standard) && (standard?.liveVersion ?? 0) < 1;
+      return true;
     }).map((zone) => zone.id);
   });
 }
@@ -979,4 +981,9 @@ export function marketZoneIdsFor(id: MarketId): string[] {
 /** J5b: the contract's English text of a commission-step problem (the panel translates it; contract.json#commissionSteps.texts.errors). */
 export function stepProblemText(problem: keyof typeof STEPS_CONTRACT.texts.errors): string {
   return STEPS_CONTRACT.texts.errors[problem].en.replace("{max}", String(STEPS_CONTRACT.validation.maxSteps));
+}
+
+/** Launch fix 2026-11-20: the reason Start surge is off, shown under the button (not only on hover). */
+export function surgeStartNote(error: string | undefined, multiplier: number): string {
+  return error && multiplier > 1 ? error : "";
 }

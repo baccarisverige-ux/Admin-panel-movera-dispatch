@@ -41,6 +41,7 @@ import {
   type SurgeProfile,
   type ZoneBook,
   type ZoneLive,
+  surgeStartNote,
 } from "./zonePricing";
 import { tr, trn, uiLocale, trx } from "../i18n";
 import { SettingInfo } from "../ui/SettingInfo";
@@ -177,7 +178,7 @@ export function SurgePanel({ market, zoneId, zoneName, rows, alerts, book, live,
                   {DURATIONS.map((value) => <option key={value} value={value}>{value < 60 ? tr("{0} min", [value]) : tr("{0} h", [value / 60])}</option>)}
                 </select>)}<SettingInfo id="pricing.manualSurge.duration" label={tr("Manual surge duration")} /></label>
               <CommandButton command="admin.pricing.startSurge" className="dash-btn surge-go" targetId={zoneId} confirmTarget={false} scope={zoneId} before="no manual surge" after={`×${manual.toFixed(1)} for ${minutes} min`} expectedSliceRev={store.draftRev} sliceKey={SLICE_KEY} value={start.store} disabled={!canEdit || manual <= 1 || Boolean(start.error)} title={manual <= 1 ? tr("Move the slider above ×1.0") : start.error} onDone={() => onNotice(tr("Manual surge ×{0} started in {1} for {2}.", [manual.toFixed(1), zoneName, minutes < 60 ? `${minutes} min` : `${minutes / 60} h`]))}>{trn("{0} Start surge ×{1}", <Zap size={14} aria-hidden="true" />, manual.toFixed(1))}</CommandButton>
-              {start.error && manual > 1 ? <small className="fine" role="alert" data-testid="surge-start-blocked">{start.error}</small> : null}
+              {surgeStartNote(start.error, manual) ? <small className="fine" role="alert" data-testid="surge-start-blocked">{surgeStartNote(start.error, manual)}</small> : null}
               <small className="fine">{tr("It stops by itself at the end. Manual surge wins over smart and scheduled surge.")}</small>
             </>
           )}

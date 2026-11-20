@@ -1,6 +1,6 @@
 import { Link, useParams } from "react-router";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
-import { recordState } from "../ui/recordState";
+import { recordPageState } from "../ui/recordState";
 import { formatZoneMoney } from "../markets/markets";
 import { useRecords } from "../api/hooks";
 import { INCIDENT_BY_ID_LIST } from "../live/incidents";
@@ -19,8 +19,8 @@ export function RecordPage({ kind, label, list, back }: { kind: Kind; label: str
   const records = useRecords(kind === "incidents" && isLiveData() ? `${INCIDENT_BY_ID_LIST}${id}` : kind, null);
   const row = records.data?.find((item) => item.id === id);
 
-  // Launch fix 2026-11-20: a failed or retrying read of a wrong link shows "not found", not "Loading" for ever.
-  const state = recordState({ found: Boolean(row), waiting: records.isLoading, missing: records.isError || records.failureCount > 0 });
+  // Launch fix 2026-11-20: a failed read of a wrong link shows "not found", not "Loading" for ever.
+  const state = recordPageState(Boolean(row), records);
   if (state === "loading") return <p className="state-line">{trn("Loading {0}.", label.toLowerCase())}</p>;
 
   if (!row) {

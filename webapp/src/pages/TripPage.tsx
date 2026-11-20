@@ -10,7 +10,7 @@ import { LiveTripTools } from "../live/LiveTripTools";
 import { stoppedMinutes } from "../live/stopVisits";
 import { useFreeDriverIds } from "../dispatch/RideProgress";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
-import { recordState } from "../ui/recordState";
+import { tripPageState } from "../ui/recordState";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Banknote, Car, Clock3, Coins, Eye, FileText, Flag, History, ListOrdered, Lock, MapPinned, MessagesSquare, Radar, Route as RouteIcon, ShieldCheck, Star, Users, Wrench } from "lucide-react";
@@ -179,10 +179,9 @@ export function TripPage() {
   const facts = dispatchOffers.data?.live ?? (trip ? liveTripOf(trip) : null);
 
   // Launch fix 2026-11-20 (audit: /trips/trp_bogus stayed on "Loading trip."): the read by id saying "no such trip"
-  // (or failing) shows "Trip not found" at once; the driver and car lists are only waited for when the trip is there.
-  const singleMissing = !listed && (single.isError || (single.isSuccess && !single.data));
-  const tripState = recordState({ found: Boolean(trip), waiting: trips.isLoading || (!listed && single.isLoading), missing: singleMissing });
-  if (tripState === "loading" || (tripState === "found" && (drivers.isLoading || vehicles.isLoading))) return <p className="state-line">{tr("Loading trip.")}</p>;
+  // (or failing) shows "Trip not found"; the driver and car lists are only waited for when the trip is there.
+  const tripState = tripPageState({ found: Boolean(trip), listed: Boolean(listed), trips, single, others: drivers.isLoading || vehicles.isLoading });
+  if (tripState === "loading") return <p className="state-line">{tr("Loading trip.")}</p>;
   if (!trip || !route) {
     return <NotFoundRecord kind="Trip" id={tripId} list="/trips" back={tr("Back to trips")} />;
   }

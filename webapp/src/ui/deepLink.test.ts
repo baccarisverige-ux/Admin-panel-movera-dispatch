@@ -30,3 +30,18 @@ test("a record page says not found once the record cannot be found, even while a
   assert.equal(recordState({ found: false, waiting: true, missing: true }), "not-found");
   assert.equal(recordState({ found: false, waiting: false, missing: false }), "not-found");
 });
+
+test("page wiring: a retry is not 'not found'; a trip the read by id did not find waits for the list", async () => {
+  const { recordPageState, tripPageState } = await import("./recordState.ts");
+  assert.equal(recordPageState(false, { isLoading: true, isError: false }), "loading", "a payout read that retries stays Loading");
+  assert.equal(recordPageState(false, { isLoading: false, isError: true }), "not-found");
+  assert.equal(recordPageState(true, { isLoading: false, isError: false }), "found");
+  const idle = { isLoading: false, isError: false, isSuccess: true, data: [] };
+  const none = { isLoading: false, isError: false, isSuccess: true, data: null };
+  const busy = { isLoading: true, isError: false };
+  assert.equal(tripPageState({ found: false, listed: false, trips: busy, single: none, others: false }), "loading", "list still loading");
+  assert.equal(tripPageState({ found: false, listed: false, trips: idle, single: none, others: false }), "not-found");
+  assert.equal(tripPageState({ found: false, listed: false, trips: busy, single: { isLoading: false, isError: true }, others: false }), "not-found", "a failed read is not found at once");
+  assert.equal(tripPageState({ found: true, listed: false, trips: busy, single: { ...none, data: {} }, others: false }), "found", "a trip read by id shows before the list");
+  assert.equal(tripPageState({ found: true, listed: true, trips: idle, single: none, others: true }), "loading", "drivers and cars are waited for");
+});

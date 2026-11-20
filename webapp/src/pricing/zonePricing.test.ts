@@ -303,4 +303,9 @@ console.log("exact split checks ok");
   assert(refused.error === "Publish prices for this zone first.", "Start surge is refused before the server is asked");
   assert(refused.store === marked, "the store is unchanged");
   assert(normalizeStore(marked).noPrices?.[0] === "Z003", "the mark survives a re-read of the store");
+  const unread = unpublishedPriceZones([{ id: "DK", zones: [{ id: "D1" }, { id: "D2" }] }], (id) => ({ D1: { liveVersion: 0, usesStandard: true }, D2: { liveVersion: 0 } } as Record<string, { liveVersion: number; usesStandard?: boolean }>)[id] ?? null, (country) => `standard-${country}`);
+  assert(JSON.stringify(unread) === '["D2"]', "a zone on a standard that was not read is not marked");
+  const { surgeStartNote } = await import("./zonePricing.ts");
+  assert(surgeStartNote(refused.error, 1.5) === "Publish prices for this zone first.", "the reason shows under Start surge");
+  assert(surgeStartNote(undefined, 1.5) === "" && surgeStartNote("x", 1) === "", "no note when the button can start, or at ×1.0");
 }
