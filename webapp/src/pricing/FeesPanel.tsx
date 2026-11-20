@@ -44,17 +44,7 @@ export function FeesPanel({ zoneName, airport, currency, book, published, proble
           {row.key.startsWith("airport") && !airport && book.fees[row.key] > 0 ? <small className="fee-note">{trn("{0} is not an airport zone, so this only applies to rides to or from an airport.", zoneName)}</small> : null}
         </div>
       ))}
-      <div className="fee-card">
-        <div>
-          <strong>{tr("Tolls and congestion tax")}</strong>
-          <small>{tr("Passed on to the rider at cost, shown on the receipt")}</small>
-        </div>
-        <label className="mini-switch big">
-          <input type="checkbox" aria-label={tr("Add tolls to the fare")} checked={book.fees.tollsPassThrough} disabled={!canEdit} onChange={(event) => onChange({ tollsPassThrough: event.target.checked })} /><SettingInfo id="pricing.fee.tolls" label={tr("Add tolls to the fare")} />
-          <span aria-hidden="true"><i /></span>
-          {book.fees.tollsPassThrough ? tr("Added to fare") : tr("Not added")}
-        </label>
-      </div>
+      {/* Owner 2026-11-20 "Remove if its safe": no Tolls switch; tollsPassThrough stays stored, no tolls are priced (CONTRACT.md:261). */}
       <div className="fee-card" data-testid="fees-tips-moved">
         <div>
           <strong>{tr("Tips")}</strong>

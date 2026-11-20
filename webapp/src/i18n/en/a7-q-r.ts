@@ -366,6 +366,7 @@ export const enA7QR = {
   "Rules (boost, event, no pickup…)": "Rules (boost, event, no pickup…)",
   "Rules apply to the whole country.": "Rules apply to the whole country.",
   "Rules come from": "Rules come from",
+  "The pickup zone's rules always apply": "The pickup zone's rules always apply",
   "Rules to test": "Rules to test",
   "Rules to test{0}": "Rules to test{0}",
   "Run drills": "Run drills",
