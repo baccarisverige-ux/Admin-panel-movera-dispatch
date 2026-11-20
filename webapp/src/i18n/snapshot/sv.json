@@ -9383,4 +9383,8 @@
 ["Sign-in SMS per day: {0} → {1}","Inloggnings-sms per dygn: {0} → {1}"],
 ["Sign-in SMS: {0} of {1} sent in the last 24 hours","Inloggnings-sms: {0} av {1} skickade de senaste 24 timmarna"],
 ["Sign-in SMS limit reached: {0} of {1} in the last 24 hours. New sign-in codes are stopped","Gränsen för inloggnings-sms är nådd: {0} av {1} de senaste 24 timmarna. Nya inloggningskoder är stoppade"],
-["Raise the daily limit in Tips & limits per country if these are real people","Höj dygnsgränsen i Dricks och gränser per land om det är riktiga personer"]]
+["Raise the daily limit in Tips & limits per country if these are real people","Höj dygnsgränsen i Dricks och gränser per land om det är riktiga personer"],
+["Require device check","Kräv enhetskontroll"],
+["Require device check: {0} → {1}","Kräv enhetskontroll: {0} → {1}"],
+["On: a sign-in SMS is sent only to the real Movera app from the store (Google Play Integrity, Apple App Attest). Web sign-in stops for this country. The iPhone check is not active yet: keep this off while iPhones sign in here.","På: ett inloggnings-sms skickas bara till den riktiga Movera-appen från appbutiken (Google Play Integrity, Apple App Attest). Inloggning på webben stoppas för det här landet. iPhone-kontrollen är inte aktiv än: låt detta vara av medan iPhones loggar in här."],
+["Sign-in codes per app install per hour","Inloggningskoder per appinstallation per timme"]]

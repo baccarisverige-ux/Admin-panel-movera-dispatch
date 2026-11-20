@@ -26,6 +26,13 @@ export function SmsSignInCard({ value, saved, canEdit, onStandard, onChange }: P
         <span aria-hidden="true"><i /></span>
         {value.enabled ? tr("On") : tr("Off")}
       </label>
+      {/* v0.18.138 (contract.json#deviceCheck.setting): default off; the iPhone check is inactive until the owner's Apple account. */}
+      <label className="mini-switch">
+        <input type="checkbox" aria-label={tr("Require device check")} data-testid="sms-sign-in-device-check" checked={value.requireDeviceCheck} disabled={!editable} onChange={(event) => onChange({ ...value, requireDeviceCheck: event.target.checked })} /><SettingInfo id="tips.smsSignIn.requireDeviceCheck" label={tr("Require device check")} />
+        <span aria-hidden="true"><i /></span>
+        {tr("Require device check")}: {value.requireDeviceCheck ? tr("On") : tr("Off")}
+      </label>
+      <small>{tr("On: a sign-in SMS is sent only to the real Movera app from the store (Google Play Integrity, Apple App Attest). Web sign-in stops for this country. The iPhone check is not active yet: keep this off while iPhones sign in here.")}</small>
       <div data-testid="sms-sign-in-cap">
         <NumberField info="tips.smsSignIn.dailyCap" label={tr("Sign-in SMS per day, at most")} value={value.dailyCap} step={1} min={SMS_DAILY_CAP.min} max={SMS_DAILY_CAP.max} disabled={!editable} changed={value.dailyCap !== saved.dailyCap} onChange={(dailyCap) => onChange({ ...value, dailyCap: Math.round(dailyCap) })} />
       </div>

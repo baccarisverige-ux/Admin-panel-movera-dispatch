@@ -72,6 +72,7 @@ import { svC37AutoOfflineOutage } from "./sv/c37-auto-offline-outage.ts";
 import { svC40OneStream } from "./sv/c40-one-stream.ts";
 import { svC41LaneLate } from "./sv/c41-lane-late.ts";
 import { svC49SmsSignIn } from "./sv/c49-sms-sign-in.ts";
+import { svC51DeviceCheck } from "./sv/c51-device-check.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./sv/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -149,4 +150,5 @@ export const sv: Record<MessageKey, string> = {
   ...svC40OneStream,
   ...svC41LaneLate,
   ...svC49SmsSignIn,
+  ...svC51DeviceCheck,
 };

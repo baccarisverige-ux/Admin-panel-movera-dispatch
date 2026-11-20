@@ -365,4 +365,12 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "200: the 201st SMS in 24 hours is not sent; that person must wait until the oldest SMS is a day old, or until an admin raises the limit. A code asked for twice counts twice.",
     "10: only ten SMS per day, so about ten people can sign in; 100 000: almost no protection against SMS cost.",
   ),
+  "tips.smsSignIn.requireDeviceCheck": t(
+    "Before a sign-in SMS is sent, the phone must prove it runs the real Movera app from the store: Google Play Integrity on Android, Apple App Attest on iPhone. A missing or wrong check gets no SMS, so scripts and copied apps cannot spend the daily SMS limit. Off: no check, the other limits still apply.",
+    `${STANDARD_ONLY} Rider and driver apps; test numbers never need it. Web sign-in cannot send a check, so On stops it here. The iPhone check is NOT active yet (owner's Apple account + two server keys): until then On stops iPhone sign-in too.`,
+    "On or off.",
+    "Off.",
+    "On for Sweden: Sara's Android phone with the store app gets her code; a script calling the server without the check gets no SMS.",
+    "Off: any caller that passes the limits gets an SMS; On: only real store apps, no web and (for now) no iPhone sign-in.",
+  ),
 };
