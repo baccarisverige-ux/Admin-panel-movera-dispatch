@@ -11001,21 +11001,26 @@ paths:
         offered, accepted, arrived, on board or a booked ride not yet done (409 conflict reason deletion_open_trip; the app
         says to finish or cancel the ride first). v0.18.140 (accountDeletion): v0.18.140: when the account owes money at the
         request (a rider: unpaid fees, riders.outstanding; a driver: debtModel.driverOwes.owed > 0, i.e. drivers who owe Movera),
-        one debt record is kept: name, phone number and amount with its currency and the trip or period it comes from. It
-        is kept until it is paid or written off by an admin (Mark as paid / Driver paid Movera), then it goes with the next
-        erase run. It is never sent to an app. v0.18.140 (accountDeletion): v0.18.140: 30 days after the request (CountryRules.accountDeletion.eraseAfterDays,
-        never less than 30) the job erases the account: the person row is emptied in place (phone replaced by a unique placeholder
-        so the number is free, first name / e-mail / language / consents / moderation reason emptied, erased_at set), and
-        the rows that hang off it are deleted: saved places, emergency contacts, favourite drivers, sessions and sign-in links,
-        push addresses, notifications, Apple / Google links, e-mail changes, driver phone data and last position, document
-        rows and files. Chat, GPS traces and share links go by their own timed clean-ups (90 / 30 / 30 days). v0.18.140 (accountDeletion):
-        v0.18.140: kept, linked only to the emptied account id: trips with price, times, zone and fare lines, rider fees,
-        wallet entries, refunds, earnings entries, payouts, ratings (stars only), admin audit rows and the debt record. Swedish
-        bookkeeping law keeps money records for 7 years; how long exactly for each table, and whether trip addresses and the
-        driver''s name on money records may go, is for the lawyer (FLAGGED, not decided; owner privacy Q2 + Q5 open). Until
-        decided: nothing in this list is erased, the driver''s first and last name stay on his row for the money records.
-        v0.18.140: Account > Delete account (since v0.5.1) works with the same rules: on 202 it signs out and wipes the phone;
-        409 deletion_open_trip shows the same text. It accepts any status text (older servers answer requested only).'
+        one debt record is kept: name, phone number and amount with its currency and the trip or period it comes from. Its
+        amount follows the live debt (the wallet and earnings rows stay after the erase): Mark as paid, Driver paid Movera,
+        a payment in the car and every account_erase run bring it up to date, and at 0 it is settled (paid or written off);
+        a settled record of an erased account goes with the next run. A request stored before v0.18.140 gets its record from
+        the live debt just before the erase. It is never sent to an app. v0.18.140 (accountDeletion): v0.18.140: 30 days after
+        the request (CountryRules.accountDeletion.eraseAfterDays, never less than 30) the job erases the account: the person
+        row is emptied in place (phone replaced by a unique placeholder so the number is free, first name / e-mail / language
+        / consents / moderation reason emptied, erased_at set), and the rows that hang off it are deleted: saved places, emergency
+        contacts, favourite drivers, sessions and sign-in links, push addresses, notifications, Apple / Google links, e-mail
+        changes, driver phone data and last position, document rows and their stored files (identity and licence photos are
+        stored in the database and go with them). The car (vehicles, plate) is kept for the taxi ride records (FLAGGED, lawyer).
+        No bank details are stored by the server. Chat, GPS traces and share links go by their own timed clean-ups (90 / 30
+        / 30 days). v0.18.140 (accountDeletion): v0.18.140: kept, linked only to the emptied account id: trips with price,
+        times, zone and fare lines, rider fees, wallet entries, refunds, earnings entries, payouts, ratings (stars only),
+        admin audit rows and the debt record. Swedish bookkeeping law keeps money records for 7 years; how long exactly for
+        each table, and whether trip addresses and the driver''s name on money records may go, is for the lawyer (FLAGGED,
+        not decided; owner privacy Q2 + Q5 open). Until decided: nothing in this list is erased, the driver''s first and last
+        name stay on his row for the money records. v0.18.140: Account > Delete account (since v0.5.1) works with the same
+        rules: on 202 it signs out and wipes the phone; 409 deletion_open_trip shows the same text. It accepts any status
+        text (older servers answer requested only).'
   /trips/{tripId}/path:
     get:
       operationId: getTripPath
@@ -19626,22 +19631,26 @@ paths:
         offered, accepted, arrived, on board or a booked ride not yet done (409 conflict reason deletion_open_trip; the app
         says to finish or cancel the ride first). v0.18.140 (accountDeletion): v0.18.140: when the account owes money at the
         request (a rider: unpaid fees, riders.outstanding; a driver: debtModel.driverOwes.owed > 0, i.e. drivers who owe Movera),
-        one debt record is kept: name, phone number and amount with its currency and the trip or period it comes from. It
-        is kept until it is paid or written off by an admin (Mark as paid / Driver paid Movera), then it goes with the next
-        erase run. It is never sent to an app. v0.18.140 (accountDeletion): v0.18.140: 30 days after the request (CountryRules.accountDeletion.eraseAfterDays,
-        never less than 30) the job erases the account: the person row is emptied in place (phone replaced by a unique placeholder
-        so the number is free, first name / e-mail / language / consents / moderation reason emptied, erased_at set), and
-        the rows that hang off it are deleted: saved places, emergency contacts, favourite drivers, sessions and sign-in links,
-        push addresses, notifications, Apple / Google links, e-mail changes, driver phone data and last position, document
-        rows and files. Chat, GPS traces and share links go by their own timed clean-ups (90 / 30 / 30 days). v0.18.140 (accountDeletion):
-        v0.18.140: kept, linked only to the emptied account id: trips with price, times, zone and fare lines, rider fees,
-        wallet entries, refunds, earnings entries, payouts, ratings (stars only), admin audit rows and the debt record. Swedish
-        bookkeeping law keeps money records for 7 years; how long exactly for each table, and whether trip addresses and the
-        driver''s name on money records may go, is for the lawyer (FLAGGED, not decided; owner privacy Q2 + Q5 open). Until
-        decided: nothing in this list is erased, the driver''s first and last name stay on his row for the money records.
-        v0.18.140: Profile > Delete my account: a confirm step (what closes at once, what is kept, 30 days), then the request;
-        on 202 the app signs out and wipes the phone; 409 deletion_open_trip shows "Finish or cancel your ride first". sv
-        / fr / en.'
+        one debt record is kept: name, phone number and amount with its currency and the trip or period it comes from. Its
+        amount follows the live debt (the wallet and earnings rows stay after the erase): Mark as paid, Driver paid Movera,
+        a payment in the car and every account_erase run bring it up to date, and at 0 it is settled (paid or written off);
+        a settled record of an erased account goes with the next run. A request stored before v0.18.140 gets its record from
+        the live debt just before the erase. It is never sent to an app. v0.18.140 (accountDeletion): v0.18.140: 30 days after
+        the request (CountryRules.accountDeletion.eraseAfterDays, never less than 30) the job erases the account: the person
+        row is emptied in place (phone replaced by a unique placeholder so the number is free, first name / e-mail / language
+        / consents / moderation reason emptied, erased_at set), and the rows that hang off it are deleted: saved places, emergency
+        contacts, favourite drivers, sessions and sign-in links, push addresses, notifications, Apple / Google links, e-mail
+        changes, driver phone data and last position, document rows and their stored files (identity and licence photos are
+        stored in the database and go with them). The car (vehicles, plate) is kept for the taxi ride records (FLAGGED, lawyer).
+        No bank details are stored by the server. Chat, GPS traces and share links go by their own timed clean-ups (90 / 30
+        / 30 days). v0.18.140 (accountDeletion): v0.18.140: kept, linked only to the emptied account id: trips with price,
+        times, zone and fare lines, rider fees, wallet entries, refunds, earnings entries, payouts, ratings (stars only),
+        admin audit rows and the debt record. Swedish bookkeeping law keeps money records for 7 years; how long exactly for
+        each table, and whether trip addresses and the driver''s name on money records may go, is for the lawyer (FLAGGED,
+        not decided; owner privacy Q2 + Q5 open). Until decided: nothing in this list is erased, the driver''s first and last
+        name stay on his row for the money records. v0.18.140: Profile > Delete my account: a confirm step (what closes at
+        once, what is kept, 30 days), then the request; on 202 the app signs out and wipes the phone; 409 deletion_open_trip
+        shows "Finish or cancel your ride first". sv / fr / en.'
       tags:
       - Driver · Account
       x-actor:
@@ -19686,10 +19695,10 @@ paths:
         waiting (due, but blocked or eraseEnabled is off), erased. The phone number is never in the list. v0.18.140: account_erase:
         one recurring housekeeping timer (hourly, own kind, so it has a heartbeat in system health), at most 10 accounts per
         run, one transaction per account, idempotent (erased_at set last in the same transaction; a second run finds nothing;
-        a run that fails undoes only its own account). Re-checks the blocks at run time (open trip, open safety case: the
-        account waits and shows as waiting). While CountryRules.accountDeletion.eraseEnabled is false (default) it only counts:
-        the admin list shows the accounts that would be erased, nothing is erased. One admin audit row per erased account
-        (account.erase) with table counts, no personal data.'
+        a run that fails undoes only its own account). Accounts blocked by an open trip or an open safety case are left out
+        of the batch in the query (they wait and show as waiting; they never hold back the others). While CountryRules.accountDeletion.eraseEnabled
+        is false (default) it only counts: the admin list shows the accounts that would be erased, nothing is erased. One
+        admin audit row per erased account (account.erase) with table counts, no personal data.'
       tags:
       - Admin · Riders
       x-actor:
