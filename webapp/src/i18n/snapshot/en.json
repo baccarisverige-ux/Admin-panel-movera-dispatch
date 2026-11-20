@@ -9383,4 +9383,8 @@
 ["Sign-in SMS per day: {0} → {1}","Sign-in SMS per day: {0} → {1}"],
 ["Sign-in SMS: {0} of {1} sent in the last 24 hours","Sign-in SMS: {0} of {1} sent in the last 24 hours"],
 ["Sign-in SMS limit reached: {0} of {1} in the last 24 hours. New sign-in codes are stopped","Sign-in SMS limit reached: {0} of {1} in the last 24 hours. New sign-in codes are stopped"],
-["Raise the daily limit in Tips & limits per country if these are real people","Raise the daily limit in Tips & limits per country if these are real people"]]
+["Raise the daily limit in Tips & limits per country if these are real people","Raise the daily limit in Tips & limits per country if these are real people"],
+["Require device check","Require device check"],
+["Require device check: {0} → {1}","Require device check: {0} → {1}"],
+["On: a sign-in SMS is sent only to the real Movera app from the store (Google Play Integrity, Apple App Attest). Web sign-in stops for this country. The iPhone check is not active yet: keep this off while iPhones sign in here.","On: a sign-in SMS is sent only to the real Movera app from the store (Google Play Integrity, Apple App Attest). Web sign-in stops for this country. The iPhone check is not active yet: keep this off while iPhones sign in here."],
+["Sign-in codes per app install per hour","Sign-in codes per app install per hour"]]

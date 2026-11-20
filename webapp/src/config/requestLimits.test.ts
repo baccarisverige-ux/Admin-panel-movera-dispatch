@@ -6,8 +6,9 @@ import { retryDelay } from "../api/commandFlow.ts";
 import { ApiError } from "../api/httpClient.ts";
 
 test("request limits: contract defaults 120 / 60, ranges checked", () => {
-  assert.deepEqual(REQUEST_LIMIT_DEFAULTS, { writesPerUserPerMinute: 120, writesPerAddressPerMinute: 60 });
-  assert.deepEqual(requestLimitsOf({ limits: { writesPerUserPerMinute: 300, writesPerAddressPerMinute: 5 } }), { writesPerUserPerMinute: 300, writesPerAddressPerMinute: 60 });
+  // v0.18.138: codesPerDevicePerHour (sign-in codes per app install per hour, default 5) is one more request limit.
+  assert.deepEqual(REQUEST_LIMIT_DEFAULTS, { writesPerUserPerMinute: 120, writesPerAddressPerMinute: 60, codesPerDevicePerHour: 5 });
+  assert.deepEqual(requestLimitsOf({ limits: { writesPerUserPerMinute: 300, writesPerAddressPerMinute: 5 } }), { writesPerUserPerMinute: 300, writesPerAddressPerMinute: 60, codesPerDevicePerHour: 5 });
   assert.equal(requestLimitIssue("writesPerUserPerMinute", 29), "Between 30 and 10000.");
   assert.equal(requestLimitIssue("writesPerAddressPerMinute", 10001), "Between 20 and 10000.");
   assert.equal(requestLimitIssue("writesPerAddressPerMinute", 1.5), "Enter a whole number.");
@@ -16,7 +17,7 @@ test("request limits: contract defaults 120 / 60, ranges checked", () => {
 
 test("request limits: saving keeps the other limits and fields of the Standard", () => {
   const doc = { country: "SE", tips: [], limits: { wrongCodesPerDay: 20 } };
-  assert.deepEqual(withRequestLimits(doc, { writesPerUserPerMinute: 200, writesPerAddressPerMinute: 80 }), { country: "SE", tips: [], limits: { wrongCodesPerDay: 20, writesPerUserPerMinute: 200, writesPerAddressPerMinute: 80 } });
+  assert.deepEqual(withRequestLimits(doc, { writesPerUserPerMinute: 200, writesPerAddressPerMinute: 80, codesPerDevicePerHour: 5 }), { country: "SE", tips: [], limits: { wrongCodesPerDay: 20, writesPerUserPerMinute: 200, writesPerAddressPerMinute: 80, codesPerDevicePerHour: 5 } });
 });
 
 test("Tips & limits save keeps CountryRules.limits (fail-before: dropped the admin's limits)", () => {

@@ -264,6 +264,15 @@ export const SETTINGS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "20: a shared office network may be slowed; 10 000: in practice no limit.",
     "People not signed in yet (sign-in, waiting list).",
   ),
+  "settings.requestLimits.codesPerDevicePerHour": t(
+    "How many sign-in codes one app install may ask for in one hour, over every phone number. It stops one phone (or one copied app) from asking codes for many numbers and spending the daily SMS limit.",
+    "Settings › Request limits, per country (the phone number's country), on the live server. Rider and driver apps that send their install id (from this version); older apps and scripts without it are not counted here, the other limits still apply. Test numbers count too.",
+    "Whole number, 1 to 100.",
+    "5.",
+    "5: a 6th code from the same phone within an hour gets \"Too many tries. Try again in 42 min\" (the wait is the server's); another phone is not affected.",
+    "1: a person who mistypes their number must wait an hour; 100: almost no protection per phone.",
+    "People signing in on the rider and driver apps.",
+  ),
   "settings.devPages": t(
     "Shows System, Release gates and Design (pages for developers) in the menu. Off: they still open by their address, for the Super admin only.",
     "Settings › Admin panel: the whole admin panel. Only the Super admin can change it.",

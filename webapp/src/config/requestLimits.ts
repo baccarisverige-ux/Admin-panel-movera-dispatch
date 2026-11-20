@@ -5,17 +5,19 @@ import contract from "../../../contracts/contract.json" with { type: "json" };
  * country, in CountryRules.limits of the country's Standard (standard-XX). The server reads it within about a minute;
  * its env value stays the floor (staging keeps its higher limits).
  */
-export const REQUEST_LIMIT_FIELDS = ["writesPerUserPerMinute", "writesPerAddressPerMinute"] as const;
+/** v0.18.138 (contract.json#deviceCheck.deviceLimit, owner 2026-11-20 "Ok"): codesPerDevicePerHour, sign-in codes per app install per hour. */
+export const REQUEST_LIMIT_FIELDS = ["writesPerUserPerMinute", "writesPerAddressPerMinute", "codesPerDevicePerHour"] as const;
 export type RequestLimitField = (typeof REQUEST_LIMIT_FIELDS)[number];
 export type RequestLimits = Record<RequestLimitField, number>;
 
 const SPEC = (contract as unknown as { countryLimits: { defaults: Record<string, number>; ranges: Record<string, [number, number]> } }).countryLimits;
-export const REQUEST_LIMIT_DEFAULTS: RequestLimits = { writesPerUserPerMinute: SPEC.defaults.writesPerUserPerMinute!, writesPerAddressPerMinute: SPEC.defaults.writesPerAddressPerMinute! };
-export const REQUEST_LIMIT_RANGES: Record<RequestLimitField, [number, number]> = { writesPerUserPerMinute: SPEC.ranges.writesPerUserPerMinute!, writesPerAddressPerMinute: SPEC.ranges.writesPerAddressPerMinute! };
+export const REQUEST_LIMIT_DEFAULTS: RequestLimits = { writesPerUserPerMinute: SPEC.defaults.writesPerUserPerMinute!, writesPerAddressPerMinute: SPEC.defaults.writesPerAddressPerMinute!, codesPerDevicePerHour: SPEC.defaults.codesPerDevicePerHour! };
+export const REQUEST_LIMIT_RANGES: Record<RequestLimitField, [number, number]> = { writesPerUserPerMinute: SPEC.ranges.writesPerUserPerMinute!, writesPerAddressPerMinute: SPEC.ranges.writesPerAddressPerMinute!, codesPerDevicePerHour: SPEC.ranges.codesPerDevicePerHour! };
 
 export const REQUEST_LIMIT_LABEL: Record<RequestLimitField, string> = {
   writesPerUserPerMinute: "Changes per signed-in user per minute",
   writesPerAddressPerMinute: "Changes per internet address per minute (not signed in)",
+  codesPerDevicePerHour: "Sign-in codes per app install per hour",
 };
 
 type Doc = Record<string, unknown>;

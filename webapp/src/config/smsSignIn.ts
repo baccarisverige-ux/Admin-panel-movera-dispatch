@@ -7,17 +7,20 @@ import { tr } from "../i18n/core.ts";
  *   (configDefaults.smsSignIn). Admin › Pricing › Tips & limits › card "Real SMS sign-in codes".
  * - It works only when the server also has the SMS company's keys (set by the owner on the server; the panel never
  *   sees them). Off: every number that is not a test number is told sign-in is not open yet, as before.
+ * - v0.18.138 (contract.json#deviceCheck.setting; owner 2026-11-20 "Ok"): requireDeviceCheck (default off) — a sign-in
+ *   SMS only for the real store app (Play Integrity / App Attest). On stops web sign-in of the country; the iPhone
+ *   check stays inactive until the owner's Apple account exists.
  */
-export type SmsSignIn = { enabled: boolean; dailyCap: number };
-export const SMS_SIGN_IN_DEFAULT: SmsSignIn = { enabled: false, dailyCap: 200 };
+export type SmsSignIn = { enabled: boolean; dailyCap: number; requireDeviceCheck: boolean };
+export const SMS_SIGN_IN_DEFAULT: SmsSignIn = { enabled: false, dailyCap: 200, requireDeviceCheck: false };
 export const SMS_DAILY_CAP = { min: 10, max: 100_000 } as const;
 
 const capOk = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value) && value >= SMS_DAILY_CAP.min && value <= SMS_DAILY_CAP.max;
 
 /** The stored block; anything missing or wrong is the default (the server reads it the same way: only true is on). */
 export function smsSignInOf(raw: unknown): SmsSignIn {
-  const value = (raw && typeof raw === "object" ? raw : {}) as { enabled?: unknown; dailyCap?: unknown };
-  return { enabled: value.enabled === true, dailyCap: capOk(value.dailyCap) ? value.dailyCap : SMS_SIGN_IN_DEFAULT.dailyCap };
+  const value = (raw && typeof raw === "object" ? raw : {}) as { enabled?: unknown; dailyCap?: unknown; requireDeviceCheck?: unknown };
+  return { enabled: value.enabled === true, dailyCap: capOk(value.dailyCap) ? value.dailyCap : SMS_SIGN_IN_DEFAULT.dailyCap, requireDeviceCheck: value.requireDeviceCheck === true };
 }
 
 /** What stops a save (the server would answer 400 invalid_document). */
@@ -30,5 +33,6 @@ export function smsSignInLines(before: SmsSignIn, after: SmsSignIn): string[] {
   const lines: string[] = [];
   if (before.enabled !== after.enabled) lines.push(tr("Real SMS sign-in codes: {0} → {1}", [tr(before.enabled ? "on" : "off"), tr(after.enabled ? "on" : "off")]));
   if (before.dailyCap !== after.dailyCap) lines.push(tr("Sign-in SMS per day: {0} → {1}", [before.dailyCap, after.dailyCap]));
+  if (before.requireDeviceCheck !== after.requireDeviceCheck) lines.push(tr("Require device check: {0} → {1}", [tr(before.requireDeviceCheck ? "on" : "off"), tr(after.requireDeviceCheck ? "on" : "off")]));
   return lines;
 }

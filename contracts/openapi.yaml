@@ -1,11 +1,11 @@
-# Movera API v0.18.133 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.138 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.133
+  version: 0.18.138
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.133 in this folder; this file must agree with them.
+    v0.18.138 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.133
+  version: 0.18.138
   source: contract.json
 paths:
   /auth/otp/request:
@@ -135,7 +135,22 @@ paths:
         200 as before (requestId, sessionId, expiresAt, retryAfterSeconds) plus codeLength (codeLengthNote). Refused by the
         company, answered with an error, or not answered (a time-out or a broken connection): the code is void at once and
         the answer is 503 unavailable, reason sms_not_sent, Retry-After = auth.otp.retryAfterSeconds; the app may ask again
-        after that wait. The try still counts on the hourly limits.'
+        after that wait. The try still counts on the hourly limits. v0.18.138 (contract.json#deviceCheck): Codes per installId
+        in the last hour, over every phone number and both apps, counted before the resend wait of the number: at countryLimits.codesPerDevicePerHour
+        (the phone''s country; default 5, range 1-100, admin setting per country) the answer is 429 rate_limited reason otp_too_many
+        with retryAfterSeconds until the oldest of them is an hour old (the apps'' text and handling are unchanged). Test
+        numbers count too, except on the staging fast path (auth.testSignIn). A request without installId (an app before v0.18.138,
+        a script) is not counted on this limit; with requireDeviceCheck on, it gets no SMS (setting). 403 forbidden (v0.18.138):
+        requireDeviceCheck is on for the number''s country and the request has no valid check (setting). No SMS. The apps
+        show texts.deviceCheckFailed and stop; they do not ask again by themselves. On POST /auth/otp/request, after the test-number
+        and sign_in_restricted decisions: the device limit, the resend wait and the hourly limits, the wrong-code locks, then
+        (requireDeviceCheck on) the check, then the daily SMS cap, then the SMS. A refusal sends nothing. The check itself
+        (the only call to Google) runs only after the cheap guards hold: the switch, the number, the per-install count and
+        the one-use list; at most 20 checks at once per server copy, a circuit breaker (5 Google errors or time-outs in a
+        row: checks fail for 30 s), a time-out that aborts the call, and at most 20 failed checks per client address per hour
+        (then that address fails without a call; only a token the check refused counts, never Google trouble (429, 5xx, a
+        time-out), Google refusing the server''s own credentials (401 / 403, also a breaker error), a full cap or an open
+        breaker, so people behind one shared address are not blocked by an outage). All fail closed.'
       tags:
       - Auth
       x-actor:
@@ -25159,6 +25174,14 @@ components:
               maximum: 100000
               default: 200
               description: Sign-in SMS per 24 hours for this country before new codes are refused (sms_daily_limit).
+            requireDeviceCheck:
+              type: boolean
+              description: 'Real-phone check before a sign-in SMS (Play Integrity / App Attest). INACTIVE until the owner''s
+                Apple account exists: the iPhone apps send a check only in a build made with APP_ATTEST=true (App Attest capability
+                on the owner''s Apple team) and the server checks it only with the two ios serverKeys set. Until then an iPhone
+                sends no check: do NOT switch requireDeviceCheck on for a country while iPhones sign in there. Turning it
+                on later needs no contract change.'
+              default: false
           additionalProperties: false
       x-server-only: true
     FeeRule:
@@ -26299,6 +26322,26 @@ components:
           description: 'From a PHONE_REQUIRED provider sign-in: links this phone to that account.'
         locale:
           $ref: '#/components/schemas/Language'
+        installId:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{16,64}$
+          description: 'v0.18.138 (contract.json#deviceCheck): OtpRequest.installId (optional, 16-64 of A-Z a-z 0-9 - _):
+            a random id the rider and driver apps make once per install (a random UUID v4) and keep in the app''s own storage
+            until the app is removed or its data is cleared; never derived from the phone''s hardware ids, never shown. Sent
+            on every POST /auth/otp/request. The web rider app sends one kept in its browser storage. The server keeps it
+            with the code (otp_sessions.install_id) only to count codes per install.'
+        deviceCheck:
+          allOf:
+          - $ref: '#/components/schemas/DeviceCheck'
+          description: 'v0.18.138 (contract.json#deviceCheck): CountryRules.smsSignIn.requireDeviceCheck (boolean, default
+            false; country standard only, with smsSignIn.enabled and dailyCap: Admin › Pricing › Tips & limits, card "Real
+            SMS sign-in codes"). true: a number of that country that is not a test number gets a code ONLY with a valid OtpRequest.deviceCheck
+            (check); missing, unreadable, not valid or already used = 403 forbidden reason device_check_failed, no SMS, nothing
+            counted on dailyCap. The web rider app cannot send a check: with the switch on, web sign-in of that country''s
+            numbers stops. Switch it on only once the store builds that send the check are the ones in use (and, for iPhones,
+            once ios.active holds). Inside smsSignIn the key requireDeviceCheck is allowed besides enabled and dailyCap (v0.18.138);
+            a value that is not true / false is 400 invalid_request, reason invalid_document. false (default): deviceCheck
+            is not read and every other limit works as before.'
     OtpChallenge:
       type: object
       description: 'The code lives 300 s; at most 5 attempts. v0.18.133 (contract.json#smsSignIn): it is 4 digits for a test
@@ -36226,6 +36269,14 @@ components:
           description: 'v0.18.26 (owner 2026-11-04): emergency contacts per person (each rider and each driver; 112 is built
             in and not counted) (400 too_many_contacts). Range 1–50.'
           default: 10
+        codesPerDevicePerHour:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: 'v0.18.138 (owner 2026-11-20 "Ok", contract.json#deviceCheck.installId): sign-in codes per app install
+            (OtpRequest.installId) per hour, over every phone number and both apps (429 otp_too_many). A request without installId
+            is not counted here (the other limits still apply). Range 1–100.'
+          default: 5
     AccountPhoneChange:
       type: object
       required:
@@ -36233,6 +36284,29 @@ components:
       properties:
         phone:
           $ref: '#/components/schemas/PhoneE164'
+        installId:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{16,64}$
+          description: 'v0.18.138 (contract.json#deviceCheck): OtpRequest.installId (optional, 16-64 of A-Z a-z 0-9 - _):
+            a random id the rider and driver apps make once per install (a random UUID v4) and keep in the app''s own storage
+            until the app is removed or its data is cleared; never derived from the phone''s hardware ids, never shown. Sent
+            on every POST /auth/otp/request. The web rider app sends one kept in its browser storage. The server keeps it
+            with the code (otp_sessions.install_id) only to count codes per install.'
+        deviceCheck:
+          allOf:
+          - $ref: '#/components/schemas/DeviceCheck'
+          description: 'v0.18.138 (contract.json#deviceCheck): CountryRules.smsSignIn.requireDeviceCheck (boolean, default
+            false; country standard only, with smsSignIn.enabled and dailyCap: Admin › Pricing › Tips & limits, card "Real
+            SMS sign-in codes"). true: a number of that country that is not a test number gets a code ONLY with a valid OtpRequest.deviceCheck
+            (check); missing, unreadable, not valid or already used = 403 forbidden reason device_check_failed, no SMS, nothing
+            counted on dailyCap. The web rider app cannot send a check: with the switch on, web sign-in of that country''s
+            numbers stops. Switch it on only once the store builds that send the check are the ones in use (and, for iPhones,
+            once ios.active holds). Inside smsSignIn the key requireDeviceCheck is allowed besides enabled and dailyCap (v0.18.138);
+            a value that is not true / false is 400 invalid_request, reason invalid_document. false (default): deviceCheck
+            is not read and every other limit works as before.'
+      description: 'v0.18.138 (contract.json#deviceCheck): POST /account/phone/change { phone, installId?, deviceCheck? }
+        takes the same two fields (same binding with the account''s app) and sends a real SMS under the same rules: with requireDeviceCheck
+        on, a phone change to a real number needs a valid check; the per-install limit counts it.'
     AccountPhoneVerify:
       type: object
       required:
@@ -39132,3 +39206,44 @@ components:
           - string
           - 'null'
           description: Opaque; null on the last page.
+    DeviceCheck:
+      type: object
+      description: 'v0.18.138 (contract.json#deviceCheck): OtpRequest.deviceCheck { platform: android | ios, token (string,
+        base64; at most 16384 characters), keyId? (iOS: the App Attest key id, base64) }. Android: token = a Google Play Integrity
+        token (classic request with the binding as nonce); the server decodes it with Google (playintegrity.googleapis.com
+        decodeIntegrityToken, service account) and accepts it only when requestDetails.requestPackageName is one of PLAY_INTEGRITY_PACKAGES,
+        requestDetails.nonce = the binding, requestDetails.timestampMillis is at most maxAgeSeconds old (and at most 60 s
+        ahead), appIntegrity.appRecognitionVerdict = PLAY_RECOGNIZED and deviceIntegrity.deviceRecognitionVerdict holds MEETS_DEVICE_INTEGRITY.
+        iPhone: token = an App Attest attestation object (CBOR) for a key made for this request, keyId its id; the server
+        checks it as Apple says (certificate chain to the Apple App Attestation root, nonce = SHA-256(authenticatorData +
+        binding) in the leaf certificate, keyId = SHA-256 of the leaf''s public key, rpIdHash = SHA-256 of one of APPLE_APP_ATTEST_APP_IDS,
+        counter 0, aaguid appattest, or appattestdevelop outside production, credential id = keyId). A token is used once:
+        the server keeps its SHA-256 (otp_sessions.device_check_sha256) and a token seen before is device_check_failed. Google
+        or the check not answering within timeoutSeconds = device_check_failed (fail closed). A token is used once by its
+        canonical bytes: iPhone = the decoded attestation (strict base64 only), Android = the decoded bytes of each segment
+        of the token (a JWE in compact form: exactly 5 base64url segments joined by dots; every segment must be canonical
+        base64url: no padding, zero padding bits); any other spelling is device_check_failed. Both checks are bound to the
+        request: binding = SHA-256 of the UTF-8 text "movera-sms-code|" + app + "|" + phone + "|" + installId (32 bytes).
+        Android sends it as the nonce (base64url without padding, 43 characters); iPhone as the clientDataHash (the 32 bytes).
+        So a token is good for one app, number and install only.'
+      required:
+      - platform
+      - token
+      properties:
+        platform:
+          type: string
+          enum:
+          - android
+          - ios
+          description: Which check this is.
+        token:
+          type: string
+          minLength: 1
+          maxLength: 16384
+          description: 'Android: the Play Integrity token. iPhone: the App Attest attestation object, base64.'
+        keyId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: 'iPhone only: the App Attest key id, base64.'
+      additionalProperties: false
