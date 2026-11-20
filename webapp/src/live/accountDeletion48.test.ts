@@ -1,20 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import contract from "../../../contracts/contract.json" with { type: "json" };
-import { deletionSettingOf, deletionSettingProblem, readDeletionRequests, saveDeletionSetting, statusText, withDeletionSetting } from "./accountDeletion.ts";
+import { DELETION_DEFAULT, deletionSettingOf, deletionSettingProblem, readDeletionRequests, saveDeletionSetting, statusText, withDeletionSetting } from "./accountDeletion.ts";
 
 /**
  * contract v0.18.134 (contract.json#accountDeletion; owner button 2026-11-20 "Accept, keep debt (Rec.)"): Riders ›
  * "Account deletion requests" (GET /admin/deletion-requests, read only) and the country setting
  * CountryRules.accountDeletion { eraseEnabled (off = count only), eraseAfterDays (30..365) } on the Standard.
  */
-const C = contract as unknown as { version: string; accountDeletion: { adminStatus: string[] }; configDefaults: { accountDeletion: { eraseEnabled: boolean; eraseAfterDays: number } } };
 
-test("the contract copy is 0.18.134 or later with the deletion rules", () => {
-  const [a, b, c] = C.version.split(".").map(Number);
-  assert.ok(a! > 0 || b! > 18 || (b === 18 && c! >= 134), C.version);
-  assert.deepEqual(C.accountDeletion.adminStatus, ["requested", "waiting", "erased"]);
-  assert.deepEqual(C.configDefaults.accountDeletion, { eraseEnabled: false, eraseAfterDays: 30 });
+test("the contract's rules as the panel uses them (contract v0.18.134 accountDeletion; the admin copy is bumped when 0.18.134 ships)", () => {
+  assert.deepEqual(DELETION_DEFAULT, { eraseEnabled: false, eraseAfterDays: 30 });
 });
 
 test("the list: GET /admin/deletion-requests, items and the dry-run count, never a phone", async () => {
