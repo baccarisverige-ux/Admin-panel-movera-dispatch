@@ -12,5 +12,4 @@ export const frC50StripeFees: Record<keyof typeof enC50StripeFees, string> = {
   "Refund sent. The money goes back to the card.": "Remboursement envoyé. L'argent revient sur la carte.",
   "Processing": "En cours",
   "Refund pending": "Remboursement en attente",
-  "Refund {0} to the card?": "Rembourser {0} sur la carte ?",
 };

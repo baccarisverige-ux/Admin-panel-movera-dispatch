@@ -264,7 +264,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 <label className="mini-switch">
                   <input type="checkbox" aria-label={tr("Card payment of fees")} data-testid="rider-fee-stripe-on" checked={shown.riderFeeStripe} disabled={!canEdit || !onStandard} onChange={(event) => edit({ riderFeeStripe: event.target.checked })} />
                   <span aria-hidden="true"><i /></span>
-                  {tr("Card payment of fees")}
+                  {tr("Card payment of fees")}<SettingInfo id="tips.riderFeeStripe" />
                 </label>
                 <small>{tr("The rider can pay an owed fee by card or Apple Pay in the app. Off by default.")}</small>
               </div>

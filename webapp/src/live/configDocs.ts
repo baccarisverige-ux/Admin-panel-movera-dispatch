@@ -434,7 +434,9 @@ export const COUNTRY_RULES_PANEL_KEYS = ["version", "publishedAt", "country", "c
  * on a zone (400 *_country_only). The panel's own Standard-only keys (walletCreditMax, emergencyNumbers,
  * sosContactsSms) are in COUNTRY_RULES_PANEL_KEYS and only sent on the Standard by the caller.
  */
-export const COUNTRY_RULES_STANDARD_ONLY_KEPT = ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit", "riderFeeStripe"] as const;
+export const COUNTRY_RULES_STANDARD_ONLY_KEPT = ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit"] as const;
+/** v0.18.136 stripeFees (DRAFT; not in this admin's contract copy yet): Standard-only too, never in a zone's own rules. */
+export const COUNTRY_RULES_DRAFT_STANDARD_ONLY = ["riderFeeStripe"] as const;
 
 /** Never stored in a document: the server's marks on a read. */
 const COUNTRY_RULES_READ_MARKS = ["usesStandard", "zoneId"] as const;
@@ -445,7 +447,7 @@ const COUNTRY_RULES_READ_MARKS = ["usesStandard", "zoneId"] as const;
  */
 export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null, { standard = true }: { standard?: boolean } = {}): Doc {
   const option = (amount: number) => ({ amount: toMinor(amount, currency), enabled: true });
-  const drop = new Set<string>([...COUNTRY_RULES_PANEL_KEYS, ...COUNTRY_RULES_READ_MARKS, ...(standard ? [] : COUNTRY_RULES_STANDARD_ONLY_KEPT)]);
+  const drop = new Set<string>([...COUNTRY_RULES_PANEL_KEYS, ...COUNTRY_RULES_READ_MARKS, ...(standard ? [] : [...COUNTRY_RULES_STANDARD_ONLY_KEPT, ...COUNTRY_RULES_DRAFT_STANDARD_ONLY])]);
   const kept = structuredClone(Object.fromEntries(Object.entries(base ?? {}).filter(([key]) => !drop.has(key)))) as Doc;
   // U2 (Rules audits/impact/safe-config-saves.md, SAFETY): a block the panel writes starts from the stored block, so a
   // key the panel does not show (calls.adminCallRoles, calls.phoneProvider, ...) is kept; the panel's own keys win.

@@ -27,10 +27,8 @@ export function LiveStripeFeePayments({ riderId }: { riderId: string }) {
   if (!canRead || items.length === 0) return null;
   const twice = paidTwiceOf(items);
   const refundable = new Set(refundableOf(items).map((p) => p.paymentIntentId));
-  const refund = async (tripId: string, amount: string) => {
+  const refund = async (tripId: string) => {
     if (inFlight.current) return;
-    // Review SHOULD 2: a confirm step with the amount that goes back to the card.
-    if (typeof window !== "undefined" && !window.confirm(tr("Refund {0} to the card?", [amount]))) return;
     inFlight.current = true;
     setBusy(true);
     try {
@@ -59,7 +57,7 @@ export function LiveStripeFeePayments({ riderId }: { riderId: string }) {
             {p.tripId} · {liveMoney(p.amount)} · <b>{tr(STRIPE_STATUS_LABEL[p.status] as Parameters<typeof tr>[0])}</b>
             {p.paidTwice ? <> · {tr("Paid twice")}</> : null}
             {p.amountMismatch ? <> · {tr("Amount differs: check in Stripe.")}</> : null}
-            {canEdit && refundable.has(p.paymentIntentId) ? <button type="button" className="dash-btn small ghost" disabled={busy || !reason.trim()} onClick={() => void refund(p.tripId, liveMoney(p.paidTwice && p.overpaid ? p.overpaid : p.amount))}>{tr("Refund")}</button> : null}
+            {canEdit && refundable.has(p.paymentIntentId) ? <button type="button" className="dash-btn small ghost" disabled={busy || !reason.trim()} data-command="admin.rider.feeStripeRefund" title={liveMoney(p.paidTwice && p.overpaid ? p.overpaid : p.amount)} onClick={() => void refund(p.tripId)}>{tr("Refund")}</button> : null}
           </li>
         ))}
       </ul>
