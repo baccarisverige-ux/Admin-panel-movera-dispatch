@@ -10,4 +10,5 @@ export const enC50StripeFees = {
   "Refund sent. The money goes back to the card.": "Refund sent. The money goes back to the card.",
   "Processing": "Processing",
   "Refund pending": "Refund pending",
+  "Refund a card payment of a fee": "Refund a card payment of a fee",
 };

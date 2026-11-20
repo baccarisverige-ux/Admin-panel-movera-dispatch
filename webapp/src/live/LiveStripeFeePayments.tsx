@@ -57,7 +57,7 @@ export function LiveStripeFeePayments({ riderId }: { riderId: string }) {
             {p.tripId} · {liveMoney(p.amount)} · <b>{tr(STRIPE_STATUS_LABEL[p.status] as Parameters<typeof tr>[0])}</b>
             {p.paidTwice ? <> · {tr("Paid twice")}</> : null}
             {p.amountMismatch ? <> · {tr("Amount differs: check in Stripe.")}</> : null}
-            {canEdit && refundable.has(p.paymentIntentId) ? <button type="button" className="dash-btn small ghost" disabled={busy || !reason.trim()} data-command="admin.rider.feeStripeRefund" title={liveMoney(p.paidTwice && p.overpaid ? p.overpaid : p.amount)} onClick={() => void refund(p.tripId)}>{tr("Refund")}</button> : null}
+            {canEdit && refundable.has(p.paymentIntentId) ? <button type="button" className="dash-btn small ghost" disabled={busy || !reason.trim()} data-command="admin.server.feeStripeRefund" title={liveMoney(p.paidTwice && p.overpaid ? p.overpaid : p.amount)} onClick={() => void refund(p.tripId)}>{tr("Refund")}</button> : null}
           </li>
         ))}
       </ul>

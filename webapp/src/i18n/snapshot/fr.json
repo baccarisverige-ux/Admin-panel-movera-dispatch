@@ -9383,4 +9383,5 @@
 ["Amount differs: check in Stripe.","Le montant diffère : vérifiez dans Stripe."],
 ["Refund sent. The money goes back to the card.","Remboursement envoyé. L'argent revient sur la carte."],
 ["Processing","En cours"],
-["Refund pending","Remboursement en attente"]]
+["Refund pending","Remboursement en attente"],
+["Refund a card payment of a fee","Rembourser un paiement des frais par carte"]]

@@ -12,4 +12,5 @@ export const svC50StripeFees: Record<keyof typeof enC50StripeFees, string> = {
   "Refund sent. The money goes back to the card.": "Återbetalning skickad. Pengarna går tillbaka till kortet.",
   "Processing": "Behandlas",
   "Refund pending": "Återbetalning väntar",
+  "Refund a card payment of a fee": "Återbetala en kortbetalning av en avgift",
 };
