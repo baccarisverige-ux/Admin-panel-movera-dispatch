@@ -38,6 +38,10 @@ export const CONFIG_DEFAULTS = {
   pickupSpotsOn: true,
   /** v0.18.116 BQ-S10 (owner S10 Q6: default on): riders can share a live trip link (contract configDefaults.shareTripOn). */
   shareTripOn: true,
+  /** v0.18.147 driver profile (owner 2026-11-20 "Now build all"): the rider sees the driver profile sheet (contract configDefaults.driverProfileOn). */
+  driverProfileOn: true,
+  /** v0.18.147: written reviews on the profile, each shown only after an admin approves it; off until a zone has moderators (contract configDefaults.driverReviewsOn). */
+  driverReviewsOn: false,
   /** v0.18.122 L20 stream (owner 2026-11-17 "Yes, with switch (Rec.)", off until tested): one live connection per driver phone (contract configDefaults.driverOneStream). */
   driverOneStream: false,
   freeWaitMin: { default: 5, xl: 3 },
