@@ -125,6 +125,14 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "On, 500 kr: a driver who owes 520 kr is not offered cash trips until they pay Movera.",
     "Off: a driver's debt is never checked at Accept; a very small amount stops cash trips after one trip.",
   ),
+  "tips.driverPayRequest": t(
+    "Temporary. When on: once a month, on this day, each driver who owes Movera more than the smallest amount gets a notification and a Pay Movera screen with the amount, a reference and a button that opens this payment link.",
+    `${STANDARD_ONLY} Driver app (notification, push and the Pay Movera screen). When the money has arrived, record it in Drivers › Owe Movera with "Driver paid Movera": nothing is confirmed by itself.`,
+    "On or off; day 1 to 28; a link that starts with https://; the smallest amount is money, 0 or above.",
+    "Off everywhere, day 1, no link.",
+    "On, day 1, 100 kr: on the 1st from 09:00 a driver who owes 250 kr is asked to pay 250 kr; one who owes 80 kr is not asked.",
+    "A wrong link sends the drivers' money to the wrong place: open it yourself before saving. The link is opened as it is, so the driver types the amount and the reference on the payment page.",
+  ),
   "tips.onTripMinDonePct": t(
     "A driver on a trip gets offers (Exclusive only) only after they have driven this share of their route to the drop-off.",
     `${COUNTRY} Driver app and dispatch.`,
