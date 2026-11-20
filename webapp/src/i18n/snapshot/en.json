@@ -9373,4 +9373,6 @@
 ["Server trip timers are running {0} s late","Server trip timers are running {0} s late"],
 ["Server dispatch rounds are running {0} s late","Server dispatch rounds are running {0} s late"],
 ["{0} trip timers overdue","{0} trip timers overdue"],
-["{0} dispatch rounds overdue","{0} dispatch rounds overdue"]]
+["{0} dispatch rounds overdue","{0} dispatch rounds overdue"],
+["SOS pressed {0} · received by Movera {1}","SOS pressed {0} · received by Movera {1}"],
+["Reached Movera {0} min after the press (the phone had no network).","Reached Movera {0} min after the press (the phone had no network)."]]

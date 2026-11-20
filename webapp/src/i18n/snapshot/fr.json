@@ -9373,4 +9373,6 @@
 ["Server trip timers are running {0} s late","Les minuteurs de course du serveur ont {0} s de retard"],
 ["Server dispatch rounds are running {0} s late","Les tours d'envoi du serveur ont {0} s de retard"],
 ["{0} trip timers overdue","{0} minuteurs de course en retard"],
-["{0} dispatch rounds overdue","{0} tours d'envoi en retard"]]
+["{0} dispatch rounds overdue","{0} tours d'envoi en retard"],
+["SOS pressed {0} · received by Movera {1}","SOS appuyé {0} · reçu par Movera {1}"],
+["Reached Movera {0} min after the press (the phone had no network).","Arrivé chez Movera {0} min après l'appui (le téléphone n'avait pas de réseau)."]]

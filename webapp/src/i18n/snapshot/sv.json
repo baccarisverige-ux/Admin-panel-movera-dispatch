@@ -9373,4 +9373,6 @@
 ["Server trip timers are running {0} s late","Serverns resetimrar ligger {0} s efter"],
 ["Server dispatch rounds are running {0} s late","Serverns utskicksrundor ligger {0} s efter"],
 ["{0} trip timers overdue","{0} resetimrar försenade"],
-["{0} dispatch rounds overdue","{0} utskicksrundor försenade"]]
+["{0} dispatch rounds overdue","{0} utskicksrundor försenade"],
+["SOS pressed {0} · received by Movera {1}","SOS trycktes {0} · mottaget av Movera {1}"],
+["Reached Movera {0} min after the press (the phone had no network).","Nådde Movera {0} min efter trycket (telefonen hade ingen täckning)."]]
