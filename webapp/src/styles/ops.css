@@ -219,13 +219,15 @@
 .op-level.high { background: #fff1df; color: #a4560a; }
 .op-late { color: #b32a2a !important; font-weight: 700; display: inline-flex; gap: 4px; align-items: center; }
 .op-late-banner { margin: 0; display: flex; gap: 6px; align-items: center; padding: 9px 12px; border-radius: 12px; background: #fdecec; color: #9b2020; font-weight: 700; font-size: 13px; }
-.op-case-view { display: grid; gap: 12px; padding: 16px; border-radius: 18px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow); min-width: 0; }
+.op-case-view { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 16px; border-radius: 18px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow); min-width: 0; }
 .op-case-view.critical { border-top: 4px solid #d03b3b; }
 .op-case-view.high { border-top: 4px solid #d9730d; }
 .op-case-view.low { border-top: 4px solid #2a78d6; }
 .op-case-head { display: grid; gap: 4px; }
 .op-case-head h3 { margin: 0; font-size: 19px; }
 .op-case-head p { margin: 0; font-size: 13px; color: var(--dash-ink-2); }
+/* Admin check round 2: a long case or rider id breaks instead of running off the card on a 390 px phone. */
+.op-case-head h3, .op-case-head p { overflow-wrap: anywhere; }
 .op-owner { display: inline-flex; gap: 5px; align-items: center; font-weight: 700; }
 .op-clocks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .op-clock { display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px; background: #f6f8f9; }
