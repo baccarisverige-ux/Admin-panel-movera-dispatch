@@ -127,7 +127,7 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
   ),
   "tips.driverPayRequest": t(
     "Temporary. When on: once a month, on this day, each driver who owes Movera more than the smallest amount gets a notification and a Pay Movera screen with the amount and a button to pay by card or Apple Pay in the app.",
-    `${STANDARD_ONLY} Driver app (notification, push and the Pay Movera screen). A card payment lowers what he owes by itself; record any other payment in Drivers › Owe Movera with "Driver paid Movera".`,
+    `${STANDARD_ONLY} Driver app (notification, push and the Pay Movera screen). A card payment lowers what they owe by itself; record any other payment in Drivers › Owe Movera with "Driver paid Movera".`,
     "On or off; day 1 to 28; the smallest amount is money, 0 or above.",
     "Off everywhere, day 1.",
     "On, day 1, 100 kr: on the 1st from 09:00 a driver who owes 250 kr is asked to pay 250 kr; one who owes 80 kr is not asked.",
