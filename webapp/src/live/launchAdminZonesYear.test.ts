@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import contract from "../../../contracts/contract.json" with { type: "json" };
 import { isNoQueueArea, queueAreaWanted } from "./airportQueue.ts";
-import { kpiRanges } from "./kpis.ts";
+import { fetchKpiDays, kpiRanges } from "./kpis.ts";
 
 /** Launch click-through 2026-11-19 (admin-every): Zones › open zone, and Dashboard › Year. */
 
@@ -38,4 +38,21 @@ test("KPIs: a short period stays one request; exactly maxDays is one request", (
   assert.deepEqual(kpiRanges("2026-11-19", "2026-11-19"), [{ fromDate: "2026-11-19", toDate: "2026-11-19" }]);
   assert.equal(kpiRanges("2025-01-01", "2026-02-04").length, 1);
   assert.equal(kpiRanges("2025-01-01", "2026-02-05").length, 2);
+});
+
+test("fetchKpiDays: Year sends one GET per part with the filter, and joins the days in order", async () => {
+  const asked: string[] = [];
+  const get = async (path: string) => {
+    asked.push(path);
+    const from = new URLSearchParams(path.split("?")[1]).get("fromDate")!;
+    return { days: [{ zoneId: "Z001", date: from }] as never[] };
+  };
+  const out = await fetchKpiDays(get, "2025-01-01", "2026-11-19", "country=SE");
+  assert.deepEqual(asked, [
+    "/admin/kpis?fromDate=2025-01-01&toDate=2026-02-04&country=SE",
+    "/admin/kpis?fromDate=2026-02-05&toDate=2026-11-19&country=SE",
+  ]);
+  assert.deepEqual(out.days.map((d: { date: string }) => d.date), ["2025-01-01", "2026-02-05"]);
+  assert.deepEqual(await fetchKpiDays(async (p) => { asked.push(p); return { days: [] }; }, "2026-11-19", "2026-11-19", ""), { days: [] });
+  assert.equal(asked.at(-1), "/admin/kpis?fromDate=2026-11-19&toDate=2026-11-19");
 });
