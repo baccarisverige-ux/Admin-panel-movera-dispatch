@@ -3,6 +3,7 @@
  * Reading a slice loads the server's drafts of every zone and of each country's Standard into the demo store;
  * publishing a page saves and publishes the server documents it owns at once (no second admin, owner 2026-10-27).
  */
+import { liveLocationOf } from "../dispatch/rules/liveLocation.ts";
 import { callSettingsOf } from "../config/callSettings.ts";
 import { chatSettingsOf } from "../config/chatSettings.ts";
 import { dontMatchOf } from "../config/dontMatchSettings.ts";
@@ -687,6 +688,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const next = liveRules(book, id);
       if ((next.shareTrip?.on ?? true) !== (was.shareTrip?.on ?? true)) throw new Error("Share trip could not be read from the server for this zone. Reload the page and try again.");
       if ((next.pickupSpots?.on ?? true) !== (was.pickupSpots?.on ?? true)) throw new Error("Pickup entrance chips could not be read from the server for this zone. Reload the page and try again.");
+      // v0.18.144: the same for Live location (switch and banner distance), read from the same rider document.
+      if (JSON.stringify(liveLocationOf(next)) !== JSON.stringify(liveLocationOf(was))) throw new Error("Live location could not be read from the server for this zone. Reload the page and try again.");
     }
     slices.set(DISPATCH_KEY, book);
     const state = stateWith({ dispatch: book });

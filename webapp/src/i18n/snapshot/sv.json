@@ -9379,4 +9379,5 @@
 ["Riders and drivers can share their live location","Resenärer och förare kan dela sin liveposition"],
 ["Off: the apps hide Share my location in this zone. Usual value: off until the load test passes.","Av: apparna döljer Dela min plats i zonen. Vanligt värde: av tills belastningstestet är godkänt."],
 ["Adjust-pickup banner from","Banner för att justera upphämtning från"],
-["10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.","10 till 500 m. Resenärsappen erbjuder att flytta upphämtningen till resenärens GPS när resenären är längre bort än så från upphämtningen."]]
+["0 = off, or 10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.","0 = av, eller 10 till 500 m. Resenärsappen erbjuder att flytta upphämtningen till resenärens GPS när resenären är längre bort än så från upphämtningen."],
+["Live location could not be read from the server for this zone. Reload the page and try again.","Liveposition kunde inte läsas från servern för den här zonen. Ladda om sidan och försök igen."]]

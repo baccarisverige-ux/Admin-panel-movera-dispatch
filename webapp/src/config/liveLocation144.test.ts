@@ -49,5 +49,7 @@ test("read back from the rider document as the server serves it", () => {
   assert.deepEqual(read({ liveLocation: { share: true, adjustPickupMeters: 45, sendEverySeconds: 8 } }), { share: true, adjustPickupMeters: 45 });
   assert.deepEqual(read({}), { share: false, adjustPickupMeters: 30 }, "never saved: off, 30 m");
   assert.deepEqual(read({ liveLocation: { share: "x", adjustPickupMeters: 9000 } }), { share: false, adjustPickupMeters: 30 }, "bad values: the defaults");
+  assert.deepEqual(read({ liveLocation: { share: true, adjustPickupMeters: 0 } }), { share: true, adjustPickupMeters: 0 }, "0 = the banner is off");
+  assert.deepEqual(read({ liveLocation: { share: true, adjustPickupMeters: 5 } }), { share: true, adjustPickupMeters: 30 }, "5 m is not allowed: the default");
   assert.deepEqual(read(null, { ...zone, liveLocation: { share: true, adjustPickupMeters: 50 } }), { share: true, adjustPickupMeters: 50 }, "no rider document read: the rules keep their value");
 });

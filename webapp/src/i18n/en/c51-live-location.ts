@@ -5,5 +5,6 @@ export const enC51LiveLocation = {
   "Riders and drivers can share their live location": "Riders and drivers can share their live location",
   "Off: the apps hide Share my location in this zone. Usual value: off until the load test passes.": "Off: the apps hide Share my location in this zone. Usual value: off until the load test passes.",
   "Adjust-pickup banner from": "Adjust-pickup banner from",
-  "10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.": "10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.",
+  "0 = off, or 10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.": "0 = off, or 10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.",
+  "Live location could not be read from the server for this zone. Reload the page and try again.": "Live location could not be read from the server for this zone. Reload the page and try again.",
 };

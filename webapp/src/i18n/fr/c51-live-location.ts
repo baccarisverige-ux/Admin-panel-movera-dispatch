@@ -7,5 +7,6 @@ export const frC51LiveLocation: Record<keyof typeof enC51LiveLocation, string> =
   "Riders and drivers can share their live location": "Les passagers et les chauffeurs peuvent partager leur position en direct",
   "Off: the apps hide Share my location in this zone. Usual value: off until the load test passes.": "Désactivé : les applis masquent Partager ma position dans cette zone. Valeur habituelle : désactivé jusqu'à la réussite du test de charge.",
   "Adjust-pickup banner from": "Bandeau d'ajustement de la prise en charge à partir de",
-  "10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.": "10 à 500 m. L'appli passager propose de déplacer la prise en charge à la position GPS du passager quand il est plus loin que cela.",
+  "0 = off, or 10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.": "0 = désactivé, ou 10 à 500 m. L'appli passager propose de déplacer la prise en charge à la position GPS du passager quand il est plus loin que cela.",
+  "Live location could not be read from the server for this zone. Reload the page and try again.": "La position en direct n'a pas pu être lue depuis le serveur pour cette zone. Rechargez la page et réessayez.",
 };
