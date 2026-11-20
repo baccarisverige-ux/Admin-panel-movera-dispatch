@@ -7,7 +7,7 @@ import type { PeriodWindow } from "../dashboard/period";
 import type { Card, Format } from "../reports/engine";
 import { Cards, Panel, SortTable } from "../reports/ui";
 import { useLiveSession } from "./LiveSessionContext";
-import { daysOf, localDay, moneyGroups, type MoneyLine } from "./kpis";
+import { daysOf, fetchKpiDays, localDay, moneyGroups, type MoneyLine } from "./kpis";
 import { ErrorLine } from "./ui";
 import type { KpiDay } from "./types";
 import { zoneFilterOf } from "./zoneFilter";
@@ -24,7 +24,7 @@ export function LiveMoneyReport({ window, timeZone, zoneIds }: { window: PeriodW
   const toDate = localDay(Math.max(window.start, window.end - 1), timeZone);
   // v0.17.2: the server counts only the zones shown.
   const zoneQuery = zoneIds.length ? new URLSearchParams(zoneFilterOf([...zoneIds]).params).toString() : "";
-  const query = useQuery({ queryKey: ["live", "kpis", fromDate, toDate, zoneQuery], queryFn: () => client.json<{ days: KpiDay[] }>(`/admin/kpis?fromDate=${fromDate}&toDate=${toDate}${zoneQuery ? `&${zoneQuery}` : ""}`) });
+  const query = useQuery({ queryKey: ["live", "kpis", fromDate, toDate, zoneQuery], queryFn: () => fetchKpiDays((path) => client.json<{ days: KpiDay[] }>(path), fromDate, toDate, zoneQuery) });
   if (query.isLoading) return <p className="state-line">{tr("Loading.")}</p>;
   if (query.error) return <ErrorLine error={query.error} onRetry={() => void query.refetch()} />;
   const dates = daysOf(window.start, window.end, timeZone);
