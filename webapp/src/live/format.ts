@@ -233,6 +233,10 @@ export function errorText(error: unknown): string {
   if (error.reason === "owed_changed") return tr("What the driver owes changed. It was reloaded; check it and try again.");
   if (error.reason === "paid_above_owed") return tr("That is more than the driver owes Movera.");
   if (error.reason === "owes_limit_needs_amount") return tr("Set an amount above 0 to switch the driver owes-limit on.");
+  // v0.18.139 driverPayRequest.setting: the monthly pay request's three refusals.
+  if (error.reason === "pay_request_needs_link") return tr("Set the payment link to switch the monthly pay request on.");
+  if (error.reason === "pay_request_needs_amount") return tr("Set the smallest amount to ask for to switch the monthly pay request on.");
+  if (error.reason === "pay_request_invalid") return tr("The monthly pay request is not valid: the day must be 1 to 28 and the payment link must start with https://.");
   if (error.reason === "pin_not_now") return tr("The PIN can only be checked while the driver is at the pickup.");
   if (error.reason === "pin_blocked") return tr("Too many wrong codes: the PIN is blocked until an admin unlocks it.");
   if (error.reason === "reason_required") return tr("Write a reason.");
