@@ -18,7 +18,7 @@ export const svC47PayRequest = {
   "Day of the month": "Dag i månaden",
   "Payment link": "Betalningslänk",
   "Smallest amount to ask for": "Minsta belopp att be om",
-  "Temporary: once a month a driver who owes Movera more than this is asked to pay with the link. Record the payment in Drivers › Owe Movera (Driver paid Movera).": "Tillfälligt: en gång i månaden ombeds en förare som är skyldig Movera mer än detta att betala med länken. Registrera betalningen i Förare › Skyldiga Movera (Föraren har betalat Movera).",
+  "Temporary: once a month a driver who owes Movera more than this is asked to pay by card in the app. The card payment is recorded by itself; a payment made another way is recorded in Drivers › Owe Movera (Driver paid Movera).": "Tillfälligt: en gång i månaden ombeds en förare som är skyldig Movera mer än detta att betala med kort i appen. Kortbetalningen registreras av sig själv; en betalning på annat sätt registreras i Förare › Skyldiga Movera (Föraren har betalat Movera).",
   "Temporary. When on: once a month, on this day, each driver who owes Movera more than the smallest amount gets a notification and a Pay Movera screen with the amount, a reference and a button that opens this payment link.": "Tillfälligt. När den är på: en gång i månaden, den här dagen, får varje förare som är skyldig Movera mer än det minsta beloppet en avisering och en skärm Betala Movera med beloppet, en referens och en knapp som öppnar den här betalningslänken.",
   "On or off; day 1 to 28; a link that starts with https://; the smallest amount is money, 0 or above.": "På eller av; dag 1 till 28; en länk som börjar med https://; det minsta beloppet är pengar, 0 eller mer.",
   "Off everywhere, day 1, no link.": "Av överallt, dag 1, ingen länk.",

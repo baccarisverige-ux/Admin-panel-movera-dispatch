@@ -18,7 +18,7 @@ export const enC47PayRequest = {
   "Day of the month": "Day of the month",
   "Payment link": "Payment link",
   "Smallest amount to ask for": "Smallest amount to ask for",
-  "Temporary: once a month a driver who owes Movera more than this is asked to pay with the link. Record the payment in Drivers › Owe Movera (Driver paid Movera).": "Temporary: once a month a driver who owes Movera more than this is asked to pay with the link. Record the payment in Drivers › Owe Movera (Driver paid Movera).",
+  "Temporary: once a month a driver who owes Movera more than this is asked to pay by card in the app. The card payment is recorded by itself; a payment made another way is recorded in Drivers › Owe Movera (Driver paid Movera).": "Temporary: once a month a driver who owes Movera more than this is asked to pay by card in the app. The card payment is recorded by itself; a payment made another way is recorded in Drivers › Owe Movera (Driver paid Movera).",
   "Temporary. When on: once a month, on this day, each driver who owes Movera more than the smallest amount gets a notification and a Pay Movera screen with the amount, a reference and a button that opens this payment link.": "Temporary. When on: once a month, on this day, each driver who owes Movera more than the smallest amount gets a notification and a Pay Movera screen with the amount, a reference and a button that opens this payment link.",
   "On or off; day 1 to 28; a link that starts with https://; the smallest amount is money, 0 or above.": "On or off; day 1 to 28; a link that starts with https://; the smallest amount is money, 0 or above.",
   "Off everywhere, day 1, no link.": "Off everywhere, day 1, no link.",
