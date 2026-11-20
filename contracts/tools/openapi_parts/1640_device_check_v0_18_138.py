@@ -17,3 +17,7 @@ assert "requireDeviceCheck" not in _p138, "smsSignIn.requireDeviceCheck exists b
 _p138["requireDeviceCheck"] = {**b("Real-phone check before a sign-in SMS (Play Integrity / App Attest). " + _DC["ios"]["note"]), "default": C["configDefaults"]["smsSignIn"]["requireDeviceCheck"]}
 _op138 = PATHS["/auth/otp/request"]["post"]
 _op138["description"] = (_op138.get("description", "") + " " + _V138 + _DC["deviceLimit"] + " " + _DC["errors"]["device_check_failed"] + " " + _DC["order"]).strip()
+for _k138 in ("installId", "deviceCheck"):
+    assert _k138 not in S["AccountPhoneChange"]["properties"], "AccountPhoneChange device fields exist before v0.18.138"
+    S["AccountPhoneChange"]["properties"][_k138] = S["OtpRequest"]["properties"][_k138]
+S["AccountPhoneChange"]["description"] = (S["AccountPhoneChange"].get("description", "") + " " + _V138 + _DC["phoneChange"]).strip()
