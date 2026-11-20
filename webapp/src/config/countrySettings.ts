@@ -96,6 +96,11 @@ export type CountrySettings = {
    * it the driver gets no cash trips; he is never refused online. ON needs an amount above 0 (400 owes_limit_needs_amount).
    */
   driverOwesLimit: DriverOwesLimit;
+  /**
+   * v0.18.136 stripeFees.setting (DRAFT; owner 2026-11-20 "So we use stripe"): CountryRules.riderFeeStripe.enabled, country
+   * standard only, default OFF: the rider can pay an owed cancel or no-show fee by card or Apple Pay in the app.
+   */
+  riderFeeStripe: boolean;
 };
 export type DriverOwesLimit = { enabled: boolean; max: number | null };
 export type PersonLimits = { savedPlacesPerPerson: number; emergencyContactsPerPerson: number };
@@ -147,7 +152,7 @@ export const ON_TRIP_MIN_DONE_PCT_DEFAULT = 70;
 /** v0.18.33 (owner Q5): CountryRules.onTripOffers.lateFreeCancelMin default. */
 export const CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT = 10;
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "mixedCashInCar", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms", "maxRiderDebt", "driverOwesLimit"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "mixedCashInCar", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms", "maxRiderDebt", "driverOwesLimit", "riderFeeStripe"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "walletFirst", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
@@ -204,6 +209,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     sosContactsSms: SOS_CONTACTS_SMS_DEFAULT,
     maxRiderDebt: MAX_RIDER_DEBT[country],
     driverOwesLimit: { ...DRIVER_OWES_LIMIT[country] },
+    riderFeeStripe: false,
   };
 }
 
@@ -259,6 +265,7 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     // S5 J9: no upper bound (owner "Any amount"); a stored value is kept as it is, for the checks to see.
     maxRiderDebt: finite(raw.maxRiderDebt) ? raw.maxRiderDebt : base.maxRiderDebt,
     driverOwesLimit: owesLimitOf(raw.driverOwesLimit, base.driverOwesLimit),
+    riderFeeStripe: raw.riderFeeStripe === true,
     ...mixedOf(raw.mixedMethods),
     ...mixedTipOf(raw.mixedTipRules),
   };
@@ -276,8 +283,8 @@ function owesLimitOf(stored: unknown, fallback: DriverOwesLimit): DriverOwesLimi
  * S5 J9 (v0.18.84): maxRiderDebt and driverOwesLimit of a country_rules document (the standard's) in local money.
  * A missing field, or one in another currency, is left out (the panel shows the default, like the server).
  */
-export function debtSettingsOfRules(document: unknown, country: MarketId): Partial<Pick<CountrySettings, "maxRiderDebt" | "driverOwesLimit">> {
-  const doc = (document && typeof document === "object" ? document : {}) as { maxRiderDebt?: unknown; driverOwesLimit?: unknown };
+export function debtSettingsOfRules(document: unknown, country: MarketId): Partial<Pick<CountrySettings, "maxRiderDebt" | "driverOwesLimit" | "riderFeeStripe">> {
+  const doc = (document && typeof document === "object" ? document : {}) as { maxRiderDebt?: unknown; driverOwesLimit?: unknown; riderFeeStripe?: { enabled?: unknown } };
   const { currency, minorUnits } = market(country);
   const money = (value: unknown): number | null | undefined => {
     if (value === null) return null;
@@ -290,6 +297,8 @@ export function debtSettingsOfRules(document: unknown, country: MarketId): Parti
   return {
     ...(typeof debt === "number" && debt > 0 ? { maxRiderDebt: debt } : {}),
     ...(limit && typeof limit === "object" && typeof limit.enabled === "boolean" && max !== undefined ? { driverOwesLimit: { enabled: limit.enabled, max } } : {}),
+    // v0.18.136 stripeFees.setting: missing = off.
+    ...(doc.riderFeeStripe && typeof doc.riderFeeStripe === "object" && typeof doc.riderFeeStripe.enabled === "boolean" ? { riderFeeStripe: doc.riderFeeStripe.enabled } : {}),
   };
 }
 
@@ -386,7 +395,7 @@ export function zoneSettingsOf(book: CountrySettingsBook, country: MarketId, zon
  * Standard only and refuses the emergency numbers and the SOS SMS switch on a zone's own rules. On a zone the panel
  * shows them locked.
  */
-export const STANDARD_ONLY_FIELDS = ["walletCreditMax", "maxRiderDebt", "driverOwesLimit", "emergencyNumbers", "sosContactsSms"] as const satisfies readonly (keyof CountrySettings)[];
+export const STANDARD_ONLY_FIELDS = ["walletCreditMax", "maxRiderDebt", "driverOwesLimit", "emergencyNumbers", "sosContactsSms", "riderFeeStripe"] as const satisfies readonly (keyof CountrySettings)[];
 
 /**
  * What the live Tips & limits panel shows for a scope: its own settings, and for a ZONE the Standard's values of the
@@ -503,6 +512,7 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   lines.push(...emergencyNumbersLines(before.emergencyNumbers, after.emergencyNumbers));
   lines.push(...sosContactsSmsLines(before.sosContactsSms, after.sosContactsSms));
   if (before.maxRiderDebt !== after.maxRiderDebt) lines.push(tr("Max rider debt: {0} → {1}", [`${short(before.maxRiderDebt)} ${symbol}`, `${short(after.maxRiderDebt)} ${symbol}`]));
+  if (before.riderFeeStripe !== after.riderFeeStripe) lines.push(tr("Card payment of fees: {0} → {1}", [tr(before.riderFeeStripe ? "on" : "off"), tr(after.riderFeeStripe ? "on" : "off")]));
   if (JSON.stringify(before.driverOwesLimit) !== JSON.stringify(after.driverOwesLimit)) {
     const owes = (limit: DriverOwesLimit) => `${tr(limit.enabled ? "on" : "off")}${limit.max !== null ? `, ${short(limit.max)} ${symbol}` : ""}`;
     lines.push(tr("Driver owes-limit: {0} → {1}", [owes(before.driverOwesLimit), owes(after.driverOwesLimit)]));
