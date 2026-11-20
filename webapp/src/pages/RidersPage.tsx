@@ -51,7 +51,7 @@ import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
 import { DateInput } from "../ui/DateInput";
 import { ListCount } from "../live/ListCount";
 
-// v0.18.140 (contract.json#accountDeletion): Riders › Account deletion requests (riders and drivers), live builds only.
+// v0.18.134 (contract.json#accountDeletion): Riders › Account deletion requests (riders and drivers), live builds only.
 const LiveDeletionRequests = lazy(() => import("../live/LiveDeletionRequests").then((module) => ({ default: module.LiveDeletionRequests })));
 
 type View = "riders" | "promotions" | "insights";

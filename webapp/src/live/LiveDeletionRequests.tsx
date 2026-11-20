@@ -10,7 +10,7 @@ import { DateText, ErrorLine } from "./ui";
 const COUNTRIES = ["SE", "FR", "TN"] as const;
 
 /**
- * contract v0.18.140 (contract.json#accountDeletion; owner button 2026-11-20 "Accept, keep debt (Rec.)"): Riders ›
+ * contract v0.18.134 (contract.json#accountDeletion; owner button 2026-11-20 "Accept, keep debt (Rec.)"): Riders ›
  * "Account deletion requests" (riders and drivers, newest first, never a phone number) and the country setting
  * "Erase after N days" + "Erase on" (off = the server only counts). Live builds only.
  */

@@ -1,5 +1,5 @@
 /**
- * contract v0.18.140 (contract.json#accountDeletion; owner button 2026-11-20 "Accept, keep debt (Rec.)", Rules
+ * contract v0.18.134 (contract.json#accountDeletion; owner button 2026-11-20 "Accept, keep debt (Rec.)", Rules
  * decisions/session-2026-11-06.md): Riders › "Account deletion requests", the server's list (read only, riders.read,
  * never a phone number), and the country setting CountryRules.accountDeletion on the Standard: eraseEnabled (off by
  * default = the server only counts, nothing is erased) and eraseAfterDays (30..365). Own module (Rule 25).

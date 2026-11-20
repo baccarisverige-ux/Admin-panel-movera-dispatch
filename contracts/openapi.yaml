@@ -1,11 +1,11 @@
-# Movera API v0.18.140 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.134 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.140
+  version: 0.18.134
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.140 in this folder; this file must agree with them.
+    v0.18.134 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.140
+  version: 0.18.134
   source: contract.json
 paths:
   /auth/otp/request:
@@ -118,7 +118,24 @@ paths:
         the app says "Too many wrong codes today. Try again later." with the wait from retryAfterSeconds and disables Send
         code v0.18.119 (S7 W2 Q118, owner OQ-1 "Lock at 60 for 24 h (Rec.)"): also when the number alone reaches 4 × wrongCodesPerDay
         wrong codes in 24 h over all addresses (default 60): then every address gets it for that number, even with the right
-        code, for up to 24 h or until an admin unlocks it (auth.otp.note). The app text and handling are unchanged.'
+        code, for up to 24 h or until an admin unlocks it (auth.otp.note). The app text and handling are unchanged. v0.18.133
+        (contract.json#smsSignIn): A number that is not a test number gets a real code only when ALL hold: (1) the server
+        has the SMS company''s two keys (serverKeys; set by the owner on the server, never in a repository, never sent to
+        an app or the admin panel); (2) the number is a mobile number of a country Movera serves (countries, mobileNumbers);
+        (3) CountryRules.smsSignIn.enabled of that country''s standard is true. Otherwise the answer is 403 forbidden, reason
+        sign_in_restricted, exactly as before (the apps offer the waiting list). A test number (outside production) never
+        gets an SMS and keeps the fixed test code, whatever the switch says. Cost guard (SMS pumping): per country, the sign-in
+        SMS handed to the SMS company in the last 24 hours are counted, and the new one is booked, in one step per country
+        (two requests at once can never both pass the limit). Counted: accepted, still being sent, and every hand-over the
+        company did not answer or answered with a server error (a time-out, a broken connection, a 5xx answer: it may still
+        have sent and billed it); only an SMS the company answered with a refusal (a 4xx answer) is not counted. At dailyCap
+        the request is refused: 503 unavailable, reason sms_daily_limit, Retry-After = until the oldest leaves the 24 h window
+        (at most 24 h); no code is made and nothing is sent (fail closed). Test numbers are not counted and not stopped. The
+        code is stored first, then the SMS is handed to the SMS company (one try, short time limit) before the answer. Accepted:
+        200 as before (requestId, sessionId, expiresAt, retryAfterSeconds) plus codeLength (codeLengthNote). Refused by the
+        company, answered with an error, or not answered (a time-out or a broken connection): the code is void at once and
+        the answer is 503 unavailable, reason sms_not_sent, Retry-After = auth.otp.retryAfterSeconds; the app may ask again
+        after that wait. The try still counts on the hourly limits.'
       tags:
       - Auth
       x-actor:
@@ -10992,20 +11009,20 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
-      description: 'v0.18.140 (accountDeletion): v0.18.140: on the request, in the same transaction: every session of the
+      description: 'v0.18.134 (accountDeletion): v0.18.134: on the request, in the same transaction: every session of the
         account ends (the next call is 401 session_ended), push addresses are removed, a driver is set offline (offers withdrawn);
         from then on sign-in and refresh with that number or identity answer 403 forbidden reason account_closed until the
         erase is done. After the erase the number is free and signs up as a new account. Change of mind during the 30 days:
-        not decided (owner question open); until then there is no way back. v0.18.140 (accountDeletion): v0.18.140: never
+        not decided (owner question open); until then there is no way back. v0.18.134 (accountDeletion): v0.18.134: never
         refused because of a debt (store rules: deletion must always be possible). Refused only during an open trip: searching,
         offered, accepted, arrived, on board or a booked ride not yet done (409 conflict reason deletion_open_trip; the app
-        says to finish or cancel the ride first). v0.18.140 (accountDeletion): v0.18.140: when the account owes money at the
+        says to finish or cancel the ride first). v0.18.134 (accountDeletion): v0.18.134: when the account owes money at the
         request (a rider: unpaid fees, riders.outstanding; a driver: debtModel.driverOwes.owed > 0, i.e. drivers who owe Movera),
         one debt record is kept: name, phone number and amount with its currency and the trip or period it comes from. Its
         amount follows the live debt (the wallet and earnings rows stay after the erase): Mark as paid, Driver paid Movera,
         a payment in the car and every account_erase run bring it up to date, and at 0 it is settled (paid or written off);
-        a settled record of an erased account goes with the next run. A request stored before v0.18.140 gets its record from
-        the live debt just before the erase. It is never sent to an app. v0.18.140 (accountDeletion): v0.18.140: 30 days after
+        a settled record of an erased account goes with the next run. A request stored before v0.18.134 gets its record from
+        the live debt just before the erase. It is never sent to an app. v0.18.134 (accountDeletion): v0.18.134: 30 days after
         the request (CountryRules.accountDeletion.eraseAfterDays, never less than 30) the job erases the account: the person
         row is emptied in place (phone replaced by a unique placeholder so the number is free, first name / e-mail / language
         / consents / moderation reason emptied, erased_at set), and the rows that hang off it are deleted: saved places, emergency
@@ -11013,12 +11030,12 @@ paths:
         changes, driver phone data and last position, document rows and their stored files (identity and licence photos are
         stored in the database and go with them). The car (vehicles, plate) is kept for the taxi ride records (FLAGGED, lawyer).
         No bank details are stored by the server. Chat, GPS traces and share links go by their own timed clean-ups (90 / 30
-        / 30 days). v0.18.140 (accountDeletion): v0.18.140: kept, linked only to the emptied account id: trips with price,
+        / 30 days). v0.18.134 (accountDeletion): v0.18.134: kept, linked only to the emptied account id: trips with price,
         times, zone and fare lines, rider fees, wallet entries, refunds, earnings entries, payouts, ratings (stars only),
         admin audit rows and the debt record. Swedish bookkeeping law keeps money records for 7 years; how long exactly for
         each table, and whether trip addresses and the driver''s name on money records may go, is for the lawyer (FLAGGED,
         not decided; owner privacy Q2 + Q5 open). Until decided: nothing in this list is erased, the driver''s first and last
-        name stay on his row for the money records. v0.18.140: Account > Delete account (since v0.5.1) works with the same
+        name stay on his row for the money records. v0.18.134: Account > Delete account (since v0.5.1) works with the same
         rules: on 202 it signs out and wipes the phone; 409 deletion_open_trip shows the same text. It accepts any status
         text (older servers answer requested only).'
   /trips/{tripId}/path:
@@ -19622,20 +19639,20 @@ paths:
     post:
       operationId: requestDriverAccountDeletion
       summary: Ask to delete the driver account
-      description: 'v0.18.140 (accountDeletion): v0.18.140: on the request, in the same transaction: every session of the
+      description: 'v0.18.134 (accountDeletion): v0.18.134: on the request, in the same transaction: every session of the
         account ends (the next call is 401 session_ended), push addresses are removed, a driver is set offline (offers withdrawn);
         from then on sign-in and refresh with that number or identity answer 403 forbidden reason account_closed until the
         erase is done. After the erase the number is free and signs up as a new account. Change of mind during the 30 days:
-        not decided (owner question open); until then there is no way back. v0.18.140 (accountDeletion): v0.18.140: never
+        not decided (owner question open); until then there is no way back. v0.18.134 (accountDeletion): v0.18.134: never
         refused because of a debt (store rules: deletion must always be possible). Refused only during an open trip: searching,
         offered, accepted, arrived, on board or a booked ride not yet done (409 conflict reason deletion_open_trip; the app
-        says to finish or cancel the ride first). v0.18.140 (accountDeletion): v0.18.140: when the account owes money at the
+        says to finish or cancel the ride first). v0.18.134 (accountDeletion): v0.18.134: when the account owes money at the
         request (a rider: unpaid fees, riders.outstanding; a driver: debtModel.driverOwes.owed > 0, i.e. drivers who owe Movera),
         one debt record is kept: name, phone number and amount with its currency and the trip or period it comes from. Its
         amount follows the live debt (the wallet and earnings rows stay after the erase): Mark as paid, Driver paid Movera,
         a payment in the car and every account_erase run bring it up to date, and at 0 it is settled (paid or written off);
-        a settled record of an erased account goes with the next run. A request stored before v0.18.140 gets its record from
-        the live debt just before the erase. It is never sent to an app. v0.18.140 (accountDeletion): v0.18.140: 30 days after
+        a settled record of an erased account goes with the next run. A request stored before v0.18.134 gets its record from
+        the live debt just before the erase. It is never sent to an app. v0.18.134 (accountDeletion): v0.18.134: 30 days after
         the request (CountryRules.accountDeletion.eraseAfterDays, never less than 30) the job erases the account: the person
         row is emptied in place (phone replaced by a unique placeholder so the number is free, first name / e-mail / language
         / consents / moderation reason emptied, erased_at set), and the rows that hang off it are deleted: saved places, emergency
@@ -19643,12 +19660,12 @@ paths:
         changes, driver phone data and last position, document rows and their stored files (identity and licence photos are
         stored in the database and go with them). The car (vehicles, plate) is kept for the taxi ride records (FLAGGED, lawyer).
         No bank details are stored by the server. Chat, GPS traces and share links go by their own timed clean-ups (90 / 30
-        / 30 days). v0.18.140 (accountDeletion): v0.18.140: kept, linked only to the emptied account id: trips with price,
+        / 30 days). v0.18.134 (accountDeletion): v0.18.134: kept, linked only to the emptied account id: trips with price,
         times, zone and fare lines, rider fees, wallet entries, refunds, earnings entries, payouts, ratings (stars only),
         admin audit rows and the debt record. Swedish bookkeeping law keeps money records for 7 years; how long exactly for
         each table, and whether trip addresses and the driver''s name on money records may go, is for the lawyer (FLAGGED,
         not decided; owner privacy Q2 + Q5 open). Until decided: nothing in this list is erased, the driver''s first and last
-        name stay on his row for the money records. v0.18.140: Profile > Delete my account: a confirm step (what closes at
+        name stay on his row for the money records. v0.18.134: Profile > Delete my account: a confirm step (what closes at
         once, what is kept, 30 days), then the request; on 202 the app signs out and wipes the phone; 409 deletion_open_trip
         shows "Finish or cancel your ride first". sv / fr / en.'
       tags:
@@ -19689,10 +19706,10 @@ paths:
     get:
       operationId: adminDeletionRequests
       summary: Account deletion requests and their status
-      description: 'v0.18.140 (accountDeletion): v0.18.140: GET /admin/deletion-requests (riders.read, read only, own zones
+      description: 'v0.18.134 (accountDeletion): v0.18.134: GET /admin/deletion-requests (riders.read, read only, own zones
         not applied: accounts are country-wide) lists every request, newest first: DeletionRequest { accountKind, accountId,
         firstName, requestedAt, eraseDueAt, status, waitingReason?, debt?, erasedAt? }. status requested (before eraseDueAt),
-        waiting (due, but blocked or eraseEnabled is off), erased. The phone number is never in the list. v0.18.140: account_erase:
+        waiting (due, but blocked or eraseEnabled is off), erased. The phone number is never in the list. v0.18.134: account_erase:
         one recurring housekeeping timer (hourly, own kind, so it has a heartbeat in system health), at most 10 accounts per
         run, one transaction per account, idempotent (erased_at set last in the same transaction; a second run finds nothing;
         a run that fails undoes only its own account). Accounts blocked by an open trip or an open safety case are left out
@@ -25266,6 +25283,26 @@ components:
             amount of one bonus campaign (CountryRules.bonusCampaignMax, per country standard or zone, Admin › Pricing › Tips
             & limits, settings.publish). Builder default values (plan §12 D13), admin-changeable. Defaults SE 2 000,00 kr
             (200000 SEK), FR 200,00 € (20000 EUR), TN 200.000 DT (200000 TND). Optional: absent → configDefaults.bonusCampaignMax.'
+        smsSignIn:
+          type: object
+          description: 'v0.18.133 (contract.json#smsSignIn): CountryRules.smsSignIn { enabled (boolean), dailyCap (integer,
+            dailyCapRange) } of the COUNTRY STANDARD only (standard-<CC>), like sosContactsSms: Admin › Pricing › Tips & limits
+            per country, card "Real SMS sign-in codes" (settings.edit, published with the country_rules document by settings.publish).
+            A zone''s own country_rules carrying it is 400 invalid_request, reason sms_sign_in_country_only; enabled not true
+            / false, dailyCap not a whole number inside dailyCapRange, or another key inside it, is 400 invalid_request, reason
+            invalid_document. Never saved, or a part missing = configDefaults.smsSignIn (off, 200).'
+          properties:
+            enabled:
+              type: boolean
+              description: Real SMS sign-in codes for this country's numbers.
+              default: false
+            dailyCap:
+              type: integer
+              minimum: 10
+              maximum: 100000
+              default: 200
+              description: Sign-in SMS per 24 hours for this country before new codes are refused (sms_daily_limit).
+          additionalProperties: false
         accountDeletion:
           $ref: '#/components/schemas/AccountDeletionSetting'
       x-server-only: true
@@ -26409,7 +26446,8 @@ components:
           $ref: '#/components/schemas/Language'
     OtpChallenge:
       type: object
-      description: The code is 4 digits and lives 300 s; at most 5 attempts.
+      description: 'The code lives 300 s; at most 5 attempts. v0.18.133 (contract.json#smsSignIn): it is 4 digits for a test
+        number and 6 digits when sent by SMS (codeLength).'
       required:
       - requestId
       - sessionId
@@ -26426,6 +26464,13 @@ components:
           type: integer
           minimum: 0
           default: 30
+        codeLength:
+          type: integer
+          enum:
+          - 4
+          - 6
+          description: 'v0.18.133 (contract.json#smsSignIn): how many digits this code has: 4 for a test number (auth.otp.codeLength),
+            6 for a code sent by SMS (smsSignIn.codeLength). Missing = 4.'
     OtpVerifyRequest:
       type: object
       required:
@@ -26439,7 +26484,7 @@ components:
           $ref: '#/components/schemas/Id'
         code:
           type: string
-          pattern: ^[0-9]{4}$
+          pattern: ^([0-9]{4}|[0-9]{6})$
         linkToken:
           type: string
           minLength: 1
@@ -29388,7 +29433,7 @@ components:
     AccountDeletion:
       type: object
       description: 'v0.5.1: POST /account/deletion (rider) answers 202 { status: requested }; the server erases the account
-        on its own schedule (legal retention, open payments). v0.18.140 (accountDeletion): v0.18.140: POST /account/deletion
+        on its own schedule (legal retention, open payments). v0.18.134 (accountDeletion): v0.18.134: POST /account/deletion
         (rider, since v0.5.1) and POST /driver/account/deletion (driver, new) answer 202 AccountDeletion { status: requested,
         requestedAt, eraseDueAt }. A second request answers the first one again (same requestedAt; nothing changes).'
       required:
@@ -29401,11 +29446,11 @@ components:
         requestedAt:
           allOf:
           - $ref: '#/components/schemas/Timestamp'
-          description: 'v0.18.140 (accountDeletion): when the account asked (the first request).'
+          description: 'v0.18.134 (accountDeletion): when the account asked (the first request).'
         eraseDueAt:
           allOf:
           - $ref: '#/components/schemas/Timestamp'
-          description: 'v0.18.140 (accountDeletion): requestedAt + eraseAfterDays: from then the job may erase it.'
+          description: 'v0.18.134 (accountDeletion): requestedAt + eraseAfterDays: from then the job may erase it.'
     RiderConsents:
       type: object
       properties:
@@ -36356,7 +36401,7 @@ components:
           $ref: '#/components/schemas/Id'
         code:
           type: string
-          pattern: ^[0-9]{4}$
+          pattern: ^([0-9]{4}|[0-9]{6})$
     AccountEmailChange:
       type: object
       required:
@@ -39244,7 +39289,7 @@ components:
           description: Opaque; null on the last page.
     DeletionRequest:
       type: object
-      description: 'v0.18.140 (accountDeletion): v0.18.140: GET /admin/deletion-requests (riders.read, read only, own zones
+      description: 'v0.18.134 (accountDeletion): v0.18.134: GET /admin/deletion-requests (riders.read, read only, own zones
         not applied: accounts are country-wide) lists every request, newest first: DeletionRequest { accountKind, accountId,
         firstName, requestedAt, eraseDueAt, status, waitingReason?, debt?, erasedAt? }. status requested (before eraseDueAt),
         waiting (due, but blocked or eraseEnabled is off), erased. The phone number is never in the list.'
@@ -39301,7 +39346,7 @@ components:
       additionalProperties: false
     DeletionRequestPage:
       type: object
-      description: 'v0.18.140 (accountDeletion): newest first, at most 200.'
+      description: 'v0.18.134 (accountDeletion): newest first, at most 200.'
       required:
       - items
       - dueNow
@@ -39318,7 +39363,7 @@ components:
       additionalProperties: false
     AccountDeletionSetting:
       type: object
-      description: 'v0.18.140 (accountDeletion): v0.18.140: CountryRules.accountDeletion { eraseEnabled (default false = count
+      description: 'v0.18.134 (accountDeletion): v0.18.134: CountryRules.accountDeletion { eraseEnabled (default false = count
         only), eraseAfterDays (default 30, minimum 30) } on the country standard in Admin Pricing; a zone''s own value is
         ignored. The account''s country: a driver''s country, else SE.'
       properties:

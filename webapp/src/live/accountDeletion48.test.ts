@@ -4,15 +4,15 @@ import contract from "../../../contracts/contract.json" with { type: "json" };
 import { deletionSettingOf, deletionSettingProblem, readDeletionRequests, saveDeletionSetting, statusText, withDeletionSetting } from "./accountDeletion.ts";
 
 /**
- * contract v0.18.140 (contract.json#accountDeletion; owner button 2026-11-20 "Accept, keep debt (Rec.)"): Riders ›
+ * contract v0.18.134 (contract.json#accountDeletion; owner button 2026-11-20 "Accept, keep debt (Rec.)"): Riders ›
  * "Account deletion requests" (GET /admin/deletion-requests, read only) and the country setting
  * CountryRules.accountDeletion { eraseEnabled (off = count only), eraseAfterDays (30..365) } on the Standard.
  */
 const C = contract as unknown as { version: string; accountDeletion: { adminStatus: string[] }; configDefaults: { accountDeletion: { eraseEnabled: boolean; eraseAfterDays: number } } };
 
-test("the contract copy is 0.18.140 or later with the deletion rules", () => {
+test("the contract copy is 0.18.134 or later with the deletion rules", () => {
   const [a, b, c] = C.version.split(".").map(Number);
-  assert.ok(a! > 0 || b! > 18 || (b === 18 && c! >= 140), C.version);
+  assert.ok(a! > 0 || b! > 18 || (b === 18 && c! >= 134), C.version);
   assert.deepEqual(C.accountDeletion.adminStatus, ["requested", "waiting", "erased"]);
   assert.deepEqual(C.configDefaults.accountDeletion, { eraseEnabled: false, eraseAfterDays: 30 });
 });

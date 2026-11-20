@@ -1,11 +1,11 @@
-# Runs inside tools/gen_openapi.py in name order with its globals (rule 25 split). v0.18.140 (account deletion E1; owner
+# Runs inside tools/gen_openapi.py in name order with its globals (rule 25 split). v0.18.134 (account deletion E1; owner
 # button 2026-11-20 "Accept, keep debt (Rec.)", Rules decisions/session-2026-11-06.md): the request closes the account
 # at once, a debt never blocks it and is kept as a record, the rest is erased 30 days after the request
 # (contract.json#accountDeletion). Additive: two optional fields, one driver route, one admin read, one setting.
 _AD = C["accountDeletion"]
-_V140 = "v0.18.140 (accountDeletion): "
+_V140 = "v0.18.134 (accountDeletion): "
 _ad = S["AccountDeletion"]
-assert "requestedAt" not in _ad["properties"], "AccountDeletion.requestedAt exists before v0.18.140"
+assert "requestedAt" not in _ad["properties"], "AccountDeletion.requestedAt exists before v0.18.134"
 _ad["properties"]["requestedAt"] = {"allOf": [ref("Timestamp")], "description": _V140 + "when the account asked (the first request)."}
 _ad["properties"]["eraseDueAt"] = {"allOf": [ref("Timestamp")], "description": _V140 + "requestedAt + eraseAfterDays: from then the job may erase it."}
 _ad["description"] = (_ad.get("description", "") + " " + _V140 + _AD["request"]).strip()
@@ -36,5 +36,5 @@ S["AccountDeletionSetting"] = obj({
     "eraseEnabled": dflt(b("Off = the job only counts (dry-run); on = due accounts are erased."), _DADS["eraseEnabled"]),
     "eraseAfterDays": dflt(i("Days from the request to the erase.", minimum=30, maximum=365), _DADS["eraseAfterDays"])},
     [], _V140 + _AD["setting"], addl=False)
-assert "accountDeletion" not in S["CountryRules"]["properties"], "CountryRules.accountDeletion exists before v0.18.140"
+assert "accountDeletion" not in S["CountryRules"]["properties"], "CountryRules.accountDeletion exists before v0.18.134"
 S["CountryRules"]["properties"]["accountDeletion"] = ref("AccountDeletionSetting")

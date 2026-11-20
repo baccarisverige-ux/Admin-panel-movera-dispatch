@@ -1,4 +1,4 @@
-/** Swedish dictionary, area c48-account-deletion: Riders › Account deletion requests and the erase setting (contract v0.18.140 accountDeletion). Add new keys at the end of this file. Merged in ../sv.ts in this order. */
+/** Swedish dictionary, area c48-account-deletion: Riders › Account deletion requests and the erase setting (contract v0.18.134 accountDeletion). Add new keys at the end of this file. Merged in ../sv.ts in this order. */
 import type { enC48AccountDeletion } from "../en/c48-account-deletion.ts";
 
 export const svC48AccountDeletion: Record<keyof typeof enC48AccountDeletion, string> = {

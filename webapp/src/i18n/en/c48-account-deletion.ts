@@ -1,4 +1,4 @@
-/** English dictionary, area c48-account-deletion: Riders › Account deletion requests and the erase setting (contract v0.18.140 accountDeletion). Add new keys at the end of this file. Merged in ../en.ts in this order. */
+/** English dictionary, area c48-account-deletion: Riders › Account deletion requests and the erase setting (contract v0.18.134 accountDeletion). Add new keys at the end of this file. Merged in ../en.ts in this order. */
 export const enC48AccountDeletion = {
   "Erased": "Erased",
   "Requested": "Requested",
