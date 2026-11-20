@@ -3,7 +3,6 @@ import type { enC48AccountDeletion } from "../en/c48-account-deletion.ts";
 
 export const svC48AccountDeletion: Record<keyof typeof enC48AccountDeletion, string> = {
   "Erased": "Raderat",
-  "Requested": "Begärt",
   "Waiting: erasing is off (count only)": "Väntar: radering är av (räknar bara)",
   "Waiting: open trip": "Väntar: pågående resa",
   "Waiting: open safety case": "Väntar: öppet säkerhetsärende",
@@ -13,7 +12,6 @@ export const svC48AccountDeletion: Record<keyof typeof enC48AccountDeletion, str
   "A rider or driver who deletes the account is closed at once. A debt is kept as a record (name, number, amount) until it is paid or written off. Everything else is erased after the set days; money and trip records stay for the bookkeeping law.": "En resenär eller förare som raderar kontot stängs direkt. En skuld sparas som en post (namn, nummer, belopp) tills den är betald eller avskriven. Allt annat raderas efter valt antal dagar; pengar och resor sparas enligt bokföringslagen.",
   "No deletion requests.": "Inga begäranden om radering.",
   "Account": "Konto",
-  "Asked": "Begärt",
   "Erase from": "Raderas från",
   "Kept debt": "Sparad skuld",
   "Paid or written off": "Betald eller avskriven",
@@ -21,4 +19,5 @@ export const svC48AccountDeletion: Record<keyof typeof enC48AccountDeletion, str
   "Erase setting (country Standard)": "Raderingsinställning (landets standard)",
   "Erase after (days)": "Radera efter (dagar)",
   "Erase on (off = count only, nothing is erased)": "Radering på (av = räknar bara, inget raderas)",
+  "Save the account erase setting": "Spara inställningen för kontoradering",
 };
