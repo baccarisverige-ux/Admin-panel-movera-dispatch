@@ -16,7 +16,7 @@ import { queueAreaKey, useQueueArea } from "./useAirportQueue";
 export function LiveQueueArea({ zone, disabled }: { zone: ServerZone; disabled: boolean }) {
   const live = useLiveSessionMaybe();
   const queryClient = useQueryClient();
-  const area = useQueueArea(zone.zoneId);
+  const area = useQueueArea(zone);
   const [draft, setDraft] = useState<QueueAreaInput>({ ...QUEUE_DEFAULTS, polygon: [] });
   const [state, setState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   useEffect(() => {
