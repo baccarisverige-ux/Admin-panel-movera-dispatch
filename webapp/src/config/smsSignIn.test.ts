@@ -40,9 +40,9 @@ test("a change is one line each in the save dialog (from → to); a daily limit 
   assert.equal(countrySettingsLines("SE", before, { ...before, smsSignIn: { enabled: true, dailyCap: 200, requireDeviceCheck: false } }).length, 1);
   assert.deepEqual(countrySettingsIssues("SE", before), []);
   for (const dailyCap of [9, 100_001, 20.5, Number.NaN]) {
-    assert.equal(countrySettingsIssues("SE", { ...before, smsSignIn: { enabled: true, dailyCap } }).length, 1, String(dailyCap));
+    assert.equal(countrySettingsIssues("SE", { ...before, smsSignIn: { enabled: true, dailyCap, requireDeviceCheck: false } }).length, 1, String(dailyCap));
   }
-  for (const dailyCap of [10, 200, 100_000]) assert.deepEqual(countrySettingsIssues("SE", { ...before, smsSignIn: { enabled: true, dailyCap } }), []);
+  for (const dailyCap of [10, 200, 100_000]) assert.deepEqual(countrySettingsIssues("SE", { ...before, smsSignIn: { enabled: true, dailyCap, requireDeviceCheck: false } }), []);
 });
 
 test("saved on the country standard only: the document carries it when given, never otherwise, and never copies a stored one", () => {
