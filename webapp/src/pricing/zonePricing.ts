@@ -162,6 +162,8 @@ export type PricingStore = {
   categories: CategoryDef[];
   zones: Record<string, ZoneBook>;
   live: Record<string, ZoneLive>;
+  /** Live only (launch fix 2026-11-20): zones the server has no published prices for (no own document, no published standard). */
+  noPrices?: string[];
   history: Revision[];
   surgeLog: SurgeEvent[];
 };
@@ -420,7 +422,30 @@ export function normalizeStore(value: unknown): PricingStore {
     live: raw.live && typeof raw.live === "object" ? raw.live : {},
     history: Array.isArray(raw.history) ? raw.history : [],
     surgeLog: Array.isArray(raw.surgeLog) ? raw.surgeLog : [],
+    ...(Array.isArray(raw.noPrices) ? { noPrices: raw.noPrices.filter((id): id is string => typeof id === "string") } : {}),
   };
+}
+
+/**
+ * Launch fix 2026-11-20 (audit admin-every-control): the zones whose prices are not published, so Start surge says so
+ * before the server refuses it (503 pricing_not_published, contracts/CONTRACT.md "production has no seeds"). A zone
+ * has prices when its own document is published, or it uses its country's standard and that standard is published.
+ * A zone that was not read (no answer) is not marked.
+ */
+export function unpublishedPriceZones(
+  markets: readonly { id: string; zones: readonly { id: string }[] }[],
+  draftOf: (id: string) => { liveVersion: number; usesStandard?: boolean } | null | undefined,
+  standardId: (country: string) => string,
+): string[] {
+  return markets.flatMap((market) => {
+    const standard = draftOf(standardId(market.id));
+    return market.zones.filter((zone) => {
+      const own = draftOf(zone.id);
+      if (!own) return false;
+      if (own.liveVersion >= 1) return false;
+      return !(own.usesStandard && (standard?.liveVersion ?? 0) >= 1);
+    }).map((zone) => zone.id);
+  });
 }
 
 /** A zone's published book, with defaults for anything missing (new categories, older data). */
@@ -817,6 +842,7 @@ export function restoreCategory(store: PricingStore, id: string, now: number): {
 export function startManualSurge(store: PricingStore, zoneId: string, multiplier: number, minutes: number, actorId: string, reason: string, at: string, points?: readonly CurvePoint[]): { store: PricingStore; error?: string } {
   if (!(multiplier >= SLIDER_MIN && multiplier <= SLIDER_MAX)) return { store, error: `Surge must be between ×${SLIDER_MIN} and ×${SLIDER_MAX}.` };
   if (!(minutes >= 5 && minutes <= 720)) return { store, error: "A manual surge lasts between 5 min and 12 h." };
+  if (store.noPrices?.includes(zoneId)) return { store, error: "Publish prices for this zone first." };
   const live = zoneLive(store, zoneId);
   const endsAt = new Date(Date.parse(at) + minutes * 60_000).toISOString();
   let curve: SurgeCurve | undefined;

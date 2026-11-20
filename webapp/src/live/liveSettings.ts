@@ -9,7 +9,7 @@ import { dontMatchOf } from "../config/dontMatchSettings.ts";
 import { emergencyNumbersOf } from "../config/emergencyNumbers.ts";
 import { sosContactsSmsOf } from "../config/sosContactsSms.ts";
 import { MARKETS, hasLiveMarketZones, marketOfZone, standardZoneId, zoneById, type Market, type MarketId } from "../markets/markets.ts";
-import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
+import { normalizeStore, unpublishedPriceZones, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { catalogChanges, readPricingExtras, scheduleOf, sendCatalog, surgeChanges, type HistoryIndex } from "./livePricingOps.ts";
 import { DISPATCH_KEY, draftRules, zoneDefault, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
 import { COUNTRY_SETTINGS_KEY, debtSettingsOfRules, personLimitsOf, TIP_CASH_IN_CAR_MINUTES, TIP_FLAGS, ZONE_RULES_KEY, languagesChanged, methodsChanged, walletFirstChanged, mixedTipAcross, type MixedTipRules, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
@@ -214,7 +214,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     const extras = await readPricingExtras(http, normalizeStore({ ...store, zones }), known);
     historyIndex = extras.index;
     surgeVersions = extras.surgeVersions;
-    const next = extras.store;
+    // Launch fix 2026-11-20: zones with no published prices, so Start surge is off with the reason (not a 503 after).
+    const noPrices = unpublishedPriceZones(readMarkets(), (id) => drafts.get(key("pricing", id)), (country) => standardZoneId(country as MarketId));
+    const next: PricingStore = { ...extras.store, noPrices };
     slices.set(PRICING_KEY, next);
     baseline.pricing = next;
     return next;

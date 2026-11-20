@@ -20,3 +20,13 @@ test("restoreDeepLink replaces the URL once and says so", () => {
   assert.equal(restoreDeepLink({ search: "", pathname: "/live/" }, "/live/", (url) => seen.push(url)), false);
   assert.equal(seen.length, 1);
 });
+
+// Launch fix 2026-11-20 (audit admin-every-control): a wrong trip or payout link must end on "not found", never wait on
+// "Loading" while a list read is still retrying.
+test("a record page says not found once the record cannot be found, even while a list read still retries", async () => {
+  const { recordState } = await import("./recordState.ts");
+  assert.equal(recordState({ found: true, waiting: true, missing: false }), "found");
+  assert.equal(recordState({ found: false, waiting: true, missing: false }), "loading");
+  assert.equal(recordState({ found: false, waiting: true, missing: true }), "not-found");
+  assert.equal(recordState({ found: false, waiting: false, missing: false }), "not-found");
+});
