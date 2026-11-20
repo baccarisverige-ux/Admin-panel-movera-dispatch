@@ -148,8 +148,9 @@ paths:
         (the only call to Google) runs only after the cheap guards hold: the switch, the number, the per-install count and
         the one-use list; at most 20 checks at once per server copy, a circuit breaker (5 Google errors or time-outs in a
         row: checks fail for 30 s), a time-out that aborts the call, and at most 20 failed checks per client address per hour
-        (then that address fails without a call; only a token the check refused counts, never Google trouble, a full cap or
-        an open breaker, so people behind one shared address are not blocked by an outage). All fail closed.'
+        (then that address fails without a call; only a token the check refused counts, never Google trouble (429, 5xx, a
+        time-out), Google refusing the server''s own credentials (401 / 403, also a breaker error), a full cap or an open
+        breaker, so people behind one shared address are not blocked by an outage). All fail closed.'
       tags:
       - Auth
       x-actor:
@@ -39220,11 +39221,11 @@ components:
         the server keeps its SHA-256 (otp_sessions.device_check_sha256) and a token seen before is device_check_failed. Google
         or the check not answering within timeoutSeconds = device_check_failed (fail closed). A token is used once by its
         canonical bytes: iPhone = the decoded attestation (strict base64 only), Android = the decoded bytes of each segment
-        of the token (base64url segments joined by dots; every segment must be canonical base64url: no padding, zero padding
-        bits); any other spelling is device_check_failed. Both checks are bound to the request: binding = SHA-256 of the UTF-8
-        text "movera-sms-code|" + app + "|" + phone + "|" + installId (32 bytes). Android sends it as the nonce (base64url
-        without padding, 43 characters); iPhone as the clientDataHash (the 32 bytes). So a token is good for one app, number
-        and install only.'
+        of the token (a JWE in compact form: exactly 5 base64url segments joined by dots; every segment must be canonical
+        base64url: no padding, zero padding bits); any other spelling is device_check_failed. Both checks are bound to the
+        request: binding = SHA-256 of the UTF-8 text "movera-sms-code|" + app + "|" + phone + "|" + installId (32 bytes).
+        Android sends it as the nonce (base64url without padding, 43 characters); iPhone as the clientDataHash (the 32 bytes).
+        So a token is good for one app, number and install only.'
       required:
       - platform
       - token
