@@ -1,3 +1,4 @@
+import { liveLocationOf } from "./rules/liveLocation";
 import { RideCheckCard } from "./RideCheckCard";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
@@ -503,6 +504,11 @@ function Safety({ zone, onChange, disabled, country, countryName }: Props) {
       {/* BQ-S10 (owner Q1 "admin on/off per zone", S10 Q6 default on; contract v0.18.116 contract.json#shareTrip): the rider document's shareTrip { on }. */}
       <Card title={tr("Share trip link")} tone="green" icon={<Shield size={18} />} help={tr("During a trip the rider can send a live link to someone they trust. The page shows the car, the plate and the arrival time. The car’s position shows only while the rider is in the car, and never near the pickup, a stop or the drop-off. The link stops at drop-off.")}>
         <Row info="dispatch.zone.ridersCanShareALiveTripLink" label={tr("Riders can share a live trip link")} help={tr("Off: the rider app hides Share trip and every live link of this zone stops. Usual value: on.")} on={zone.shareTrip?.on ?? CONFIG_DEFAULTS.shareTripOn} disabled={disabled} onToggle={(on) => onChange({ ...zone, shareTrip: { on } })} />
+      </Card>
+      {/* v0.18.144 (owner 2026-11-20; contract.json#liveLocation.setting; default off until the load test passes): the rider document's liveLocation. */}
+      <Card title={tr("Live location")} tone="green" icon={<MapPin size={18} />} help={tr("During a ride the rider and the driver can each turn on Share my location, so they see each other on the map until pickup. Positions are passed on live and never saved. Off by default until the load test passes.")}>
+        <Row info="dispatch.zone.ridersAndDriversCanShareLiveLocation" label={tr("Riders and drivers can share their live location")} help={tr("Off: the apps hide Share my location in this zone. Usual value: off until the load test passes.")} on={liveLocationOf(zone).share} disabled={disabled} onToggle={(share) => onChange({ ...zone, liveLocation: { ...liveLocationOf(zone), share } })} />
+        <Row info="dispatch.zone.adjustPickupBannerFrom" label={tr("Adjust-pickup banner from")} help={tr("10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.")}><Num label={tr("Adjust-pickup banner from")} value={liveLocationOf(zone).adjustPickupMeters} unit="m" min={10} max={500} disabled={disabled} onChange={(meters) => onChange({ ...zone, liveLocation: { ...liveLocationOf(zone), adjustPickupMeters: Math.min(500, Math.max(10, Math.round(meters))) } })} /></Row>
       </Card>
     </div>
   );

@@ -2,6 +2,7 @@
  * The Dispatch rules read back from the server's documents (split from configDocs.ts so the first load carries only
  * this part: dispatch/rules.ts needs it; the save / publish code stays in the lazily loaded live chunk).
  */
+import { liveLocationOf } from "../dispatch/rules/liveLocation.ts";
 import { completeBookingWindow, completeEarlyEnd, RIDE_CHECK_LIMITS, rideCheckDefault, type ZoneDispatch } from "../dispatch/rules.ts";
 import { completeOfferCard } from "../dispatch/offers.ts";
 import { headingValue } from "../config/zoneDefaults.ts";
@@ -109,6 +110,8 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     const on = (rider["shareTrip"] as { on?: unknown } | undefined)?.on;
     const older = (rider["features"] as { shareTrip?: unknown } | undefined)?.shareTrip;
     zone.shareTrip = { on: typeof on === "boolean" ? on : typeof older === "boolean" ? older : true };
+    // v0.18.144 (contract.json#liveLocation.setting): never saved or a bad value = the default (off, 30 m), as the server.
+    zone.liveLocation = liveLocationOf({ liveLocation: rider["liveLocation"] as ZoneDispatch["liveLocation"] });
   }
   // v0.18.8 (G6): the free wait at each stop the server charges by (waiting.stopFreeWaitMin, 0–20; 0 while stops are off).
   const stopFree = (driver?.["waiting"] as { stopFreeWaitMin?: unknown } | undefined)?.stopFreeWaitMin;
