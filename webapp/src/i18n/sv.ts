@@ -37,6 +37,7 @@ import { svC6InAppCalls } from "./sv/c6-in-app-calls.ts";
 import { svC8NoDriverNearby } from "./sv/c8-no-driver-nearby.ts";
 import { svC9BlockedPairs } from "./sv/c9-blocked-pairs.ts";
 import { svC9SameAddress } from "./sv/c9-same-address.ts";
+import { svC10RouteChangeSearching } from "./sv/c10-route-change-searching.ts";
 import { svC10Lifecycle } from "./sv/c10-lifecycle.ts";
 import { svC11BookedWaiting } from "./sv/c11-booked-waiting.ts";
 import { svC12AdminMasking } from "./sv/c12-admin-masking.ts";
@@ -113,6 +114,7 @@ export const sv: Record<MessageKey, string> = {
   ...svC8NoDriverNearby,
   ...svC9BlockedPairs,
   ...svC9SameAddress,
+  ...svC10RouteChangeSearching,
   ...svC10Lifecycle,
   ...svC11BookedWaiting,
   ...svC12AdminMasking,

@@ -37,6 +37,7 @@ import { frC6InAppCalls } from "./fr/c6-in-app-calls.ts";
 import { frC8NoDriverNearby } from "./fr/c8-no-driver-nearby.ts";
 import { frC9BlockedPairs } from "./fr/c9-blocked-pairs.ts";
 import { frC9SameAddress } from "./fr/c9-same-address.ts";
+import { frC10RouteChangeSearching } from "./fr/c10-route-change-searching.ts";
 import { frC10Lifecycle } from "./fr/c10-lifecycle.ts";
 import { frC11BookedWaiting } from "./fr/c11-booked-waiting.ts";
 import { frC12AdminMasking } from "./fr/c12-admin-masking.ts";
@@ -113,6 +114,7 @@ export const fr: Record<MessageKey, string> = {
   ...frC8NoDriverNearby,
   ...frC9BlockedPairs,
   ...frC9SameAddress,
+  ...frC10RouteChangeSearching,
   ...frC10Lifecycle,
   ...frC11BookedWaiting,
   ...frC12AdminMasking,
