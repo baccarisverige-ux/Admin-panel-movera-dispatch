@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreditCard } from "lucide-react";
 import { tr, trn } from "../i18n";
@@ -20,12 +20,18 @@ export function LiveStripeFeePayments({ riderId }: { riderId: string }) {
   const list = useQuery({ queryKey: key, enabled: Boolean(session) && canRead, queryFn: () => loadFeePayments(session!.client, riderId) });
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  // Money review MUST 1: one refund at a time, even on a fast double click (state updates are not instant).
+  const inFlight = useRef(false);
   const [notice, setNotice] = useState("");
   const items = list.data ?? [];
   if (!canRead || items.length === 0) return null;
   const twice = paidTwiceOf(items);
   const refundable = new Set(refundableOf(items).map((p) => p.paymentIntentId));
-  const refund = async (tripId: string) => {
+  const refund = async (tripId: string, amount: string) => {
+    if (inFlight.current) return;
+    // Review SHOULD 2: a confirm step with the amount that goes back to the card.
+    if (typeof window !== "undefined" && !window.confirm(tr("Refund {0} to the card?", [amount]))) return;
+    inFlight.current = true;
     setBusy(true);
     try {
       await refundFeePayment(session!.client, riderId, tripId, reason);
@@ -35,6 +41,7 @@ export function LiveStripeFeePayments({ riderId }: { riderId: string }) {
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error));
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
@@ -52,7 +59,7 @@ export function LiveStripeFeePayments({ riderId }: { riderId: string }) {
             {p.tripId} · {liveMoney(p.amount)} · <b>{tr(STRIPE_STATUS_LABEL[p.status] as Parameters<typeof tr>[0])}</b>
             {p.paidTwice ? <> · {tr("Paid twice")}</> : null}
             {p.amountMismatch ? <> · {tr("Amount differs: check in Stripe.")}</> : null}
-            {canEdit && refundable.has(p.paymentIntentId) ? <button type="button" className="dash-btn small ghost" disabled={busy || !reason.trim()} onClick={() => void refund(p.tripId)}>{tr("Refund")}</button> : null}
+            {canEdit && refundable.has(p.paymentIntentId) ? <button type="button" className="dash-btn small ghost" disabled={busy || !reason.trim()} onClick={() => void refund(p.tripId, liveMoney(p.paidTwice && p.overpaid ? p.overpaid : p.amount))}>{tr("Refund")}</button> : null}
           </li>
         ))}
       </ul>

@@ -29,7 +29,9 @@ test("c50: the server's list is read as is; junk rows are dropped; the client se
 test("c50: Paid twice list and Refund only on a succeeded payment, one per fee (the server refunds the paid-twice one first)", () => {
   const list = feePaymentsOf({ items: rows });
   assert.deepEqual(paidTwiceOf(list).map((p) => p.paymentIntentId), ["pi_2"]);
-  assert.deepEqual(refundableOf(list).map((p) => p.tripId), ["trp_1"]);
+  assert.deepEqual(refundableOf(list).map((p) => p.paymentIntentId), ["pi_2"]);
+  // The paid-twice one first even when the server lists it second.
+  assert.deepEqual(refundableOf([list[1]!, list[0]!]).map((p) => p.paymentIntentId), ["pi_2"]);
 });
 
 test("c50: GET fee-payments and POST stripe-refund with the reason; no reason, no call", async () => {

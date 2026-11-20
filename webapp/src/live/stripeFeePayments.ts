@@ -50,8 +50,10 @@ export const paidTwiceOf = (list: readonly StripeFeePayment[]) => list.filter((p
 
 /** One Refund button per fee with a succeeded payment (the server picks the paid-twice payment first). */
 export function refundableOf(list: readonly StripeFeePayment[]): StripeFeePayment[] {
+  // Review SHOULD 3: the paid-twice payment of a fee first (the one the server refunds first).
   const seen = new Set<string>();
-  return list.filter((p) => p.status === "succeeded" && !seen.has(p.tripId) && Boolean(seen.add(p.tripId)));
+  const ordered = [...list].sort((a, b) => Number(Boolean(b.paidTwice)) - Number(Boolean(a.paidTwice)));
+  return ordered.filter((p) => p.status === "succeeded" && !seen.has(p.tripId) && Boolean(seen.add(p.tripId)));
 }
 
 export async function loadFeePayments(client: LiveClient, riderId: string): Promise<StripeFeePayment[]> {
