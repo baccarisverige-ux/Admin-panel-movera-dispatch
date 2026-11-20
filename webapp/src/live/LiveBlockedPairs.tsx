@@ -4,7 +4,7 @@ import { UserX } from "lucide-react";
 import { tr, uiLocale } from "../i18n";
 import { shortDateTime } from "./format";
 import { useLiveSessionMaybe } from "./LiveSessionContext";
-import { ErrorLine } from "./ui";
+import { DecisionDialog, ErrorLine } from "./ui";
 import { blockPairCall, blockedPairsKey, pairByText, readBlockedPairs, unblockPath, type BlockedPair, type PairPerson } from "./blockedPairs.ts";
 
 /**
@@ -16,8 +16,10 @@ export function LiveBlockPair({ tripId, hasDriver }: { tripId: string; hasDriver
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
   const [state, setState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  const [asking, setAsking] = useState(false);
   if (!live || !hasDriver) return null;
   const canEdit = live.can("riders.block");
+  // Admin check round 2 (2026-11-20): the block is sent from the dialog's Confirm, never on the first click.
   async function block() {
     setState("saving");
     try {
@@ -25,8 +27,9 @@ export function LiveBlockPair({ tripId, hasDriver }: { tripId: string; hasDriver
       await live!.client.post(call.path, call.body);
       await queryClient.invalidateQueries({ queryKey: ["live", "blocked-pairs"] });
       setState("saved");
-    } catch {
+    } catch (error) {
       setState("failed");
+      throw error;
     }
   }
   return (
@@ -35,8 +38,20 @@ export function LiveBlockPair({ tripId, hasDriver }: { tripId: string; hasDriver
       <p className="fine">{tr("Never match this rider and driver again")}. {tr("Neither side is ever told. Only Support can undo a block.")}</p>
       <div className="fd-action-row">
         <label className="fd-reason"><span>{tr("Reason")}</span><input type="text" maxLength={300} aria-label={tr("Reason")} value={reason} disabled={!canEdit} onChange={(event) => { setReason(event.target.value); setState("idle"); }} /></label>
-        <button type="button" className="dash-btn danger" data-command="admin.rider.block" disabled={!canEdit || state === "saving"} title={canEdit ? undefined : tr("Your role cannot change this.")} onClick={() => void block()}>{tr("Block this pair")}</button>
+        <button type="button" className="dash-btn danger" data-command="admin.rider.block" disabled={!canEdit || state === "saving"} title={canEdit ? undefined : tr("Your role cannot change this.")} onClick={() => setAsking(true)}>{tr("Block this pair")}</button>
       </div>
+      <DecisionDialog
+        open={asking}
+        command="admin.rider.block"
+        title={tr("Block this pair")}
+        summary={<>{tr("Never match this rider and driver again")}. {tr("Neither side is ever told. Only Support can undo a block.")}</>}
+        confirmLabel={tr("Block this pair")}
+        note="none"
+        danger
+        undo={tr("Neither side is ever told. Only Support can undo a block.")}
+        onClose={() => setAsking(false)}
+        onConfirm={block}
+      />
       {state === "saved" ? <p role="status">{tr("Pair blocked. Neither side is told.")}</p> : null}
       {state === "failed" ? <p role="alert" className="pl-warn">{tr("Could not save. Try again.")}</p> : null}
     </section>
