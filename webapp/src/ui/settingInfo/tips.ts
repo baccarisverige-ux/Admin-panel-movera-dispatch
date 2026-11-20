@@ -349,4 +349,20 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "On: the driver's sister gets an SMS with the map position.",
     "Off: contacts get no SMS on SOS; On: each contact gets one SMS with the position.",
   ),
+  "tips.smsSignIn.enabled": t(
+    "Real riders and drivers get their sign-in code by SMS. Off: only the test numbers can sign in; every other number is told sign-in is not open yet and can join the waiting list.",
+    `${STANDARD_ONLY} Rider and driver apps, mobile numbers of this country (+46 Sweden, +33 France, +216 Tunisia). It works only when the SMS company's two keys are also set on the server; each SMS costs money.`,
+    "On or off.",
+    "Off.",
+    "On for Sweden: rider Sara types +46 70 123 45 67 and gets an SMS with the words Movera: din inloggningskod är 482193.",
+    "Off: no real person can sign in, no SMS is sent; On: every real number of this country can ask for a code, up to the daily limit.",
+  ),
+  "tips.smsSignIn.dailyCap": t(
+    "The most sign-in SMS sent to this country's numbers in 24 hours. It protects against someone making the server send thousands of paid SMS. At the limit new sign-in codes stop and an alert opens; from 80 % an earlier alert warns.",
+    `${STANDARD_ONLY} Rider and driver apps: at the limit they say We cannot send more SMS codes right now. Admins get the alert (System) when the System health alert is on for the country. Test numbers are never counted.`,
+    "10 to 100 000 SMS per 24 hours, whole numbers.",
+    "200.",
+    "200: the 201st SMS in 24 hours is not sent; that person must wait until the oldest SMS is a day old, or until an admin raises the limit. A code asked for twice counts twice.",
+    "10: only ten SMS per day, so about ten people can sign in; 100 000: almost no protection against SMS cost.",
+  ),
 };
