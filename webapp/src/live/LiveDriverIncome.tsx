@@ -114,6 +114,7 @@ export function LiveDriverIncome() {
     <th scope="row">
       <button data-command="admin.server.driverIncome" type="button" className="link-action" onClick={() => setOpen({ payee: r.payeeId, currency: r.currency })}>{r.name || r.payeeId}</button>
       <small> · {r.kind === "company" ? tr("Company") : tr("Driver")}{r.orgNumber ? ` · ${r.orgNumber}` : ""}{r.kind === "company" ? ` · ${tr("{0} drivers", [r.driverIds.length])}` : ""}</small>
+      {r.partial ? <small className="di-partial" data-testid="driver-income-partial"> · {tr("Only your zones")} <Info text={COLUMN_INFO.partial} /></small> : null}
     </th>
   );
 
@@ -161,6 +162,7 @@ export function LiveDriverIncome() {
           </button>
           <h3>{row.name || row.payeeId}</h3>
           <p>{[row.kind === "company" ? tr("Company") : tr("Driver"), row.orgNumber, row.address, row.country, row.currency].filter(Boolean).join(" · ")}<Info text={COLUMN_INFO.payee} /></p>
+          {row.partial ? <p className="di-partial">{tr("Only your zones")} <Info text={COLUMN_INFO.partial} /></p> : null}
           {!open.month ? (
             <table className="data-table di-table" data-testid="driver-income-months">
               <MoneyHead first={row.months ? tr("Month") : tr("Quarters")} />
@@ -197,7 +199,7 @@ export function LiveDriverIncome() {
                 <tbody>
                   {(dayOf?.trips ?? []).map((t, index) => (
                     <tr key={`${t.tripId ?? "x"}-${index}`}>
-                      <th scope="row">{t.localTime.slice(11)} · {t.tripId ?? tr("Bonus campaign")}<small> · {t.paymentMethod === "cash" ? tr("Pay in car") : (t.paymentMethod ?? "")}{t.zoneId ? ` · ${t.zoneId}` : ""}</small></th>
+                      <th scope="row">{t.localTime.slice(11)} · {t.lineKind === "payout" ? tr("Paid out") : (t.tripId ?? tr("Bonus campaign"))}<small> · {t.paymentMethod === "cash" ? tr("Pay in car") : (t.paymentMethod ?? "")}{t.zoneId ? ` · ${t.zoneId}` : ""}</small></th>
                       <MoneyCells totals={t} />
                     </tr>
                   ))}

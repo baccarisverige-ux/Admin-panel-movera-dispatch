@@ -28,4 +28,5 @@ export const enC56DriverIncome = {
   "Downloading…": "Downloading…",
   "Live data only: sign in to the Movera server to see what each driver and company earned in a year.": "Live data only: sign in to the Movera server to see what each driver and company earned in a year.",
   "{0} rides": "{0} rides",
+  "Only your zones": "Only your zones",
 };

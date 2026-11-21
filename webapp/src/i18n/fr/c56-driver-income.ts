@@ -28,4 +28,5 @@ export const frC56DriverIncome = {
   "Downloading…": "Téléchargement…",
   "Live data only: sign in to the Movera server to see what each driver and company earned in a year.": "Données réelles uniquement : connectez-vous au serveur Movera pour voir ce que chaque chauffeur et société a gagné sur une année.",
   "{0} rides": "{0} courses",
+  "Only your zones": "Seulement vos zones",
 };

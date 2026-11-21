@@ -42,3 +42,8 @@ test("every money column has a label and an (i) text; the table shows every fiel
   }
   assert.deepEqual([...TABLE_FIELDS].sort(), [...MONEY_FIELDS].sort());
 });
+
+test("SHOULD-4: the partial row has its own (i) text", () => {
+  assert.match(COLUMN_INFO.partial, /zones you do not cover/);
+  assert.match(COLUMN_INFO.paidOutByMovera, /Never below 0/);
+});

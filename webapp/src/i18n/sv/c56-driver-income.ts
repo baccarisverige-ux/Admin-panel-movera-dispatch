@@ -28,4 +28,5 @@ export const svC56DriverIncome = {
   "Downloading…": "Laddar ner…",
   "Live data only: sign in to the Movera server to see what each driver and company earned in a year.": "Bara riktiga data: logga in mot Movera-servern för att se vad varje förare och företag tjänat under ett år.",
   "{0} rides": "{0} resor",
+  "Only your zones": "Bara dina zoner",
 };

@@ -10,7 +10,7 @@ export type IncomeMoney = { amountMinor: number; currency: string };
 export const MONEY_FIELDS = ["grossFares", "tips", "bonuses", "adjustments", "pickupPay", "feeShare", "moveraCommission", "moveraFees", "netEarnings", "cashCollectedByDriver", "paidOutByMovera"] as const;
 export type IncomeMoneyField = (typeof MONEY_FIELDS)[number];
 export type IncomeTotals = { rides: number } & Record<IncomeMoneyField, IncomeMoney>;
-export type IncomeTripLine = IncomeTotals & { localTime: string; tripId: string | null; zoneId: string | null; paymentMethod: string | null };
+export type IncomeTripLine = IncomeTotals & { localTime: string; lineKind?: "trip" | "credit" | "payout"; tripId: string | null; zoneId: string | null; paymentMethod: string | null };
 export type IncomeDay = IncomeTotals & { day: string; trips?: IncomeTripLine[] };
 export type IncomeMonth = IncomeTotals & { month: string; days?: IncomeDay[] };
 export type IncomeQuarter = IncomeTotals & { quarter: number };
@@ -25,6 +25,8 @@ export type IncomeRow = IncomeTotals & {
   bank: { holder: string; last4: string } | null;
   driverIds: string[];
   ownPartOnly?: boolean;
+  /** v0.18.153 review SHOULD-4: this payee also has money outside the zones in view. */
+  partial?: boolean;
   quarters: IncomeQuarter[];
   months?: IncomeMonth[];
 };
@@ -72,7 +74,8 @@ export function csvFileName(year: number, detail: IncomeDetail, month?: string |
 export const monthChoices = (year: number): string[] => Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, "0")}`);
 
 /** The (i) text of each column (owner: English only). */
-export const COLUMN_INFO: Record<"payee" | "orgNumber" | "rides" | IncomeMoneyField, string> = {
+export const COLUMN_INFO: Record<"payee" | "orgNumber" | "rides" | "partial" | IncomeMoneyField, string> = {
+  partial: "This company or driver also earned or was paid in zones you do not cover. The row shows only your zones; an admin with every zone sees the whole amount for the tax report.",
   payee: "Who is reported: the taxi company (fleet) the driver drives for, or the driver himself when he has no company.",
   orgNumber: "The company's organisation number. Empty for a driver without a company: Movera does not store a personal ID number.",
   rides: "Paid rides of the period (pay in the car included).",
@@ -84,9 +87,9 @@ export const COLUMN_INFO: Record<"payee" | "orgNumber" | "rides" | IncomeMoneyFi
   feeShare: "The driver's share of cancel and no-show fees.",
   moveraCommission: "What Movera kept from the fares at each ride's end.",
   moveraFees: "Movera's share of the cancel and no-show fees.",
-  netEarnings: "What the driver earned through the app: rides + pickup pay + fee share + tips + changes + bonuses. This is the amount for DAC7.",
+  netEarnings: "What the driver earned through the app, counted on the day it was credited (the same as the driver's Earnings): rides + pickup pay + fee share + tips + changes + bonuses. This is the amount for DAC7.",
   cashCollectedByDriver: "Money the driver took in the car (pay in the car). Already in his hand, part of the earnings.",
-  paidOutByMovera: "What Movera paid out in payouts marked paid for this money. Negative when the driver owed Movera.",
+  paidOutByMovera: "What Movera paid out in payouts marked paid in this period (by the day it was paid). Never below 0.",
 };
 
 /** The column order of the table (money columns the accountant needs first). */
