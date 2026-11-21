@@ -1,0 +1,21 @@
+/** English dictionary, area c48-account-deletion: Riders › Account deletion requests and the erase setting (contract v0.18.134 accountDeletion). Add new keys at the end of this file. Merged in ../en.ts in this order. */
+export const enC48AccountDeletion = {
+  "Erased": "Erased",
+  "Waiting: erasing is off (count only)": "Waiting: erasing is off (count only)",
+  "Waiting: open trip": "Waiting: open trip",
+  "Waiting: open safety case": "Waiting: open safety case",
+  "Waiting: next run": "Waiting: next run",
+  "Erase after must be whole days from {0} to {1}.": "Erase after must be whole days from {0} to {1}.",
+  "Account deletion requests": "Account deletion requests",
+  "A rider or driver who deletes the account is closed at once. A debt is kept as a record (name, number, amount) until it is paid or written off. Everything else is erased after the set days; money and trip records stay for the bookkeeping law.": "A rider or driver who deletes the account is closed at once. A debt is kept as a record (name, number, amount) until it is paid or written off. Everything else is erased after the set days; money and trip records stay for the bookkeeping law.",
+  "No deletion requests.": "No deletion requests.",
+  "Account": "Account",
+  "Erase from": "Erase from",
+  "Kept debt": "Kept debt",
+  "Paid or written off": "Paid or written off",
+  "Due now: {0}": "Due now: {0}",
+  "Erase setting (country Standard)": "Erase setting (country Standard)",
+  "Erase after (days)": "Erase after (days)",
+  "Erase on (off = count only, nothing is erased)": "Erase on (off = count only, nothing is erased)",
+  "Save the account erase setting": "Save the account erase setting",
+};
