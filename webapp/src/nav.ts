@@ -26,6 +26,7 @@ export const NAV_ICONS = [
   "Building2",
   "Wallet",
   "Banknote",
+  "FileSpreadsheet",
   "MapPinned",
   "Tags",
   "LifeBuoy",
@@ -76,6 +77,8 @@ export const MENU: MenuItem[] = [
   { id: "onboarding", path: "/onboarding", label: "Onboarding", group: "Fleet & Drivers", permission: "drivers.read", icon: "UserPlus" },
   { id: "payments", path: "/payments", label: "Payments", group: "Finance", permission: "finance.read", icon: "Wallet" },
   { id: "payouts", path: "/payouts", label: "Payouts", group: "Finance", permission: "finance.read", icon: "Banknote" },
+  // v0.18.153 P29 (contract.json#driverIncomeYear, DAC7): the yearly income per driver or company for the accountant.
+  { id: "driver-income", path: "/driver-income", label: "Driver income (year)", group: "Finance", permission: "finance.read", icon: "FileSpreadsheet" },
   { id: "zones", path: "/zones", label: "Zones", group: "Places & pricing", permission: "zones.read", icon: "MapPinned" },
   { id: "pricing", path: "/pricing", label: "Pricing", group: "Places & pricing", permission: "settings.read", icon: "Tags" },
   { id: "support", path: "/support", label: "Support", group: "Support", permission: "support.reply", icon: "LifeBuoy" },
