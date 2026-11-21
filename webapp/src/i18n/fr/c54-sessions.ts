@@ -18,4 +18,5 @@ export const frC54Sessions = {
   "A driver on a trip is signed out only after the trip ends.": "Un chauffeur en course n’est déconnecté qu’après la fin de la course.",
   "The driver is on a trip. Sign the driver out after the trip ends.": "Le chauffeur est en course. Déconnectez-le après la fin de la course.",
   "This phone is already signed out. The list was reloaded.": "Ce téléphone est déjà déconnecté. La liste a été rechargée.",
+  "Sign driver out": "Déconnecter le chauffeur",
 };

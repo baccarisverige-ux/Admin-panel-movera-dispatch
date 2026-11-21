@@ -27,6 +27,8 @@ export function LiveSessions({ kind, id }: { kind: "rider" | "driver"; id: strin
   const items = q.data?.items ?? [];
   const locale = uiLocale();
   const signedOut = (text: string) => { setNotice(text); void q.refetch(); };
+  // A repeat on a phone that is no longer signed in (404 session_not_found) is said plainly and the list is read again.
+  const alreadyOut = (error: unknown) => { if (error instanceof ApiError && error.reason === "session_not_found") signedOut(tr("This phone is already signed out. The list was reloaded.")); };
   return (
     <section className="fd-box" data-testid={`${kind}-sessions`}>
       <h3><Smartphone size={15} aria-hidden="true" /> {tr("Sessions")}</h3>
@@ -54,6 +56,7 @@ export function LiveSessions({ kind, id }: { kind: "rider" | "driver"; id: strin
                   disabled={!canSignOut}
                   title={canSignOut ? undefined : tr("Your role cannot do that.")}
                   onDone={() => signedOut(tr("Signed out of {0}.", [deviceLine(session)]))}
+                  onError={alreadyOut}
                 >
                   {tr("Sign out")}
                 </CommandButton>

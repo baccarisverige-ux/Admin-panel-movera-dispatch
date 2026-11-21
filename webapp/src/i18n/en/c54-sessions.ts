@@ -18,4 +18,5 @@ export const enC54Sessions = {
   "A driver on a trip is signed out only after the trip ends.": "A driver on a trip is signed out only after the trip ends.",
   "The driver is on a trip. Sign the driver out after the trip ends.": "The driver is on a trip. Sign the driver out after the trip ends.",
   "This phone is already signed out. The list was reloaded.": "This phone is already signed out. The list was reloaded.",
+  "Sign driver out": "Sign driver out",
 };

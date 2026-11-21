@@ -75,6 +75,10 @@ test("a driver on a trip (409 sign_out_on_trip) and an already ended phone (404 
   const api = createLiveAdminApi(client);
   await assert.rejects(api.command({ ...base, action: "admin.driver.signOut", targetId: "drv_1", reason: "Stolen phone", value: { all: true } }), (error: unknown) => error instanceof Error && error.message === "The driver is on a trip. Sign the driver out after the trip ends.");
   assert.equal(errorText(new ApiError(404, "x", { code: "not_found", reason: "session_not_found" })), "This phone is already signed out. The list was reloaded.");
+  // The card itself says it and reads the list again (a repeat on a phone already signed out).
+  const card = readFileSync(new URL("./LiveSessions.tsx", import.meta.url), "utf8");
+  assert.match(card, /error\.reason === "session_not_found"\) signedOut\(tr\("This phone is already signed out\. The list was reloaded\."\)\)/);
+  assert.match(card, /onError=\{alreadyOut\}/);
 });
 
 test("the device line never shows an address; unknown parts say so", () => {

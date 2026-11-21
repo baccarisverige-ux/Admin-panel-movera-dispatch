@@ -18,4 +18,5 @@ export const svC54Sessions = {
   "A driver on a trip is signed out only after the trip ends.": "En förare på en resa loggas ut först när resan är slut.",
   "The driver is on a trip. Sign the driver out after the trip ends.": "Föraren är på en resa. Logga ut föraren när resan är slut.",
   "This phone is already signed out. The list was reloaded.": "Telefonen är redan utloggad. Listan laddades om.",
+  "Sign driver out": "Logga ut föraren",
 };

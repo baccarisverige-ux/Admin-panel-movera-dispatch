@@ -141,7 +141,7 @@ test("MF-1: \"No money moves.\" is said only for a named list; an unknown comman
   assert.equal(confirmParts({}).money, MONEY_UNKNOWN);
   assert.equal(confirmParts({ money: "The money goes back." }).money, "The money goes back.", "a dialog's own money words win");
   // Hand-written: the only commands allowed to say the flat "No money moves." are screen tools and these record actions.
-  const allowed = /^admin\.(ui|table|card|modal|tabs|doc|confirm|design|shell|panel|errors|profile|auditLog|alarm|live|auth|alerts|inbox|handover|gateA|shift|report|reports|waitlist)\.|^admin\.server\.(signIn|setupPassword|reload|loadMore|openRecord|dialogConfirm|dialogCancel|documentOpen|documentReview|documentCheck|fleetReview|fleetCode|copyCode|invitationCancel|legalPublish|tripChat|riderSavedPlaces|driverPreferences|emergencyContacts|revealRider|revealDriver|revealFleet|revealIncidentContacts|bonusCampaignOpen)$/;
+  const allowed = /^admin\.(ui|table|card|modal|tabs|doc|confirm|design|shell|panel|errors|profile|auditLog|alarm|live|auth|alerts|inbox|handover|gateA|shift|report|reports|waitlist)\.|^admin\.server\.(signIn|setupPassword|reload|loadMore|openRecord|dialogConfirm|dialogCancel|documentOpen|documentReview|documentCheck|fleetReview|fleetCode|copyCode|invitationCancel|legalPublish|tripChat|riderSavedPlaces|driverPreferences|emergencyContacts|revealRider|revealDriver|revealFleet|revealIncidentContacts|bonusCampaignOpen)$|^admin\.(rider|driver)\.signOut$/;
   const flat = COMMANDS.filter(({ id }) => moneyFor(id) === NO_MONEY).map(({ id }) => id);
   assert.deepEqual(flat.filter((id) => !allowed.test(id)), []);
   assert.ok(flat.length > 50);
