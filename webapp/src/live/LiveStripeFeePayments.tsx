@@ -4,10 +4,10 @@ import { CreditCard } from "lucide-react";
 import { tr, trn } from "../i18n";
 import { useLiveSessionMaybe } from "./LiveSessionContext";
 import { liveMoney } from "./format";
-import { loadFeePayments, paidTwiceOf, refundableOf, refundFeePayment, STRIPE_STATUS_LABEL } from "./stripeFeePayments";
+import { loadFeePayments, loadStripeServerStatus, paidTwiceOf, refundableOf, refundFeePayment, STRIPE_STATUS_LABEL, stripeServerStatusOf, stripeStatusIsProblem, stripeStatusText } from "./stripeFeePayments";
 
 /**
- * v0.18.136 stripeFees (DRAFT, Stripe TEST mode; area c50; owner 2026-11-20 "So we use stripe"): the rider's card
+ * v0.18.136 stripeFees (DRAFT, Stripe test or live keys; area c50; owner 2026-11-20 "So we use stripe"): the rider's card
  * payments of owed fees, their Stripe status, the "Paid twice" list and the Refund button (finance.edit, with a reason).
  * The status comes from the server (its signed webhook); the amounts are the server's.
  */
@@ -65,4 +65,18 @@ export function LiveStripeFeePayments({ riderId }: { riderId: string }) {
       {notice ? <p role="status">{notice}</p> : null}
     </section>
   );
+}
+
+/**
+ * Stripe live mode (owner 2026-11-21, contract.json#stripeFees.status): the server's Stripe mode under Card payment of
+ * fees: "Stripe: Live …", "Stripe: Test …" or "Stripe: Off. <reason>". Only for an admin with finance.read.
+ */
+export function LiveStripeStatus() {
+  const session = useLiveSessionMaybe();
+  const canRead = session?.can("finance.read") ?? false;
+  const status = useQuery({ queryKey: ["stripe-server-status"], enabled: Boolean(session) && canRead, queryFn: () => loadStripeServerStatus(session!.client), staleTime: 60_000 });
+  if (!canRead) return null;
+  const shown = status.data ?? (status.isError ? stripeServerStatusOf(null) : null);
+  if (!shown) return null;
+  return <small data-testid="stripe-server-status" className={stripeStatusIsProblem(shown) ? "pl-warn" : undefined}>{tr(stripeStatusText(shown) as Parameters<typeof tr>[0])}</small>;
 }

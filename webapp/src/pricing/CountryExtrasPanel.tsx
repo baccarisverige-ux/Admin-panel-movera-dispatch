@@ -42,6 +42,7 @@ import { ChatSettingsCard } from "./ChatSettingsCard";
 import { currencySymbol, fromSek, money, tipMax } from "./zonePricing";
 import { tr, trn, trx } from "../i18n";
 import { SettingInfo } from "../ui/SettingInfo";
+import { LiveStripeStatus } from "../live/LiveStripeFeePayments";
 
 /** The sections of this tab, so Dispatch and All features can jump to one (Q6: "a shortcut that jumps to that settings section"). */
 export const EXTRAS_SECTIONS = ["tips", "raise-steps", "promo-cap", "driver-bonus", "calls", "chat", "dont-match"] as const;
@@ -267,6 +268,8 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                   {tr("Card payment of fees")}<SettingInfo id="tips.riderFeeStripe" />
                 </label>
                 <small>{tr("The rider can pay an owed fee by card or Apple Pay in the app. Off by default.")}</small>
+                {/* Stripe live mode (owner 2026-11-21, stripeFees.status): the server's Stripe mode, Live / Test / Off + reason. */}
+                <LiveStripeStatus />
               </div>
               <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
             </div>

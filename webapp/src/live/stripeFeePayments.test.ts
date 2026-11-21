@@ -1,12 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { LiveClient } from "./session.ts";
-import { feePaymentsOf, loadFeePayments, paidTwiceOf, refundFeePayment, refundableOf, STRIPE_STATUS_LABEL } from "./stripeFeePayments.ts";
+import { feePaymentsOf, loadFeePayments, loadStripeServerStatus, paidTwiceOf, refundFeePayment, refundableOf, STRIPE_OFF_TEXT, STRIPE_STATUS_LABEL, stripeServerStatusOf, stripeStatusIsProblem, stripeStatusText } from "./stripeFeePayments.ts";
+import { tr } from "../i18n/index.ts";
+import { svC50StripeFees } from "../i18n/sv/c50-stripe-fees.ts";
+import { frC50StripeFees } from "../i18n/fr/c50-stripe-fees.ts";
 import { countryRulesOf } from "./configDocs.ts";
 import { completeCountrySettings, defaultCountrySettings, debtSettingsOfRules, STANDARD_ONLY_FIELDS, PRICING_FIELDS } from "../config/countrySettings.ts";
 
 /**
- * Contract v0.18.136 stripeFees (DRAFT, Stripe TEST mode; owner 2026-11-20 "So we use stripe"), admin area c50: the
+ * Contract v0.18.136 stripeFees (DRAFT, Stripe test or live keys; owner 2026-11-20 "So we use stripe"), admin area c50: the
  * per-country switch (Tips & limits, country Standard, default OFF), each fee's Stripe status, the Refund button and
  * the "Paid twice" list. Amounts are the server's; the admin computes nothing.
  */
@@ -56,4 +59,32 @@ test("c50: CountryRules.riderFeeStripe is off by default, read from the Standard
   assert.deepEqual(countryRulesOf("SE", "SEK", { ...input, riderFeeStripe: true }, null)["riderFeeStripe"], { enabled: true });
   assert.deepEqual(countryRulesOf("SE", "SEK", input, { riderFeeStripe: { enabled: true } })["riderFeeStripe"], { enabled: true });
   assert.equal(countryRulesOf("SE", "SEK", input, { riderFeeStripe: { enabled: true } }, { standard: false })["riderFeeStripe"], undefined);
+});
+
+test("live mode (owner 2026-11-21, stripeFees.status): the server's Stripe mode is shown as the server says, one sentence per state", async () => {
+  assert.equal(stripeStatusText(stripeServerStatusOf({ mode: "live" })), "Stripe: Live (real card payments).");
+  assert.equal(stripeStatusText(stripeServerStatusOf({ mode: "test" })), "Stripe: Test (no real money).");
+  for (const reason of Object.keys(STRIPE_OFF_TEXT)) assert.equal(stripeStatusText(stripeServerStatusOf({ mode: "off", reason })), STRIPE_OFF_TEXT[reason as keyof typeof STRIPE_OFF_TEXT]);
+  // Anything the page cannot read is never shown as Live or Test.
+  for (const junk of [null, {}, { mode: "LIVE" }, { mode: "off" }, { mode: "off", reason: "other" }]) assert.equal(stripeStatusText(stripeServerStatusOf(junk)), "Stripe: status not known.");
+  assert.equal(stripeStatusIsProblem({ mode: "off", reason: "no_keys" }), false);
+  assert.equal(stripeStatusIsProblem({ mode: "live" }), false);
+  assert.equal(stripeStatusIsProblem({ mode: "off", reason: "mixed_keys" }), true);
+  assert.equal(stripeStatusIsProblem({ mode: "unknown" }), true);
+  const asked: string[] = [];
+  const client = { json: async (path: string) => { asked.push(path); return { mode: "off", reason: "test_keys_in_production" }; } } as unknown as LiveClient;
+  assert.deepEqual(await loadStripeServerStatus(client), { mode: "off", reason: "test_keys_in_production" });
+  assert.deepEqual(asked, ["/admin/payments/stripe-status"]);
+});
+
+test("live mode: every status line and the server's alert sentences are translated in sv and fr", () => {
+  const keys = ["Stripe: Live (real card payments).", "Stripe: Test (no real money).", "Stripe: status not known.", ...Object.values(STRIPE_OFF_TEXT),
+    "Card payments are off: the server has a mix of Stripe test and live keys", "Card payments are off: a Stripe key is missing on the server",
+    "Card payments are off: the Stripe webhook secret is not valid", "Card payments are off: Stripe test keys on the production server",
+    "Card payments are off: Stripe live keys on a test server", "Fix the Stripe keys in the server settings and restart the server"];
+  for (const key of keys) {
+    assert.equal(tr(key as Parameters<typeof tr>[0]), key);
+    const sv = (svC50StripeFees as Record<string, string>)[key], fr = (frC50StripeFees as Record<string, string>)[key];
+    assert.ok(sv && sv !== key && fr && fr !== key, key);
+  }
 });

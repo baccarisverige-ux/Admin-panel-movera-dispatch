@@ -2,7 +2,7 @@ import { tr } from "../i18n/index.ts";
 import type { LiveClient } from "./session.ts";
 
 /**
- * Contract v0.18.136 stripeFees (DRAFT, Stripe TEST mode; owner 2026-11-20 "So we use stripe"), admin area c50: a
+ * Contract v0.18.136 stripeFees (DRAFT, Stripe test or live keys; owner 2026-11-20 "So we use stripe"), admin area c50: a
  * rider's card payments of owed fees (GET /admin/riders/{riderId}/fee-payments) and the Refund button
  * (POST /admin/riders/{riderId}/fees/{tripId}/stripe-refund). Every amount is the server's; nothing is computed here.
  */
@@ -64,4 +64,43 @@ export async function refundFeePayment(client: LiveClient, riderId: string, trip
   const why = reason.trim();
   if (!why) throw new Error(tr("Write a reason."));
   return client.post(`/admin/riders/${encodeURIComponent(riderId)}/fees/${encodeURIComponent(tripId)}/stripe-refund`, { reason: why.slice(0, 300) });
+}
+
+/**
+ * Stripe live mode (owner 2026-11-21 "Yes, build live mode now (Recommended)", contract.json#stripeFees.status): the
+ * server's Stripe mode, GET /admin/payments/stripe-status (finance.read) -> { mode: live | test | off, reason? }. Never a
+ * key. Shown under Card payment of fees; one whole sentence per state (the server decides, nothing is guessed here).
+ */
+export type StripeServerStatus = { mode: "live" } | { mode: "test" } | { mode: "off"; reason: StripeOffReason } | { mode: "unknown" };
+export type StripeOffReason = "no_keys" | "keys_incomplete" | "mixed_keys" | "bad_webhook_secret" | "test_keys_in_production" | "live_keys_outside_production";
+export const STRIPE_OFF_TEXT: Record<StripeOffReason, string> = {
+  no_keys: "Stripe: Off. No Stripe keys on the server.",
+  keys_incomplete: "Stripe: Off. A Stripe key is missing on the server.",
+  mixed_keys: "Stripe: Off. The server has a mix of test and live keys.",
+  bad_webhook_secret: "Stripe: Off. The Stripe webhook secret is not valid.",
+  test_keys_in_production: "Stripe: Off. Test keys on the production server.",
+  live_keys_outside_production: "Stripe: Off. Live keys on a test server.",
+};
+
+/** The server's answer as is; anything the page cannot read is "unknown" (never shown as Live or Test). */
+export function stripeServerStatusOf(body: unknown): StripeServerStatus {
+  const b = (body ?? {}) as { mode?: unknown; reason?: unknown };
+  if (b.mode === "live" || b.mode === "test") return { mode: b.mode };
+  if (b.mode === "off" && typeof b.reason === "string" && b.reason in STRIPE_OFF_TEXT) return { mode: "off", reason: b.reason as StripeOffReason };
+  return { mode: "unknown" };
+}
+
+/** The English key of the line (tr() translates it). */
+export function stripeStatusText(status: StripeServerStatus): string {
+  if (status.mode === "live") return "Stripe: Live (real card payments).";
+  if (status.mode === "test") return "Stripe: Test (no real money).";
+  if (status.mode === "off") return STRIPE_OFF_TEXT[status.reason];
+  return "Stripe: status not known.";
+}
+
+/** A setup mistake (anything off but "no keys", or unknown): the line is shown as a warning. */
+export const stripeStatusIsProblem = (status: StripeServerStatus) => status.mode === "unknown" || (status.mode === "off" && status.reason !== "no_keys");
+
+export async function loadStripeServerStatus(client: LiveClient): Promise<StripeServerStatus> {
+  return stripeServerStatusOf(await client.json("/admin/payments/stripe-status"));
 }

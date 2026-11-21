@@ -118,7 +118,7 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "A very small amount blocks cash booking after one fee; a very large one lets a debt grow with no stop.",
   ),
   "tips.riderFeeStripe": t(
-    "When on: a rider who owes a cancel or no-show fee can pay it by card or Apple Pay in the app (Stripe, test mode). Rides are still paid in the car.",
+    "When on: a rider who owes a cancel or no-show fee can pay it by card or Apple Pay in the app (Stripe). Rides are still paid in the car. Under the switch: the server's Stripe mode, Live (real money), Test (no real money) or Off with the reason.",
     `${STANDARD_ONLY} Rider app (debt line, cancel notice); the rider page shows each card payment.`,
     "On or off.",
     "Off in every country.",
