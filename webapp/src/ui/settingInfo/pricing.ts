@@ -189,14 +189,6 @@ export const PRICING_INFO: Readonly<Record<string, SettingInfoText>> = {
     "A rider spills a drink: an admin adds 300 kr with the reason.",
     "0: an admin cannot charge a cleaning fee (nothing is added); 2 000 kr is the highest fee an admin can add.",
   ),
-  "pricing.fee.tolls": t(
-    "Whether road tolls on the route are added to the rider's fare.",
-    ZONE,
-    "Added to fare or Not added.",
-    "Added in Sweden, not added in France and Tunisia.",
-    "On: a toll on the route is added to the fare.",
-    "Added: the rider pays the tolls on the route; Not added: the toll cost is not in the fare.",
-  ),
   "pricing.fee.rounding": t(
     "The final price is rounded to this step.",
     ZONE,
