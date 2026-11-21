@@ -1,7 +1,7 @@
 import type { SettingInfoText } from "../SettingInfo.ts";
 
 /**
- * English "i" texts, Settings (pages/ConfigPage.tsx, config/CountryAppsPanel.tsx, config/RequestLimitsPanel.tsx,
+ * English "i" texts, Settings (pages/ConfigPage.tsx, config/CountryAppsPanel.tsx, config/RequestLimitsPanel.tsx, config/AppUpdatePanel.tsx,
  * platform/SettingsParts.tsx). Written from config/book.ts (RIDER_SWITCHES, DRIVER_SWITCHES, emptyConfigBook),
  * config/appConfigs.ts (which switches reach the apps), config/countrySettings.ts and contract.json#countryLimits.
  */
@@ -263,6 +263,43 @@ export const SETTINGS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "60: a script trying sign-ins is slowed after 60 a minute.",
     "20: a shared office network may be slowed; 10 000: in practice no limit.",
     "People not signed in yet (sign-in, waiting list).",
+  ),
+  // v0.18.154 P16c (contract.json#appUpdate; owner 2026-11-21 20:30 "Yes, build it now (Recommended)").
+  "settings.appUpdate.minVersion.android": t(
+    "The lowest Android app version that may still book (rider) or go online and take rides (driver). A phone below it sees one screen, \"Update Movera to continue\", with a button to the store; the server also refuses its booking, go-online and ride accept. A trip already running is never stopped.",
+    "Settings › Minimum app version, for the country Standard (every zone with no own rider / driver settings) or the zone picked, for the rider app or the driver app. Phones get it with the next settings update after Save.",
+    "Empty (off) or a version x.y.z, for example 1.4.0.",
+    "Empty: off, no phone is asked to update.",
+    "1.4.0: an Android phone on 1.3.9 must update; 1.4.0 and newer work as before.",
+    "Empty: old phones keep working; a version above the newest one in the store: every Android phone is blocked until a newer version exists, so set it only after the new version is live in Google Play.",
+    "Android phones of that app.",
+  ),
+  "settings.appUpdate.minVersion.ios": t(
+    "The lowest iPhone app version that may still book (rider) or go online and take rides (driver). A phone below it sees one screen, \"Update Movera to continue\", with a button to the store; the server also refuses its booking, go-online and ride accept. A trip already running is never stopped.",
+    "Settings › Minimum app version, for the country Standard (every zone with no own rider / driver settings) or the zone picked, for the rider app or the driver app. Phones get it with the next settings update after Save.",
+    "Empty (off) or a version x.y.z, for example 1.4.0.",
+    "Empty: off, no phone is asked to update.",
+    "1.4.0: an iPhone on 1.3.9 must update; 1.4.0 and newer work as before.",
+    "Empty: old phones keep working; a version above the newest one in the App Store: every iPhone is blocked until a newer version exists, so set it only after the new version is live in the App Store.",
+    "iPhones of that app.",
+  ),
+  "settings.appUpdate.storeUrls.android": t(
+    "Where the Update button sends an Android phone: the app's page in Google Play.",
+    "Settings › Minimum app version, for the country Standard (every zone with no own rider / driver settings) or the zone picked, for the rider app or the driver app. Phones get it with the next settings update after Save.",
+    "Empty (the app's own built-in link) or a full https:// link.",
+    "Empty: the link built into the app.",
+    "https://play.google.com/store/apps/details?id=<the app id>.",
+    "Empty: the built-in link; a wrong link: the phone cannot reach the update, so check it opens the right app.",
+    "Android phones of that app.",
+  ),
+  "settings.appUpdate.storeUrls.ios": t(
+    "Where the Update button sends an iPhone: the app's page in the App Store.",
+    "Settings › Minimum app version, for the country Standard (every zone with no own rider / driver settings) or the zone picked, for the rider app or the driver app. Phones get it with the next settings update after Save.",
+    "Empty (the app's own built-in link) or a full https:// link.",
+    "Empty: the link built into the app.",
+    "https://apps.apple.com/app/<the app id>.",
+    "Empty: the built-in link; a wrong link: the phone cannot reach the update, so check it opens the right app.",
+    "iPhones of that app.",
   ),
   "settings.devPages": t(
     "Shows System, Release gates and Design (pages for developers) in the menu. Off: they still open by their address, for the Super admin only.",

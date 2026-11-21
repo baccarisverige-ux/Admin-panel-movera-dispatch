@@ -5,6 +5,7 @@ import { CHAT_FIELDS } from "../config/chatSettings.ts";
 import { APP_IDS } from "../config/countrySettings.ts";
 import { ZONE_PAYMENT_METHODS } from "../config/zoneDefaults.ts";
 import { REQUEST_LIMIT_FIELDS } from "../config/requestLimits.ts";
+import { MIN_FIELD_KINDS, MIN_PLATFORMS } from "../config/appUpdateMin.ts";
 import { ALERTS, EXTRAS, FACTORS, WAIT_KINDS } from "../dispatch/rules/model.ts";
 import { OFFER_CARD_DETAILS, WAIT_RIDE_TYPES } from "../dispatch/offers.ts";
 import { LEVELS, ZONE_LIMITS } from "../alerts/engine.ts";
@@ -27,6 +28,8 @@ export const SETTING_INFO_LISTS: Readonly<Record<string, readonly string[]>> = {
   "settings.payment.": [...ZONE_PAYMENT_METHODS],
   "settings.language.": [...APP_IDS],
   "settings.requestLimits.": [...REQUEST_LIMIT_FIELDS],
+  // config/AppUpdatePanel.tsx (v0.18.154 P16c): settings.appUpdate.<minVersion|storeUrls>.<android|ios>.
+  "settings.appUpdate.": MIN_FIELD_KINDS.flatMap((kind) => MIN_PLATFORMS.map((platform) => `${kind}.${platform}`)),
   "dispatch.zone.factor.": FACTORS.map((item) => item.id),
   "dispatch.zone.wait.": WAIT_KINDS.map((item) => item.id),
   "dispatch.zone.extra.": EXTRAS.map((item) => item.id),
