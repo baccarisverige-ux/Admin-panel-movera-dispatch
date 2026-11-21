@@ -613,7 +613,8 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
     rideCheck: rideCheck(base, state),
     routeChange: routeChange(base),
     // v0.18.122 L20 stream (contract.json#driverOneStream.setting): Dispatch › Drivers "One live connection per driver phone", default off.
-    realtime: { oneStream: zone.oneStream?.on ?? CONFIG_DEFAULTS.driverOneStream },
+    // v0.18.150 L20 stream backup (contract.json#driverOneStreamFallback.setting): the two numbers under that switch.
+    realtime: { oneStream: zone.oneStream?.on ?? CONFIG_DEFAULTS.driverOneStream, oneStreamFallback: { ...(zone.oneStreamFallback ?? CONFIG_DEFAULTS.driverOneStreamFallback) } },
     texts: driverTexts(base, state),
     notices: driverAppNotices(state.driverNotices, base.info.id),
     appUpdate: appUpdate(base, "driver"),

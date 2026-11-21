@@ -15,7 +15,7 @@ import { sv } from "../i18n/sv.ts";
  * published as the driver document's realtime.oneStream. Rule 36: fails on main (no oneStream anywhere).
  */
 const NOW = "2026-11-17T08:00:00Z";
-type DriverDoc = { realtime?: { oneStream: boolean } };
+type DriverDoc = { realtime?: { oneStream: boolean; oneStreamFallback?: { failuresInARow: number; retryOneAfterMinutes: number } } };
 const driver = (zoneId: string, on?: boolean) => {
   const zone = zoneDefault(zoneId);
   const state = on === undefined ? appConfigState({ now: NOW }) : appConfigState({ now: NOW, dispatch: { live: { [zoneId]: { ...zone, oneStream: { on } } } } as never });
@@ -26,7 +26,7 @@ test("default off: the Dispatch rules and the driver document of every country c
   assert.equal(CONFIG_DEFAULTS.driverOneStream, false);
   for (const zoneId of ["Z001", "FR-PC", "TN-TC"]) {
     assert.deepEqual(zoneDefault(zoneId).oneStream, { on: false }, zoneId);
-    assert.deepEqual(driver(zoneId).realtime, { oneStream: false }, zoneId);
+    assert.deepEqual(driver(zoneId).realtime, { oneStream: false, oneStreamFallback: { failuresInARow: 3, retryOneAfterMinutes: 10 } }, zoneId); // v0.18.150: with the backup numbers
   }
 });
 
@@ -40,10 +40,10 @@ test("save: on for one zone is published as the driver document's realtime.oneSt
   assert.ok(!OWNED.settings.driver.includes("realtime"));
   const before = driver("Z001", false);
   const after = driver("Z001", true);
-  assert.deepEqual(after.realtime, { oneStream: true });
+  assert.deepEqual(after.realtime, { oneStream: true, oneStreamFallback: { failuresInARow: 3, retryOneAfterMinutes: 10 } }); // v0.18.150: with the backup numbers
   const server: Doc = { zoneId: "Z001", features: { pin: false }, texts: ["server"] };
   const sent = patchChanged(server, before, after, OWNED.dispatch.driver);
-  assert.deepEqual(sent["realtime"], { oneStream: true }, "a document saved before v0.18.122 gets the switch");
+  assert.deepEqual(sent["realtime"], { oneStream: true }, "a document saved before v0.18.122 gets the switch (v0.18.150: unchanged backup numbers are not written)");
   assert.deepEqual(sent["texts"], ["server"]);
   assert.equal(patchChanged({ zoneId: "Z001" }, before, before, OWNED.dispatch.driver)["realtime"], undefined);
   const lines = changeLines({ ...zoneDefault("Z001"), oneStream: { on: false } }, { ...zoneDefault("Z001"), oneStream: { on: true } });

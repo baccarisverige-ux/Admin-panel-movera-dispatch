@@ -510,6 +510,13 @@ export type ZoneDispatch = {
    * realtime.oneStream. Optional so rules saved before it still load (off then).
    */
   oneStream?: { on: boolean };
+  /**
+   * v0.18.150 L20 stream backup (owner 2026-11-21 "Switch to old two (Rec.)"; contract.json#driverOneStreamFallback): after
+   * failuresInARow (1-10) failed tries of the one connection in a row the driver phone uses the two old connections, and
+   * tries the one connection again after retryOneAfterMinutes (1-60). Dispatch › Drivers, under the switch. Sent as the
+   * driver document's realtime.oneStreamFallback. Optional so rules saved before it still load (defaults 3 / 10 then).
+   */
+  oneStreamFallback?: { failuresInARow: number; retryOneAfterMinutes: number };
   airport: { on: boolean; order: "fifo" | "best"; maxQueueMin: number; queueAreas: { id: string; name: string; ring: [number, number][] }[] };
   goingHome: { on: boolean; perDay: number; maxOffDeg: number };
   /** R13-9: Destination mode, each part on or off with its own number. */
