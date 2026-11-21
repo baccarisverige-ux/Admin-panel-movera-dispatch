@@ -1,0 +1,22 @@
+/** French dictionary, area c54-sessions: the Sessions card on the rider and driver pages (contract v0.18.149 adminSessions, owner Rules decisions/driver-g12.md Q6). Add new keys at the end of this file. Merged in ../fr.ts in this order. */
+export const frC54Sessions = {
+  "Sessions": "Sessions",
+  "Phones where this account is signed in. Signing out sends the person back to Sign in with \"You were signed out by Movera\".": "Téléphones où ce compte est connecté. La déconnexion renvoie la personne vers la connexion avec « Vous avez été déconnecté par Movera ».",
+  "Not signed in on any phone.": "Connecté sur aucun téléphone.",
+  "Driver sessions": "Sessions du chauffeur",
+  "Signed in {0}": "Connecté le {0}",
+  "Sign out {0}": "Déconnecter {0}",
+  "Sign out all": "Tout déconnecter",
+  "Sign out of every phone ({0})": "Déconnecter tous les téléphones ({0})",
+  "{0} signed in": "{0} connectés",
+  "Signed out of {0}.": "Déconnecté de {0}.",
+  "Signed out of every phone.": "Déconnecté de tous les téléphones.",
+  "Unknown device": "Appareil inconnu",
+  "Unknown platform": "Plateforme inconnue",
+  "The phone is signed out at once. Its app returns to Sign in and shows \"You were signed out by Movera\".": "Le téléphone est déconnecté tout de suite. L’application revient à la connexion et affiche « Vous avez été déconnecté par Movera ».",
+  "The person can sign in again with an SMS code. Your reason is kept in the audit and is not shown to them.": "La personne peut se reconnecter avec un code SMS. Votre motif est gardé dans l’audit et ne lui est pas montré.",
+  "A driver on a trip is signed out only after the trip ends.": "Un chauffeur en course n’est déconnecté qu’après la fin de la course.",
+  "The driver is on a trip. Sign the driver out after the trip ends.": "Le chauffeur est en course. Déconnectez-le après la fin de la course.",
+  "This phone is already signed out. The list was reloaded.": "Ce téléphone est déjà déconnecté. La liste a été rechargée.",
+  "Sign driver out": "Déconnecter le chauffeur",
+};
