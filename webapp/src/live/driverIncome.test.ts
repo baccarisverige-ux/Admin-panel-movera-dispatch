@@ -47,3 +47,14 @@ test("SHOULD-4: the partial row has its own (i) text", () => {
   assert.match(COLUMN_INFO.partial, /zones you do not cover/);
   assert.match(COLUMN_INFO.paidOutByMovera, /Never below 0/);
 });
+
+test("the year list follows the server's UTC year, not the browser's local year (no income_year_invalid at New Year)", () => {
+  // 1 January 00:30 in Stockholm is still 31 December in UTC: the server refuses the new year until UTC midnight.
+  const stockholmNewYear = new Date("2025-12-31T23:30:00Z");
+  assert.equal(yearChoices(stockholmNewYear)[0], 2025);
+  assert.equal(defaultYear(stockholmNewYear), 2024);
+  // 31 December 20:00 in New York is already 1 January in UTC: the server takes the new year.
+  const newYorkEve = new Date("2026-01-01T01:00:00Z");
+  assert.equal(yearChoices(newYorkEve)[0], 2026);
+  assert.equal(defaultYear(newYorkEve), 2025);
+});

@@ -41,13 +41,17 @@ export const DETAIL_CHOICES: readonly { id: IncomeDetail; label: string }[] = [
   { id: "trips", label: "All trips per day" },
 ];
 
-/** The year picker: every year from 2020 up to this one; last year first chosen (the year the accountant files). */
+/**
+ * The year picker: every year from 2020 up to this one; last year first chosen (the year the accountant files). "This
+ * year" is the server's: it refuses a year after the current UTC year (income_year_invalid), so the list uses the UTC
+ * year, never the browser's local one (around New Year they differ).
+ */
 export function yearChoices(now: Date): number[] {
   const out: number[] = [];
-  for (let year = now.getFullYear(); year >= 2020; year -= 1) out.push(year);
+  for (let year = now.getUTCFullYear(); year >= 2020; year -= 1) out.push(year);
   return out;
 }
-export const defaultYear = (now: Date) => Math.max(2020, now.getFullYear() - 1);
+export const defaultYear = (now: Date) => Math.max(2020, now.getUTCFullYear() - 1);
 
 /** The query of GET /admin/finance/driver-income(.csv). All trips per day needs a month or a payee (income_detail_too_big). */
 export function incomeQuery(input: { year: number; detail: IncomeDetail; month?: string | null; payeeId?: string | null; zoneParams?: readonly [string, string][]; cursor?: string | null; limit?: number }): string {
