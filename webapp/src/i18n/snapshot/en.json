@@ -9373,4 +9373,9 @@
 ["Server trip timers are running {0} s late","Server trip timers are running {0} s late"],
 ["Server dispatch rounds are running {0} s late","Server dispatch rounds are running {0} s late"],
 ["{0} trip timers overdue","{0} trip timers overdue"],
-["{0} dispatch rounds overdue","{0} dispatch rounds overdue"]]
+["{0} dispatch rounds overdue","{0} dispatch rounds overdue"],
+["Backup after failed tries","Backup after failed tries"],
+["When the one connection fails this many times in a row, the phone uses the two old connections so offers keep coming. Example: 3: driver Ali's phone fails the one connection 3 times in a row, then gets offers on the two old connections.","When the one connection fails this many times in a row, the phone uses the two old connections so offers keep coming. Example: 3: driver Ali's phone fails the one connection 3 times in a row, then gets offers on the two old connections."],
+["Try the one connection again after (minutes)","Try the one connection again after (minutes)"],
+["How long the phone stays on the two old connections before it tries the one connection again. An app restart also tries it again. Example: 10: Ali's phone tries the one connection again 10 minutes later.","How long the phone stays on the two old connections before it tries the one connection again. An app restart also tries it again. Example: 10: Ali's phone tries the one connection again 10 minutes later."],
+["tries","tries"]]

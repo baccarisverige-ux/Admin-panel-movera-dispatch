@@ -40,6 +40,12 @@ export const CONFIG_DEFAULTS = {
   shareTripOn: true,
   /** v0.18.122 L20 stream (owner 2026-11-17 "Yes, with switch (Rec.)", off until tested): one live connection per driver phone (contract configDefaults.driverOneStream). */
   driverOneStream: false,
+  /**
+   * v0.18.150 L20 stream backup (owner 2026-11-21 "Switch to old two (Rec.)"): after failuresInARow failed tries of the one
+   * connection in a row the driver phone uses the two old connections for retryOneAfterMinutes (contract
+   * configDefaults.driverOneStreamFallback; ranges 1-10 and 1-60, contract.json#driverOneStreamFallback.setting).
+   */
+  driverOneStreamFallback: { failuresInARow: 3, retryOneAfterMinutes: 10 },
   freeWaitMin: { default: 5, xl: 3 },
   waitingDriverSharePct: 100,
   noShowDriverSharePct: 80,

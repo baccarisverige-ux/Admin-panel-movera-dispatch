@@ -9373,4 +9373,9 @@
 ["Server trip timers are running {0} s late","Serverns resetimrar ligger {0} s efter"],
 ["Server dispatch rounds are running {0} s late","Serverns utskicksrundor ligger {0} s efter"],
 ["{0} trip timers overdue","{0} resetimrar försenade"],
-["{0} dispatch rounds overdue","{0} utskicksrundor försenade"]]
+["{0} dispatch rounds overdue","{0} utskicksrundor försenade"],
+["Backup after failed tries","Reserv efter misslyckade försök"],
+["When the one connection fails this many times in a row, the phone uses the two old connections so offers keep coming. Example: 3: driver Ali's phone fails the one connection 3 times in a row, then gets offers on the two old connections.","När den enda anslutningen misslyckas så här många gånger i rad använder telefonen de två gamla anslutningarna, så att erbjudandena fortsätter komma. Exempel: 3: förare Alis telefon misslyckas med den enda anslutningen 3 gånger i rad och får sedan erbjudanden via de två gamla anslutningarna."],
+["Try the one connection again after (minutes)","Försök med den enda anslutningen igen efter (minuter)"],
+["How long the phone stays on the two old connections before it tries the one connection again. An app restart also tries it again. Example: 10: Ali's phone tries the one connection again 10 minutes later.","Hur länge telefonen stannar på de två gamla anslutningarna innan den försöker med den enda anslutningen igen. En omstart av appen försöker också igen. Exempel: 10: Alis telefon försöker med den enda anslutningen igen 10 minuter senare."],
+["tries","försök"]]

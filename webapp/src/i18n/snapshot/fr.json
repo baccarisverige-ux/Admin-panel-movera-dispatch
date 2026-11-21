@@ -9373,4 +9373,9 @@
 ["Server trip timers are running {0} s late","Les minuteurs de course du serveur ont {0} s de retard"],
 ["Server dispatch rounds are running {0} s late","Les tours d'envoi du serveur ont {0} s de retard"],
 ["{0} trip timers overdue","{0} minuteurs de course en retard"],
-["{0} dispatch rounds overdue","{0} tours d'envoi en retard"]]
+["{0} dispatch rounds overdue","{0} tours d'envoi en retard"],
+["Backup after failed tries","Secours après des essais ratés"],
+["When the one connection fails this many times in a row, the phone uses the two old connections so offers keep coming. Example: 3: driver Ali's phone fails the one connection 3 times in a row, then gets offers on the two old connections.","Quand la connexion unique échoue autant de fois de suite, le téléphone utilise les deux anciennes connexions pour que les offres continuent d’arriver. Exemple : 3 : le téléphone du chauffeur Ali échoue 3 fois de suite sur la connexion unique, puis reçoit les offres par les deux anciennes connexions."],
+["Try the one connection again after (minutes)","Réessayer la connexion unique après (minutes)"],
+["How long the phone stays on the two old connections before it tries the one connection again. An app restart also tries it again. Example: 10: Ali's phone tries the one connection again 10 minutes later.","Combien de temps le téléphone reste sur les deux anciennes connexions avant de réessayer la connexion unique. Un redémarrage de l’app la réessaie aussi. Exemple : 10 : le téléphone d’Ali réessaie la connexion unique 10 minutes plus tard."],
+["tries","essais"]]

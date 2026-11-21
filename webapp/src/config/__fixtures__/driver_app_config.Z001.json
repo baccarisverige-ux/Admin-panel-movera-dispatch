@@ -996,7 +996,11 @@
     "fixedPriceTrips": "block"
   },
   "realtime": {
-    "oneStream": false
+    "oneStream": false,
+    "oneStreamFallback": {
+      "failuresInARow": 3,
+      "retryOneAfterMinutes": 10
+    }
   },
   "texts": {
     "byLanguage": {
