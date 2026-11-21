@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
-import { kpiReport, localDay as kpiDay } from "../live/kpis";
+import { fetchKpiDays, kpiReport, localDay as kpiDay } from "../live/kpis";
 import type { KpiDay } from "../live/types";
 import { isLiveData } from "../live/realData";
 import { OPEN_TICKETS_LIST, WAITING_TRIPS_LIST } from "../live/listNames";
@@ -271,7 +271,7 @@ export function DashboardPage() {
   const kpiTo = kpiDay(Math.max(shownSpan.start, shownSpan.end - 1), market.timeZone);
   // v0.17.2: the server counts only the zones picked in the top bar.
   const kpiFilter = new URLSearchParams(zoneFilterOf(scope.effective).params).toString();
-  const kpiQuery = useQuery({ queryKey: ["live", "kpis", kpiFrom, kpiTo, kpiFilter], queryFn: () => liveSession!.client.json<{ days: KpiDay[] }>(`/admin/kpis?fromDate=${kpiFrom}&toDate=${kpiTo}${kpiFilter ? `&${kpiFilter}` : ""}`), enabled: Boolean(liveSession) && !scope.denied });
+  const kpiQuery = useQuery({ queryKey: ["live", "kpis", kpiFrom, kpiTo, kpiFilter], queryFn: () => fetchKpiDays((path) => liveSession!.client.json<{ days: KpiDay[] }>(path), kpiFrom, kpiTo, kpiFilter), enabled: Boolean(liveSession) && !scope.denied });
   const demoReport = useMemo(() => earningsReport(country, zoneKey ? zoneKey.split(",") : [], shownSpan), [country, zoneKey, shownSpan]);
   const report = liveSession ? kpiReport(kpiQuery.data?.days ?? [], kpiZones, shownSpan, market.timeZone, uiLocale()) : demoReport;
   useEffect(() => {

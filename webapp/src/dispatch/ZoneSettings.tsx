@@ -146,7 +146,8 @@ function Modes({ zone, onChange, busy, disabled }: Props) {
 
       <Card title={tr("Whose rules")} tone="pink" icon={<Scale size={18} />} help={tr("A rider and a driver can be in different zones. Drivers are matched across zone borders.")}>
         <Row info="dispatch.zone.rulesComeFrom" label={tr("Rules come from")}>
-          <Choice label={tr("Whose rules")} value={zone.rulesFrom} disabled={disabled} onChange={(rulesFrom) => set({ rulesFrom })} options={[{ id: "driver", label: tr("The driver's zone") }, { id: "pickup", label: tr("The pickup zone") }]} />
+          {/* CONTRACT.md:267: rulesFrom is kept but ignored; the pickup zone's document governs. */}
+          <strong data-testid="rules-from-pickup">{tr("The pickup zone's rules always apply")}</strong>
         </Row>
       </Card>
     </div>

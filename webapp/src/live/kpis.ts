@@ -8,6 +8,37 @@ import type { EarningsReport, Totals } from "../dashboard/earnings.ts";
 import type { PeriodWindow } from "../dashboard/period.ts";
 import type { KpiDay } from "./types.ts";
 import { zoneById } from "../markets/markets.ts";
+import contract from "../../../contracts/contract.json" with { type: "json" };
+
+/** contract.json#kpis.maxDays (400): the most days one GET /admin/kpis accepts (else 400 invalid_range). */
+export const KPI_MAX_DAYS = (contract as unknown as { kpis: { maxDays: number } }).kpis.maxDays;
+
+const addDays = (day: string, n: number) => {
+  const at = new Date(`${day}T12:00:00Z`);
+  at.setUTCDate(at.getUTCDate() + n);
+  return at.toISOString().slice(0, 10);
+};
+
+/**
+ * Launch fix (admin click-through 2026-11-19): Year asks this year AND last year to compare (2025-01-01..2026-11-19,
+ * 688 days), more than the server takes. Split [fromDate, toDate] into back-to-back parts of at most maxDays.
+ */
+export function kpiRanges(fromDate: string, toDate: string, maxDays = KPI_MAX_DAYS): { fromDate: string; toDate: string }[] {
+  const out: { fromDate: string; toDate: string }[] = [];
+  for (let start = fromDate; start <= toDate; ) {
+    const last = addDays(start, maxDays - 1);
+    const end = last < toDate ? last : toDate;
+    out.push({ fromDate: start, toDate: end });
+    start = addDays(end, 1);
+  }
+  return out;
+}
+
+/** GET /admin/kpis over any span: one request per part, the days joined. */
+export async function fetchKpiDays(get: (path: string) => Promise<{ days: KpiDay[] }>, fromDate: string, toDate: string, filter: string): Promise<{ days: KpiDay[] }> {
+  const parts = await Promise.all(kpiRanges(fromDate, toDate).map((r) => get(`/admin/kpis?fromDate=${r.fromDate}&toDate=${r.toDate}${filter ? `&${filter}` : ""}`)));
+  return { days: parts.flatMap((part) => part.days) };
+}
 
 /** The zone-local day of a moment, YYYY-MM-DD. */
 export function localDay(ms: number, timeZone: string): string {

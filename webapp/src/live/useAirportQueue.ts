@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLiveSessionMaybe } from "./LiveSessionContext";
-import { AIRPORT_QUEUES_PATH, parseQueueArea, parseQueueFeed, queueAreaPath, type QueueArea, type QueueFeedItem } from "./airportQueue.ts";
+import { AIRPORT_QUEUES_PATH, isNoQueueArea, queueAreaWanted, parseQueueArea, parseQueueFeed, queueAreaPath, type QueueArea, type QueueFeedItem } from "./airportQueue.ts";
 
 /** Fix job 9 (§60): the Dashboard feed, asked every 30 s (no push). null in the demo; data null while loading or failed. */
 export function useAirportQueueFeed(): { data: QueueFeedItem[] | null; failed: boolean } | null {
@@ -19,7 +19,8 @@ export function useAirportQueueFeed(): { data: QueueFeedItem[] | null; failed: b
 export const queueAreaKey = (zoneId: string) => ["live", "queue-area", zoneId];
 
 /** An airport zone's queue area; area null when none is drawn yet (404). */
-export function useQueueArea(zoneId: string) {
+export function useQueueArea(zone: { zoneId: string; kind: string }) {
+  const zoneId = zone.zoneId;
   const live = useLiveSessionMaybe();
   return useQuery({
     queryKey: queueAreaKey(zoneId),
@@ -27,11 +28,11 @@ export function useQueueArea(zoneId: string) {
       try {
         return parseQueueArea(await live!.client.json<unknown>(queueAreaPath(zoneId)));
       } catch (error) {
-        if ((error as { status?: number }).status === 404) return null;
+        if (isNoQueueArea(error)) return null;
         throw error;
       }
     },
-    enabled: Boolean(live?.admin) && zoneId.length > 0,
+    enabled: Boolean(live?.admin) && queueAreaWanted(zone),
     retry: false,
   });
 }

@@ -40,7 +40,7 @@ const CONFIRM_DIALOGS = [
   "live/LiveReservations.tsx", // the inline Confirm of a booked ride's action (cancel, no-show, raise, assign, …): SF-R2-4 found it
 ];
 /** They confirm through DecisionDialog (live/ui.tsx), which holds the info. */
-const THROUGH_DECISION_DIALOG = ["content/LegalEditor.tsx", "live/DocumentsTable.tsx", "live/LiveCompanyReview.tsx", "live/LiveFleetPanel.tsx"];
+const THROUGH_DECISION_DIALOG = ["content/LegalEditor.tsx", "live/DocumentsTable.tsx", "live/LiveCompanyReview.tsx", "live/LiveFleetPanel.tsx", "live/LiveBlockedPairs.tsx"];
 /** Panels, pickers, viewers and forms: their only confirms are CommandButtons (covered above), or they change nothing on the server. */
 const NOT_A_CONFIRM = [
   "alerts/AlertBell.tsx", "dashboard/DriverPanel.tsx", "dashboard/DriversMap.tsx", "dashboard/TripCard.tsx", "dispatch/AssignPanel.tsx", "drivers/BonusQuickPopup.tsx",

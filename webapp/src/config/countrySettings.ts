@@ -407,6 +407,28 @@ export function zoneSettingsOf(book: CountrySettingsBook, country: MarketId, zon
   return book.zones?.[zoneId] ?? countrySettingsOf(book, country);
 }
 
+/**
+ * The Tips & limits values that belong to the country Standard alone: the server reads the money limits from the
+ * Standard only and refuses the emergency numbers and the SOS SMS switch on a zone's own rules. On a zone the panel
+ * shows them locked.
+ */
+export const STANDARD_ONLY_FIELDS = ["walletCreditMax", "maxRiderDebt", "driverOwesLimit", "emergencyNumbers", "sosContactsSms"] as const satisfies readonly (keyof CountrySettings)[];
+
+/**
+ * What the live Tips & limits panel shows for a scope: its own settings, and for a ZONE the Standard's values of the
+ * Standard-only fields. Live bug 2026-11-19 (Rules audits/impact/admin-tipslimits-reset.md): the panel showed what it
+ * read from the zone's OWN document for them (the default emergency numbers, SOS SMS on, and any money limit left in
+ * that document), and Save sends the shown values to every chosen scope. With the Standard also chosen, the Standard
+ * was reset to them, with no line in the confirm.
+ */
+export function shownSettingsOf(book: CountrySettingsBook, country: MarketId, zoneId: string): CountrySettings {
+  const own = zoneSettingsOf(book, country, zoneId);
+  const standardId = `standard-${country}`;
+  if (zoneId === standardId) return own;
+  const standard = zoneSettingsOf(book, country, standardId);
+  return { ...own, ...Object.fromEntries(STANDARD_ONLY_FIELDS.map((field) => [field, standard[field]])) };
+}
+
 /** A new amount for a list: one step above the highest, with an id the list does not use yet. */
 export function addAmount(list: readonly AmountOption[], prefix: string, country: MarketId): AmountOption[] {
   const used = new Set(list.map((item) => item.id));

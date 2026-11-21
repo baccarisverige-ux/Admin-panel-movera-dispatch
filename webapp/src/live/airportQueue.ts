@@ -21,6 +21,20 @@ export type QueueArea = Defaults & { areaId: string; airportZoneId: string; poly
 export type QueueAreaInput = Defaults & { polygon: [number, number][] };
 export type QueueFeedItem = { areaId: string; airportZoneId: string; on: boolean; waiting: number; longestWaitMin: number; pickupsLastHour: number };
 
+/**
+ * Launch fix (admin click-through 2026-11-19): the server answers 404 not_found, reason queue_area_not_found
+ * (movera-server src/airportQueue/routes.ts:57) when no area is drawn. That is "none yet", shown calmly, never an error.
+ */
+export function isNoQueueArea(error: unknown): boolean {
+  const e = error as { status?: number; code?: string } | null;
+  return Boolean(e) && e!.status === 404 && (e!.code === undefined || e!.code === "not_found");
+}
+
+/** Only an airport zone has a queue area; a city zone sends no request at all. */
+export function queueAreaWanted(zone: { zoneId: string; kind: string }): boolean {
+  return zone.kind === "airport" && zone.zoneId.length > 0;
+}
+
 const clamp = (value: number, [min, max]: [number, number]) => Math.min(max, Math.max(min, Math.round(value)));
 
 /** The PUT body: the whole area (a save never keeps an older number silently), numbers inside the contract ranges. */

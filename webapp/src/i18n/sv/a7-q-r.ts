@@ -368,6 +368,7 @@ export const svA7QR: Record<keyof typeof enA7QR, string> = {
   "Rules (boost, event, no pickup…)": "Regler (boost, evenemang, ingen upphämtning…)",
   "Rules apply to the whole country.": "Reglerna gäller hela landet.",
   "Rules come from": "Reglerna kommer från",
+  "The pickup zone's rules always apply": "Upphämtningszonens regler gäller alltid",
   "Rules to test": "Regler att testa",
   "Rules to test{0}": "Regler att testa{0}",
   "Run drills": "Kör övningar",
