@@ -4,6 +4,7 @@ import { DRIVER_BY_ID_LIST } from "../live/listNames";
 import { INCIDENTS_OF_DRIVER_LIST } from "../live/incidents";
 import { LiveDriverPreferences } from "../live/LiveProfileData";
 import { LivePayoutHold } from "../live/LivePayoutHold";
+import { LiveSessions } from "../live/LiveSessions";
 import { LiveUnlockSignIn } from "../live/LiveUnlockSignIn";
 import { LiveBlockedPairs } from "../live/LiveBlockedPairs";
 import { useDriverPerformance } from "../live/useDriverPerformance";
@@ -474,6 +475,8 @@ export function DriverDetailPage() {
             </section>
             {liveData ? <LivePayoutHold driverId={driver.id} hold={liveFacts?.payoutHold ?? null} /> : null}
             {liveData ? <LiveUnlockSignIn kind="driver" id={driver.id} phone={revealed?.phone ?? null} /> : null}
+            {/* v0.18.149 (owner G12 Q6): the driver's signed-in phones, signed out one or all with a reason. */}
+            {liveData ? <LiveSessions kind="driver" id={driver.id} /> : null}
             {liveData ? <LiveBlockedPairs person={{ driverId: driver.id }} /> : null}
             <section className="fd-box">
               <h3>{tr("This month")}</h3>

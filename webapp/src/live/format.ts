@@ -196,6 +196,9 @@ export function errorText(error: unknown): string {
   // v0.18.19 Book later (live test MED 7): the server's reasons in the panel's language.
   if (error.reason === "driver_not_available") return tr("The driver cannot take a ride now (offline or no position). For a ride hours ahead you can still give it.");
   if (error.reason === "driver_on_trip") return tr("The driver is on a trip now.");
+  // v0.18.149 (contract.json#adminSessions): a driver on a trip is signed out only after the trip ends.
+  if (error.reason === "sign_out_on_trip") return tr("The driver is on a trip. Sign the driver out after the trip ends.");
+  if (error.reason === "session_not_found") return tr("This phone is already signed out. The list was reloaded.");
   // v0.18.26 (owner 2026-11-04 "Yes, respect it"): his Ride preferences switch this ride type off.
   if (error.reason === "category_switched_off") return tr("This driver switched this ride type off in their ride preferences.");
   if (error.reason === "no_show_too_early") return tr("A booked ride can be marked a no-show only after its pickup time and the waiting time.");

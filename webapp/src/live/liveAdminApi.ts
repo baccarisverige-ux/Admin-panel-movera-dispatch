@@ -876,6 +876,18 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (next?.driverId) drivers.set(next.driverId, next);
       return done("Saved.");
     }
+    // v0.18.149 (owner G12 Q6 "Real, riders + drivers", contract.json#adminSessions): sign one phone ({ sessionId }) or
+    // every phone ({ all: true }) of a rider / driver out, with the admin's reason (live/LiveSessions.tsx).
+    if (input.action === "admin.rider.signOut" || input.action === "admin.driver.signOut") {
+      const { sessionId, all } = (input.value ?? {}) as { sessionId?: unknown; all?: unknown };
+      const reason = (input.reason ?? "").trim();
+      if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", reason: "reason_required", retryable: false });
+      const one = typeof sessionId === "string" && sessionId ? sessionId : undefined;
+      if (!one && all !== true) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", reason: "session_or_all", retryable: false });
+      const list = input.action === "admin.rider.signOut" ? "riders" : "drivers";
+      await client.post(`/admin/${list}/${encodeURIComponent(input.targetId)}/sessions/sign-out`, { ...(one ? { sessionId: one } : { all: true }), reason: reason.slice(0, 500) }).catch(explained);
+      return done("Saved.");
+    }
     // v0.18.29 A2 (fix job 0) (owner G16 Q16-2): Warn → Pause → Ban with the admin's reason; level none clears it.
     if (input.action === "admin.rider.moderate") {
       const { level, pauseDays } = (input.value ?? {}) as { level?: string; pauseDays?: number };
