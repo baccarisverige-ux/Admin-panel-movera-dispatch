@@ -71,6 +71,7 @@ import { enC37AutoOfflineOutage } from "./en/c37-auto-offline-outage.ts";
 import { enC40OneStream } from "./en/c40-one-stream.ts";
 import { enC41LaneLate } from "./en/c41-lane-late.ts";
 import { enC49SmsSignIn } from "./en/c49-sms-sign-in.ts";
+import { enC48AccountDeletion } from "./en/c48-account-deletion.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -148,6 +149,7 @@ export const en = {
   ...enC40OneStream,
   ...enC41LaneLate,
   ...enC49SmsSignIn,
+  ...enC48AccountDeletion,
 } as const;
 
 export type MessageKey = keyof typeof en;
