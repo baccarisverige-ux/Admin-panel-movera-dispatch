@@ -1,0 +1,31 @@
+/** French dictionary, area c50-stripe-fees: contract v0.18.136 stripeFees (DRAFT), Tips & limits > Card payment of fees and the rider page card payments. Add new keys at the end of this file. Merged in ../fr.ts in this order. */
+import type { enC50StripeFees } from "../en/c50-stripe-fees.ts";
+
+export const frC50StripeFees: Record<keyof typeof enC50StripeFees, string> = {
+  "Card payment of fees": "Paiement des frais par carte",
+  "The rider can pay an owed fee by card or Apple Pay in the app. Off by default.": "Le passager peut payer des frais dus par carte ou Apple Pay dans l'appli. Désactivé par défaut.",
+  "Card payment of fees: {0} → {1}": "Paiement des frais par carte : {0} → {1}",
+  "{0} Card payments of fees": "{0} Paiements des frais par carte",
+  "Paid twice": "Payé deux fois",
+  "Paid twice: refund {0}.": "Payé deux fois : remboursez {0}.",
+  "Amount differs: check in Stripe.": "Le montant diffère : vérifiez dans Stripe.",
+  "Refund sent. The money goes back to the card.": "Remboursement envoyé. L'argent revient sur la carte.",
+  "Processing": "En cours",
+  "Refund pending": "Remboursement en attente",
+  "Refund a card payment of a fee": "Rembourser un paiement des frais par carte",
+  "Stripe: Live (real card payments).": "Stripe : Live (vrais paiements par carte).",
+  "Stripe: Test (no real money).": "Stripe : Test (pas d'argent réel).",
+  "Stripe: Off. No Stripe keys on the server.": "Stripe : Désactivé. Aucune clé Stripe sur le serveur.",
+  "Stripe: Off. A Stripe key is missing on the server.": "Stripe : Désactivé. Il manque une clé Stripe sur le serveur.",
+  "Stripe: Off. The server has a mix of test and live keys.": "Stripe : Désactivé. Le serveur a un mélange de clés test et live.",
+  "Stripe: Off. The Stripe webhook secret is not valid.": "Stripe : Désactivé. Le secret du webhook Stripe n'est pas valide.",
+  "Stripe: Off. Test keys on the production server.": "Stripe : Désactivé. Clés test sur le serveur de production.",
+  "Stripe: Off. Live keys on a test server.": "Stripe : Désactivé. Clés live sur un serveur de test.",
+  "Stripe: status not known.": "Stripe : statut inconnu.",
+  "Card payments are off: the server has a mix of Stripe test and live keys": "Paiements par carte désactivés : le serveur a un mélange de clés Stripe test et live",
+  "Card payments are off: a Stripe key is missing on the server": "Paiements par carte désactivés : il manque une clé Stripe sur le serveur",
+  "Card payments are off: the Stripe webhook secret is not valid": "Paiements par carte désactivés : le secret du webhook Stripe n'est pas valide",
+  "Card payments are off: Stripe test keys on the production server": "Paiements par carte désactivés : clés Stripe test sur le serveur de production",
+  "Card payments are off: Stripe live keys on a test server": "Paiements par carte désactivés : clés Stripe live sur un serveur de test",
+  "Fix the Stripe keys in the server settings and restart the server": "Corrigez les clés Stripe dans les réglages du serveur et redémarrez le serveur",
+};

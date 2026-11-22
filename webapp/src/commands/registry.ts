@@ -314,6 +314,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.rider.markPaid", label: "Mark unpaid balance as paid", reason: true, permission: "finance.edit" },
   { id: "admin.rider.walletCredit", label: "Add money to wallet", reason: true, permission: "finance.edit" },
   { id: "admin.rider.feeMarkPaid", label: "Mark the owed fee as paid", reason: true, permission: "finance.edit" },
+  // v0.18.136 stripeFees (DRAFT): refund a card payment of a fee (Stripe), with a reason.
+  { id: "admin.server.feeStripeRefund", label: "Refund a card payment of a fee", reason: true, permission: "finance.edit" },
   { id: "admin.rider.refund", label: "Refund rider", reason: true, permission: "payments.refund" },
   { id: "admin.rider.refundDecide", label: "Approve or reject refund", reason: true, permission: "approval.decide" },
   { id: "admin.rider.activate", label: "Activate rider", reason: true, permission: "riders.block" },

@@ -44,6 +44,7 @@ import { ChatSettingsCard } from "./ChatSettingsCard";
 import { currencySymbol, fromSek, money, tipMax } from "./zonePricing";
 import { tr, trn, trx } from "../i18n";
 import { SettingInfo } from "../ui/SettingInfo";
+import { LiveStripeStatus } from "../live/LiveStripeFeePayments";
 
 /** The sections of this tab, so Dispatch and All features can jump to one (Q6: "a shortcut that jumps to that settings section"). */
 export const EXTRAS_SECTIONS = ["tips", "raise-steps", "promo-cap", "driver-bonus", "calls", "chat", "dont-match"] as const;
@@ -262,6 +263,17 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 </label>
                 <NumberField info="tips.driverOwesLimit" label={tr("Driver owes-limit")} value={shown.driverOwesLimit.max ?? 0} unit={symbol} step={moneyStep(country)} disabled={!canEdit || !onStandard} invalid={shown.driverOwesLimit.enabled && !(shown.driverOwesLimit.max && shown.driverOwesLimit.max > 0)} changed={JSON.stringify(shown.driverOwesLimit) !== JSON.stringify(saved.driverOwesLimit)} onChange={(max) => edit({ driverOwesLimit: { ...shown.driverOwesLimit, max: max > 0 ? max : null } })} />
                 <small>{tr("Over the limit the driver gets no cash trips; they can still go online.")}</small>
+              </div>
+              {/* v0.18.136 stripeFees.setting (DRAFT, area c50; owner 2026-11-20 "So we use stripe"): country Standard only, default OFF. */}
+              <div className="cx-owes-limit" data-testid="rider-fee-stripe">
+                <label className="mini-switch">
+                  <input type="checkbox" aria-label={tr("Card payment of fees")} data-testid="rider-fee-stripe-on" checked={shown.riderFeeStripe} disabled={!canEdit || !onStandard} onChange={(event) => edit({ riderFeeStripe: event.target.checked })} />
+                  <span aria-hidden="true"><i /></span>
+                  {tr("Card payment of fees")}<SettingInfo id="tips.riderFeeStripe" />
+                </label>
+                <small>{tr("The rider can pay an owed fee by card or Apple Pay in the app. Off by default.")}</small>
+                {/* Stripe live mode (owner 2026-11-21, stripeFees.status): the server's Stripe mode, Live / Test / Off + reason. */}
+                <LiveStripeStatus />
               </div>
               <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
             </div>

@@ -117,6 +117,14 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "300 kr: a rider who owes 300 kr can only book with card or wallet until they pay.",
     "A very small amount blocks cash booking after one fee; a very large one lets a debt grow with no stop.",
   ),
+  "tips.riderFeeStripe": t(
+    "When on: a rider who owes a cancel or no-show fee can pay it by card or Apple Pay in the app (Stripe). Rides are still paid in the car. Under the switch: the server's Stripe mode, Live (real money), Test (no real money) or Off with the reason.",
+    `${STANDARD_ONLY} Rider app (debt line, cancel notice); the rider page shows each card payment.`,
+    "On or off.",
+    "Off in every country.",
+    "On in Sweden: a rider who owes 65 kr sees Pay 65 kr now.",
+    "Off: owed fees stay debt, paid on the next ride or in the car.",
+  ),
   "tips.driverOwesLimit": t(
     "When on: a driver who owes Movera this much or more (commission and rider debt they kept in cash) gets no cash trips. They can still go online.",
     `${STANDARD_ONLY} Driver app (Home line and Accept), dispatch, and Drivers › Owe Movera.`,

@@ -415,7 +415,7 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; bonusCampaignMax?: number; maxRiderDebt?: number; driverOwesLimit?: { enabled: boolean; max: number | null }; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number; connectTimeoutSeconds?: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }>; sosContactsSms?: boolean; smsSignIn?: { enabled: boolean; dailyCap: number } };
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; bonusCampaignMax?: number; maxRiderDebt?: number; driverOwesLimit?: { enabled: boolean; max: number | null }; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number; connectTimeoutSeconds?: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }>; sosContactsSms?: boolean; smsSignIn?: { enabled: boolean; dailyCap: number }; riderFeeStripe?: boolean };
 
 /**
  * F1 (MONEY, Rules audits/impact/f1-tips-save-payout-mode.md): the keys of a country_rules document the Tips & limits
@@ -435,6 +435,8 @@ export const COUNTRY_RULES_PANEL_KEYS = ["version", "publishedAt", "country", "c
  * sosContactsSms, smsSignIn) are in COUNTRY_RULES_PANEL_KEYS and only sent on the Standard by the caller.
  */
 export const COUNTRY_RULES_STANDARD_ONLY_KEPT = ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit"] as const;
+/** v0.18.136 stripeFees (DRAFT; not in this admin's contract copy yet): Standard-only too, never in a zone's own rules. */
+export const COUNTRY_RULES_DRAFT_STANDARD_ONLY = ["riderFeeStripe"] as const;
 
 /** Never stored in a document: the server's marks on a read. */
 const COUNTRY_RULES_READ_MARKS = ["usesStandard", "zoneId"] as const;
@@ -445,7 +447,7 @@ const COUNTRY_RULES_READ_MARKS = ["usesStandard", "zoneId"] as const;
  */
 export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null, { standard = true }: { standard?: boolean } = {}): Doc {
   const option = (amount: number) => ({ amount: toMinor(amount, currency), enabled: true });
-  const drop = new Set<string>([...COUNTRY_RULES_PANEL_KEYS, ...COUNTRY_RULES_READ_MARKS, ...(standard ? [] : COUNTRY_RULES_STANDARD_ONLY_KEPT)]);
+  const drop = new Set<string>([...COUNTRY_RULES_PANEL_KEYS, ...COUNTRY_RULES_READ_MARKS, ...(standard ? [] : [...COUNTRY_RULES_STANDARD_ONLY_KEPT, ...COUNTRY_RULES_DRAFT_STANDARD_ONLY])]);
   const kept = structuredClone(Object.fromEntries(Object.entries(base ?? {}).filter(([key]) => !drop.has(key)))) as Doc;
   // U2 (Rules audits/impact/safe-config-saves.md, SAFETY): a block the panel writes starts from the stored block, so a
   // key the panel does not show (calls.adminCallRoles, calls.phoneProvider, ...) is kept; the panel's own keys win.
@@ -494,6 +496,8 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     ...(input.sosContactsSms !== undefined ? { sosContactsSms: input.sosContactsSms } : {}),
     // v0.18.133 (contract.json#smsSignIn): real SMS sign-in codes and the daily SMS limit, on the country standard only (a zone's own rules → 400 sms_sign_in_country_only).
     ...(input.smsSignIn !== undefined ? { smsSignIn: { enabled: input.smsSignIn.enabled === true, dailyCap: input.smsSignIn.dailyCap } } : {}),
+    // v0.18.136 stripeFees.setting (DRAFT): the Stripe rider fee switch, on the country standard only; a save without it keeps the stored one.
+    ...(input.riderFeeStripe !== undefined && standard ? { riderFeeStripe: { enabled: input.riderFeeStripe } } : {}),
   };
 }
 
