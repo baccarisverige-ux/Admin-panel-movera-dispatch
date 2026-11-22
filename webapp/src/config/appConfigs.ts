@@ -352,6 +352,8 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     },
     shareTrip: shareTrip(base.zone),
     liveLocation: liveLocationOf(base.zone),
+    // v0.18.155 (contract.json#driverProfile.setting): the zone's Dispatch › Safety switches.
+    driverProfile: { on: base.zone.driverProfile?.on ?? CONFIG_DEFAULTS.driverProfileOn, reviews: base.zone.driverProfile?.reviews ?? CONFIG_DEFAULTS.driverReviewsOn },
     paymentMethods: paymentMethods(base, state, zoneId),
     // v0.18.33 (fix job 5, owner Q6): Settings › Payment methods "Use wallet first" (default on); the rider's per-ride switch starts on.
     wallet: { usedFirst: base.settings.walletFirst !== false },
