@@ -78,6 +78,7 @@ import { enC47PayRequest } from "./en/c47-pay-request.ts";
 import { enC51LiveLocation } from "./en/c51-live-location.ts";
 import { enC53SosPressTime } from "./en/c53-sos-press-time.ts";
 import { enC54Sessions } from "./en/c54-sessions.ts";
+import { enC55OfferBackup } from "./en/c55-offer-backup.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -162,6 +163,7 @@ export const en = {
   ...enC51LiveLocation,
   ...enC53SosPressTime,
   ...enC54Sessions,
+  ...enC55OfferBackup,
 } as const;
 
 export type MessageKey = keyof typeof en;

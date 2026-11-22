@@ -420,6 +420,9 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
 
 function Drivers({ zone, onChange, disabled, country, onCountry, countryName }: Props) {
   const set = (patch: Partial<ZoneDispatch>) => onChange({ ...zone, ...patch });
+  // v0.18.150 L20 stream backup: the two numbers under "One live connection per driver phone" (only used while it is on).
+  const oneStreamOn = zone.oneStream?.on ?? CONFIG_DEFAULTS.driverOneStream;
+  const fallback = zone.oneStreamFallback ?? CONFIG_DEFAULTS.driverOneStreamFallback;
   return (
     <div className="dx-cards">
       <Card title={tr("Going home")} info="dispatch.zone.goingHome" tone="green" icon={<Home size={18} />} help={tr("Drivers can ask for rides only towards their destination.")} off={!zone.goingHome.on} aside={<Switch label={tr("Going home")} on={zone.goingHome.on} disabled={disabled} onChange={(on) => set({ goingHome: { ...zone.goingHome, on } })} />}>
@@ -443,6 +446,13 @@ function Drivers({ zone, onChange, disabled, country, onCountry, countryName }: 
       {/* L20 stream (owner 2026-11-17 "Yes, with switch (Rec.)"; contract v0.18.122 contract.json#driverOneStream): the driver document's realtime.oneStream, default off. */}
       <Card title={tr("Live connection")} info="dispatch.zone.liveConnection" tone="blue" icon={<Smartphone size={18} />} help={tr("What it does: one live connection per driver phone instead of two: new offers and settings updates arrive on the same connection. The trip connection during a ride does not change. Who and where: drivers of the zone picked at the top (or every zone on the Standard), after Publish; their phone switches within one settings update. Riders are not affected. Range: On or off. Default: off (turn it on per zone after the test). Example: on in one test zone: each driver phone there holds 1 connection off-trip instead of 2, so one server copy can hold about a third more phones. Extremes: off = 2 connections per phone, as before; on = 1 connection. An older driver app, or an older server, keeps using 2 connections. Turning it off is the way back without an app release.")}>
         <Row info="dispatch.zone.oneLiveConnectionPerDriverPhone" label={tr("One live connection per driver phone")} on={zone.oneStream?.on ?? CONFIG_DEFAULTS.driverOneStream} disabled={disabled} onToggle={(on) => set({ oneStream: { on } })} />
+        {/* v0.18.150 L20 stream backup (owner 2026-11-21 "Switch to old two (Rec.)"; contract.json#driverOneStreamFallback): the driver document's realtime.oneStreamFallback, defaults 3 / 10. */}
+        <Row info="dispatch.zone.oneStreamBackupAfterFailedTries" label={tr("Backup after failed tries")} help={tr("When the one connection fails this many times in a row, the phone uses the two old connections so offers keep coming. Example: 3: driver Ali's phone fails the one connection 3 times in a row, then gets offers on the two old connections.")}>
+          <Num label={tr("Backup after failed tries")} value={fallback.failuresInARow} unit="tries" min={1} max={10} disabled={disabled || !oneStreamOn} onChange={(failuresInARow) => set({ oneStreamFallback: { ...fallback, failuresInARow: Math.round(failuresInARow) } })} />
+        </Row>
+        <Row info="dispatch.zone.oneStreamTryAgainAfterMinutes" label={tr("Try the one connection again after (minutes)")} help={tr("How long the phone stays on the two old connections before it tries the one connection again. An app restart also tries it again. Example: 10: Ali's phone tries the one connection again 10 minutes later.")}>
+          <Num label={tr("Try the one connection again after (minutes)")} value={fallback.retryOneAfterMinutes} unit="min" min={1} max={60} disabled={disabled || !oneStreamOn} onChange={(retryOneAfterMinutes) => set({ oneStreamFallback: { ...fallback, retryOneAfterMinutes: Math.round(retryOneAfterMinutes) } })} />
+        </Row>
       </Card>
 
       <Card title={tr("Saying no")} info="dispatch.zone.sayingNo" tone="orange" icon={<UserX size={18} />} help={tr("When a driver declines or ignores an offer.")} off={!zone.decline.on} aside={<Switch label={tr("Saying no rules")} on={zone.decline.on} disabled={disabled} onChange={(on) => set({ decline: { ...zone.decline, on } })} />}>

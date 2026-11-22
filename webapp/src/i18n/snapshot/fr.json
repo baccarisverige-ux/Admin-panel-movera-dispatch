@@ -9481,4 +9481,9 @@
 ["A driver on a trip is signed out only after the trip ends.","Un chauffeur en course n’est déconnecté qu’après la fin de la course."],
 ["The driver is on a trip. Sign the driver out after the trip ends.","Le chauffeur est en course. Déconnectez-le après la fin de la course."],
 ["This phone is already signed out. The list was reloaded.","Ce téléphone est déjà déconnecté. La liste a été rechargée."],
-["Sign driver out","Déconnecter le chauffeur"]]
+["Sign driver out","Déconnecter le chauffeur"],
+["Backup after failed tries","Secours après des essais ratés"],
+["When the one connection fails this many times in a row, the phone uses the two old connections so offers keep coming. Example: 3: driver Ali's phone fails the one connection 3 times in a row, then gets offers on the two old connections.","Quand la connexion unique échoue autant de fois de suite, le téléphone utilise les deux anciennes connexions pour que les offres continuent d’arriver. Exemple : 3 : le téléphone du chauffeur Ali échoue 3 fois de suite sur la connexion unique, puis reçoit les offres par les deux anciennes connexions."],
+["Try the one connection again after (minutes)","Réessayer la connexion unique après (minutes)"],
+["How long the phone stays on the two old connections before it tries the one connection again. An app restart also tries it again. Example: 10: Ali's phone tries the one connection again 10 minutes later.","Combien de temps le téléphone reste sur les deux anciennes connexions avant de réessayer la connexion unique. Un redémarrage de l’app la réessaie aussi. Exemple : 10 : le téléphone d’Ali réessaie la connexion unique 10 minutes plus tard."],
+["tries","essais"]]
