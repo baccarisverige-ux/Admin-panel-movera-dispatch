@@ -52,7 +52,7 @@ const LABELS: Record<string, string> = {
   "decline.on": "Saying no rules", "decline.countsAcceptance": "No lowers acceptance", "decline.pauseAfter": "Pause after no's", "decline.pauseMin": "No pause minutes",
   "decline.longTripFree": "Long trips free to refuse", "decline.farPickupFree": "Far pickups free to refuse", "decline.farPickupKm": "Far pickup from",
   "safety.minRating": "Lowest rating check", "pickupPin.required": "Rider PIN before Start", "pickupPin.maxAttempts": "Wrong tries before lock", "pickupPin.lockMinutes": "Lock minutes", "safety.ratingBelow": "Lowest rating", "safety.maxCancel": "No requests over the cancel rate limit",
-  "safety.doNotMatch": "Do not match list", "safety.womenOnly": "Women-only rides", "shareTrip.on": "Riders can share a live trip link", "oneStream.on": "One live connection per driver phone", alerts: "Alerts",
+  "safety.doNotMatch": "Do not match list", "safety.womenOnly": "Women-only rides", "shareTrip.on": "Riders can share a live trip link", "liveLocation.share": "Riders and drivers can share their live location", "liveLocation.adjustPickupMeters": "Adjust-pickup banner from", "oneStream.on": "One live connection per driver phone", "oneStreamFallback.failuresInARow": "Backup after failed tries", "oneStreamFallback.retryOneAfterMinutes": "Try the one connection again after (minutes)", alerts: "Alerts",
 };
 
 /** Labels for the offer and waiting settings (Round 3, Q14–Q20). */
@@ -328,9 +328,9 @@ const PART_KEYS: Record<TabId, (keyof ZoneDispatch)[]> = {
   best: ["factors", "radius", "batching", "finishing", "favourite"],
   waiting: ["waiting", "noDriverNearby", "reaskLimit"],
   rides: ["extras", "longTripKm", "stops", "pickupMove", "samePoint", "pickupSpots", "driverCancel", "riderCancel", "airport", "pickupWait"],
-  drivers: ["goingHome", "fairness", "decline", "oneStream"],
+  drivers: ["goingHome", "fairness", "decline", "oneStream", "oneStreamFallback"],
   destination: ["destinationMode", "nextTrips"],
-  safety: ["safety", "pickupPin", "rideCheck", "shareTrip"],
+  safety: ["safety", "pickupPin", "rideCheck", "shareTrip", "liveLocation"],
   alerts: ["alerts"],
 };
 

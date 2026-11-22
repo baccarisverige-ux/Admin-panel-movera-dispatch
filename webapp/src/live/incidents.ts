@@ -11,6 +11,7 @@ import type { DemoRecord, LiveRideCheck } from "../api/seed.ts";
 import type { IncidentEvent, SafetyBook } from "../safety/ops.ts";
 import type { LiveClient } from "./session.ts";
 import { contactsSmsOf, type ContactsSms } from "../config/sosContactsSms.ts";
+import { pressedAtOf } from "../safety/pressTime.ts";
 
 export type ServerPosition = { lat: number; lng: number; accuracyM?: number; at?: string; measuredAt?: string };
 
@@ -41,6 +42,8 @@ export type ServerIncident = {
   rideCheck?: LiveRideCheck;
   /** v0.18.101 §92 (BQ-V34): the SMS to the driver's emergency contacts on his SOS; absent = no driver SOS on the case. */
   contactsSms?: ContactsSms;
+  /** v0.18.148 (contract.json#sosPressTime.incident): when the SOS that opened the case was pressed (openedAt = received). */
+  pressedAt?: string;
 };
 
 export type IncidentFeedEvent = {
@@ -113,6 +116,7 @@ export function incidentRecord(incident: ServerIncident): DemoRecord {
     alarm: rings(incident),
     ...(incident.rideCheck ? { liveRideCheck: incident.rideCheck } : {}),
     ...(() => { const sms = contactsSmsOf(incident.contactsSms); return sms ? { liveContactsSms: sms } : {}; })(),
+    ...(() => { const pressed = pressedAtOf(incident.pressedAt); return pressed ? { livePressedAt: pressed } : {}; })(),
     ...(incident.version ? { version: incident.version } : {}),
     // v0.18.9 (G7): the case level is the server's (its kind default, or what an admin set with Change level).
     ...(incident.severity ? { severity: incident.severity } : {}),

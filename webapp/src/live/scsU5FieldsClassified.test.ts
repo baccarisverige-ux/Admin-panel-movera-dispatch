@@ -6,7 +6,7 @@ import { defaultCountrySettings } from "../config/countrySettings.ts";
 import { emptyDispatchBook, liveRules } from "../dispatch/rules.ts";
 import { defaultDoc, wireDocument } from "../drivers/onboardingSettings.ts";
 import { defaultZoneBook } from "../pricing/zonePricing.ts";
-import { COUNTRY_RULES_PANEL_KEYS, COUNTRY_RULES_STANDARD_ONLY_KEPT, OWNED, countryRulesOf, dispatchDocumentOf, patchChanged, pricingDocumentOf, type Doc } from "./configDocs.ts";
+import { COUNTRY_RULES_DRAFT_STANDARD_ONLY, COUNTRY_RULES_PANEL_KEYS, COUNTRY_RULES_STANDARD_ONLY_KEPT, OWNED, countryRulesOf, dispatchDocumentOf, patchChanged, pricingDocumentOf, type Doc } from "./configDocs.ts";
 
 /**
  * SCS U5 (Rules audits/impact/safe-config-saves.md "U5", ledger row "SCS U5"; closes SF-F1-1): every contract field of
@@ -105,7 +105,7 @@ const countryInput = {
   driverPayChangeMax: settings.driverPayChangeMax, bonusCampaignMax: settings.bonusCampaignMax, personLimits: settings.personLimits,
   onTripMinDonePct: settings.onTripMinDonePct, chainLateFreeCancelMin: settings.chainLateFreeCancelMin, calls: settings.calls, chat: settings.chat,
   dontMatchAgain: settings.dontMatchAgain, walletCreditMax: settings.walletCreditMax, maxRiderDebt: settings.maxRiderDebt,
-  driverOwesLimit: settings.driverOwesLimit, emergencyNumbers: settings.emergencyNumbers, sosContactsSms: settings.sosContactsSms,
+  driverOwesLimit: settings.driverOwesLimit, driverPayRequest: settings.driverPayRequest, emergencyNumbers: settings.emergencyNumbers, sosContactsSms: settings.sosContactsSms, smsSignIn: settings.smsSignIn, riderFeeStripe: settings.riderFeeStripe,
 };
 
 /** The keys each admin publish of an app document passes to patchChanged (liveSettings.ts publishAppParts callers). */
@@ -146,7 +146,8 @@ const ENTRIES: Entry[] = [
   {
     schema: "CountryRules",
     built: countryRulesOf("SE", "SEK", countryInput, null),
-    kept: ["payoutMode", "payoutSchedule", "calls.adminCallRoles", "calls.phoneProvider"],
+    // v0.18.134 accountDeletion: written by Riders › Account deletion requests only (live/accountDeletion.ts); kept by the Tips & limits save.
+    kept: ["payoutMode", "payoutSchedule", "calls.adminCallRoles", "calls.phoneProvider", "accountDeletion", "accountDeletion.eraseEnabled", "accountDeletion.eraseAfterDays"],
     save: (stored) => countryRulesOf("SE", "SEK", countryInput, stored),
   },
   {
@@ -160,6 +161,10 @@ const ENTRIES: Entry[] = [
       "waiting.rideTypes", "waiting.stopFreeWaitMin", "waiting.perMinShown", "rideCheck", "rideCheck.stopMinutes", "rideCheck.offRouteKm",
       "rideCheck.endFarMeters", "rideCheck.noAnswerSeconds", "rideCheck.repeatMinutes", "rideCheck.noAnswerAlarm", "rideCheck.scanEverySeconds",
       "appUpdate.storeUrl", "raisePrice", "raisePrice.maxFactor", "dontMatchAgain", "routeChange", "paymentOptions", "emergencyNumbers",
+      // v0.18.154 P16c: written by Settings › Minimum app version (config/AppUpdatePanel.tsx) only; kept by every other save.
+      "appUpdate.minVersion", "appUpdate.storeUrls",
+      // v0.18.144 live location: the admin writes share and adjustPickupMeters; sendEverySeconds stays the server's (dispatch/rules/liveLocation.ts).
+      "liveLocation.sendEverySeconds",
     ],
     save: merge,
   },
@@ -172,6 +177,8 @@ const ENTRIES: Entry[] = [
       "pickupPay.byCategory", "pickupPay.perKm", "pickupPay.perMin", "pickupPay.freeKm", "pickupPay.freeMin", "pickupPay.ranges", "pickupPay.maxPerRide",
       "driverBonus", "driverBonus.defaultLimit", "driverBonus.hardMax", "appUpdate.storeUrl", "dontMatchAgain", "paymentOptions",
       "emergencyNumbers", "sosContactsSms", "sosContactsSms.connected",
+      // v0.18.154 P16c: written by Settings › Minimum app version (config/AppUpdatePanel.tsx) only; kept by every other save.
+      "appUpdate.minVersion", "appUpdate.storeUrls",
     ],
     save: merge,
   },
@@ -221,5 +228,5 @@ for (const entry of ENTRIES) {
 
 test("SCS U5 CountryRules: the top level is exactly the panel keys + the Standard-only kept keys (the F1 by-hand count 17 + 4 = 21)", () => {
   const top = contractPaths("CountryRules").filter((path) => !path.includes("."));
-  assert.deepEqual([...top].sort(), [...new Set([...COUNTRY_RULES_PANEL_KEYS, ...COUNTRY_RULES_STANDARD_ONLY_KEPT])].sort());
+  assert.deepEqual([...top].sort(), [...new Set([...COUNTRY_RULES_PANEL_KEYS, ...COUNTRY_RULES_STANDARD_ONLY_KEPT, ...COUNTRY_RULES_DRAFT_STANDARD_ONLY])].sort());
 });

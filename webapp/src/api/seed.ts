@@ -78,6 +78,8 @@ export type DemoRecord = {
   liveRideCheck?: LiveRideCheck;
   /** Live SOS incidents (contract v0.18.101 §92, BQ-V34): Incident.contactsSms, the SMS to the driver's emergency contacts. */
   liveContactsSms?: ContactsSms;
+  /** Live SOS incidents (contract v0.18.148 sosPressTime): Incident.pressedAt, when the SOS that opened the case was pressed. */
+  livePressedAt?: string;
   /** Live build: the record came from the Movera server. Nothing on it may be invented (owner rule, part 3). */
   live?: true;
   /**
@@ -180,7 +182,7 @@ export type LiveTripFacts = {
   /** The cancel as the server recorded it: who, the reason code, the fee, whether it is paid / owed / waived, which rule set it, and the driver's share. */
   /** v0.18.9 (G7): the server's ride check, the latest route change (with the driver's money) and the admin flag. */
   rideCheck?: { checkId: string; trigger: string; askedAt: string; answerBy: string; answers: { rider?: string; driver?: string }; alertedAt: string | null } | null;
-  routeChange?: { status: string; dropoff: LivePlace; stops: LivePlace[]; totalMinor: number; differenceMinor: number; askedAt: string; answerBy: string; answeredBy: string | null; driverEarningsMinor: number | null; earningsDifferenceMinor: number | null; /** BQ-A29: TripRouteChange.driverTotal as sent (v0.18.89). */ driverTotalMinor?: number | null } | null;
+  routeChange?: { status: string; dropoff: LivePlace; stops: LivePlace[]; totalMinor: number; differenceMinor: number; askedAt: string; answerBy: string; answeredBy: string | null; driverEarningsMinor: number | null; earningsDifferenceMinor: number | null; /** BQ-A29: TripRouteChange.driverTotal as sent (v0.18.89). */ driverTotalMinor?: number | null; /** v0.18.143 (whileSearching): the new pickup and reason of a change made while searching. */ pickup?: LivePlace | null; reason?: string | null } | null;
   adminFlag?: { flagged: boolean; reason: string | null; by: string | null; at: string | null } | null;
   /** v0.18.39 §63: the rider's latest search step (no_driver_nearby → the trip row's "No driver in reach" mark). */
   searchStep?: { kind: string } | null;

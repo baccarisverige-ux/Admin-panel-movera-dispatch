@@ -18,6 +18,7 @@ import {
   mixedTipAcross,
   mixedCashInCarAcross,
   zoneValuesForSave,
+  draftForShownScope,
   TIP_CASH_IN_CAR_MINUTES,
   TIP_FLAGS,
   type MixedTipRules,
@@ -37,11 +38,13 @@ import { useSlice } from "../api/hooks";
 import { CommandButton } from "../ui/CommandButton";
 import { FieldErrorScope, useFieldErrors } from "../ui/fieldErrors";
 import { NumberField } from "./NumberField";
+import { SmsSignInCard } from "./SmsSignInCard";
 import { EmergencyNumbersEditor } from "./EmergencyNumbersEditor";
 import { ChatSettingsCard } from "./ChatSettingsCard";
 import { currencySymbol, fromSek, money, tipMax } from "./zonePricing";
 import { tr, trn, trx } from "../i18n";
 import { SettingInfo } from "../ui/SettingInfo";
+import { LiveStripeStatus } from "../live/LiveStripeFeePayments";
 
 /** The sections of this tab, so Dispatch and All features can jump to one (Q6: "a shortcut that jumps to that settings section"). */
 export const EXTRAS_SECTIONS = ["tips", "raise-steps", "promo-cap", "driver-bonus", "calls", "chat", "dont-match"] as const;
@@ -153,8 +156,10 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
   const mixedMinutes = targets && targets.length > 1 ? mixedCashInCarAcross(targets.map((id) => [zoneById(id)?.name ?? id, zoneSettingsOf(zoneBook, country, id).tipRules] as const)) : undefined;
   const saved: CountrySettings = { ...first, mixedTipRules: mixedTip, mixedCashInCar: mixedMinutes, tipRules: { ...first.tipRules, ...Object.fromEntries(TIP_FLAGS.filter((flag) => mixedTip?.[flag]).map((flag) => [flag, false])) } };
   const [draft, setDraft] = useState<CountrySettings | null>(null);
-  const shown = draft ?? saved;
-  const dirty = draft !== null && JSON.stringify(sectionPart(draft, "pricing")) !== JSON.stringify(sectionPart(saved, "pricing"));
+  // The scope the draft was made on: its country-wide values (SMS sign-in, emergency numbers) never follow to another shown scope.
+  const [draftScope, setDraftScope] = useState(zoneId);
+  const shown = draft ? draftForShownScope(draft, draftScope, zoneId, saved) : saved;
+  const dirty = draft !== null && JSON.stringify(sectionPart(shown, "pricing")) !== JSON.stringify(sectionPart(saved, "pricing"));
   const fieldErrors = useFieldErrors();
   const issues = dirty ? countrySettingsIssues(country, shown) : [];
   const lines = dirty ? countrySettingsLines(country, saved, shown) : [];
@@ -163,7 +168,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
   const name = market(country).name;
   const zoneNames = (targets ?? []).map((id) => zoneById(id)?.name ?? id).join(", ");
   const hardMax = driverBonusHardMax(country);
-  const edit = (patch: Partial<CountrySettings>) => setDraft({ ...shown, ...patch });
+  const edit = (patch: Partial<CountrySettings>) => { setDraft({ ...shown, ...patch }); setDraftScope(zoneId); };
 
   useEffect(() => {
     onDirty(dirty);
@@ -259,6 +264,29 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 <NumberField info="tips.driverOwesLimit" label={tr("Driver owes-limit")} value={shown.driverOwesLimit.max ?? 0} unit={symbol} step={moneyStep(country)} disabled={!canEdit || !onStandard} invalid={shown.driverOwesLimit.enabled && !(shown.driverOwesLimit.max && shown.driverOwesLimit.max > 0)} changed={JSON.stringify(shown.driverOwesLimit) !== JSON.stringify(saved.driverOwesLimit)} onChange={(max) => edit({ driverOwesLimit: { ...shown.driverOwesLimit, max: max > 0 ? max : null } })} />
                 <small>{tr("Over the limit the driver gets no cash trips; they can still go online.")}</small>
               </div>
+              {/* v0.18.136 stripeFees.setting (DRAFT, area c50; owner 2026-11-20 "So we use stripe"): country Standard only, default OFF. */}
+              <div className="cx-owes-limit" data-testid="rider-fee-stripe">
+                <label className="mini-switch">
+                  <input type="checkbox" aria-label={tr("Card payment of fees")} data-testid="rider-fee-stripe-on" checked={shown.riderFeeStripe} disabled={!canEdit || !onStandard} onChange={(event) => edit({ riderFeeStripe: event.target.checked })} />
+                  <span aria-hidden="true"><i /></span>
+                  {tr("Card payment of fees")}<SettingInfo id="tips.riderFeeStripe" />
+                </label>
+                <small>{tr("The rider can pay an owed fee by card or Apple Pay in the app. Off by default.")}</small>
+                {/* Stripe live mode (owner 2026-11-21, stripeFees.status): the server's Stripe mode, Live / Test / Off + reason. */}
+                <LiveStripeStatus />
+              </div>
+              {/* v0.18.139 driverPayRequest (owner 2026-11-20, TEMPORARY): the monthly pay request, country Standard only, off by default. */}
+              <div className="cx-owes-limit" data-testid="driver-pay-request">
+                <label className="mini-switch">
+                  <input type="checkbox" aria-label={tr("Monthly pay request on")} checked={shown.driverPayRequest.enabled} disabled={!canEdit || !onStandard} onChange={(event) => edit({ driverPayRequest: { ...shown.driverPayRequest, enabled: event.target.checked, minAmount: event.target.checked && shown.driverPayRequest.minAmount === null ? 0 : shown.driverPayRequest.minAmount } })} />
+                  <span aria-hidden="true"><i /></span>
+                  {tr("Monthly pay request")}<SettingInfo id="tips.driverPayRequest" />
+                </label>
+                <NumberField info="tips.driverPayRequest" label={tr("Day of the month")} value={shown.driverPayRequest.dayOfMonth} unit="" step={1} min={1} max={28} disabled={!canEdit || !onStandard} invalid={!Number.isInteger(shown.driverPayRequest.dayOfMonth) || shown.driverPayRequest.dayOfMonth < 1 || shown.driverPayRequest.dayOfMonth > 28} changed={shown.driverPayRequest.dayOfMonth !== saved.driverPayRequest.dayOfMonth} onChange={(dayOfMonth) => edit({ driverPayRequest: { ...shown.driverPayRequest, dayOfMonth } })} />
+                {/* Owner 2026-11-20: Stripe replaces the payment link; the field is hidden (Rule D), its stored value is kept. */}
+                <NumberField info="tips.driverPayRequest" label={tr("Smallest amount to ask for")} value={shown.driverPayRequest.minAmount ?? 0} unit={symbol} step={moneyStep(country)} disabled={!canEdit || !onStandard} invalid={shown.driverPayRequest.enabled && shown.driverPayRequest.minAmount === null} changed={shown.driverPayRequest.minAmount !== saved.driverPayRequest.minAmount} onChange={(minAmount) => edit({ driverPayRequest: { ...shown.driverPayRequest, minAmount: minAmount >= 0 ? minAmount : null } })} />
+                <small>{tr("Temporary: once a month a driver who owes Movera more than this is asked to pay by card in the app. The card payment is recorded by itself; a payment made another way is recorded in Drivers › Owe Movera (Driver paid Movera).")}</small>
+              </div>
               <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
             </div>
           </div>
@@ -321,6 +349,10 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
           <div id="extras-emergency-numbers" className="cx-anchor">
             <EmergencyNumbersEditor rows={onStandard ? shown.emergencyNumbers : countrySettingsOf(book, country).emergencyNumbers} canEdit={canEdit} onStandard={onStandard} onChange={(emergencyNumbers) => edit({ emergencyNumbers })} sosSms={onStandard ? shown.sosContactsSms : countrySettingsOf(book, country).sosContactsSms} onSosSms={(sosContactsSms) => edit({ sosContactsSms })} />
           </div>
+          {/* v0.18.133 (contract.json#smsSignIn): CountryRules.smsSignIn, country standard only (a zone shows the country's, read-only). */}
+          <div id="extras-sms-sign-in" className="cx-anchor">
+            <SmsSignInCard value={onStandard ? shown.smsSignIn : countrySettingsOf(book, country).smsSignIn} saved={onStandard ? saved.smsSignIn : countrySettingsOf(book, country).smsSignIn} canEdit={canEdit} onStandard={onStandard} onChange={(smsSignIn) => edit({ smsSignIn })} />
+          </div>
           <div id="extras-person-limits" className="cx-anchor">
             <div className="fee-card" data-testid="person-limits">
               <div>
@@ -346,7 +378,7 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
             after={pricingSummary(country, shown)}
             info={{ changeOf: { kind: "tipsLimits", country, before: saved, after: shown } }}
             sliceKey={COUNTRY_SETTINGS_KEY}
-            value={targets ? { ...book, draftRev: book.draftRev + 1, zones: { ...zoneRules.value, ...zoneValuesForSave(shown, targets, (id) => zoneSettingsOf(zoneBook, country, id)) } } : { ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
+            value={targets ? { ...book, draftRev: book.draftRev + 1, zones: { ...zoneRules.value, ...zoneValuesForSave(shown, targets, (id) => zoneSettingsOf(zoneBook, country, id), zoneId) } } : { ...book, draftRev: book.draftRev + 1, countries: { ...book.countries, [country]: shown } }}
             expectedSliceRev={book.draftRev}
             disabled={loading || !canEdit || !dirty || issues.length > 0 || fieldErrors.count > 0}
             title={!canEdit ? tr("Your role cannot change this.") : !dirty ? tr("No unsaved change.") : fieldErrors.first ?? issues[0]}

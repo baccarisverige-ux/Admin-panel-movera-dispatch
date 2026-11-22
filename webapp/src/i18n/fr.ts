@@ -37,6 +37,7 @@ import { frC6InAppCalls } from "./fr/c6-in-app-calls.ts";
 import { frC8NoDriverNearby } from "./fr/c8-no-driver-nearby.ts";
 import { frC9BlockedPairs } from "./fr/c9-blocked-pairs.ts";
 import { frC9SameAddress } from "./fr/c9-same-address.ts";
+import { frC10RouteChangeSearching } from "./fr/c10-route-change-searching.ts";
 import { frC10Lifecycle } from "./fr/c10-lifecycle.ts";
 import { frC11BookedWaiting } from "./fr/c11-booked-waiting.ts";
 import { frC12AdminMasking } from "./fr/c12-admin-masking.ts";
@@ -71,6 +72,16 @@ import { frC32ShareTrip } from "./fr/c32-share-trip.ts";
 import { frC37AutoOfflineOutage } from "./fr/c37-auto-offline-outage.ts";
 import { frC40OneStream } from "./fr/c40-one-stream.ts";
 import { frC41LaneLate } from "./fr/c41-lane-late.ts";
+import { frC49SmsSignIn } from "./fr/c49-sms-sign-in.ts";
+import { frC48AccountDeletion } from "./fr/c48-account-deletion.ts";
+import { frC50StripeFees } from "./fr/c50-stripe-fees.ts";
+import { frC47PayRequest } from "./fr/c47-pay-request.ts";
+import { frC51LiveLocation } from "./fr/c51-live-location.ts";
+import { frC53SosPressTime } from "./fr/c53-sos-press-time.ts";
+import { frC54Sessions } from "./fr/c54-sessions.ts";
+import { frC55OfferBackup } from "./fr/c55-offer-backup.ts";
+import { frC56DriverIncome } from "./fr/c56-driver-income.ts";
+import { frC57AppUpdate } from "./fr/c57-app-update.ts";
 
 /** French. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./fr/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -113,6 +124,7 @@ export const fr: Record<MessageKey, string> = {
   ...frC8NoDriverNearby,
   ...frC9BlockedPairs,
   ...frC9SameAddress,
+  ...frC10RouteChangeSearching,
   ...frC10Lifecycle,
   ...frC11BookedWaiting,
   ...frC12AdminMasking,
@@ -147,4 +159,14 @@ export const fr: Record<MessageKey, string> = {
   ...frC37AutoOfflineOutage,
   ...frC40OneStream,
   ...frC41LaneLate,
+  ...frC49SmsSignIn,
+  ...frC48AccountDeletion,
+  ...frC50StripeFees,
+  ...frC47PayRequest,
+  ...frC51LiveLocation,
+  ...frC53SosPressTime,
+  ...frC54Sessions,
+  ...frC55OfferBackup,
+  ...frC56DriverIncome,
+  ...frC57AppUpdate,
 };

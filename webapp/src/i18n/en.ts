@@ -36,6 +36,7 @@ import { enC6InAppCalls } from "./en/c6-in-app-calls.ts";
 import { enC8NoDriverNearby } from "./en/c8-no-driver-nearby.ts";
 import { enC9BlockedPairs } from "./en/c9-blocked-pairs.ts";
 import { enC9SameAddress } from "./en/c9-same-address.ts";
+import { enC10RouteChangeSearching } from "./en/c10-route-change-searching.ts";
 import { enC10Lifecycle } from "./en/c10-lifecycle.ts";
 import { enC11BookedWaiting } from "./en/c11-booked-waiting.ts";
 import { enC12AdminMasking } from "./en/c12-admin-masking.ts";
@@ -70,6 +71,16 @@ import { enC32ShareTrip } from "./en/c32-share-trip.ts";
 import { enC37AutoOfflineOutage } from "./en/c37-auto-offline-outage.ts";
 import { enC40OneStream } from "./en/c40-one-stream.ts";
 import { enC41LaneLate } from "./en/c41-lane-late.ts";
+import { enC49SmsSignIn } from "./en/c49-sms-sign-in.ts";
+import { enC48AccountDeletion } from "./en/c48-account-deletion.ts";
+import { enC50StripeFees } from "./en/c50-stripe-fees.ts";
+import { enC47PayRequest } from "./en/c47-pay-request.ts";
+import { enC51LiveLocation } from "./en/c51-live-location.ts";
+import { enC53SosPressTime } from "./en/c53-sos-press-time.ts";
+import { enC54Sessions } from "./en/c54-sessions.ts";
+import { enC55OfferBackup } from "./en/c55-offer-backup.ts";
+import { enC56DriverIncome } from "./en/c56-driver-income.ts";
+import { enC57AppUpdate } from "./en/c57-app-update.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -112,6 +123,7 @@ export const en = {
   ...enC8NoDriverNearby,
   ...enC9BlockedPairs,
   ...enC9SameAddress,
+  ...enC10RouteChangeSearching,
   ...enC10Lifecycle,
   ...enC11BookedWaiting,
   ...enC12AdminMasking,
@@ -146,6 +158,17 @@ export const en = {
   ...enC37AutoOfflineOutage,
   ...enC40OneStream,
   ...enC41LaneLate,
+  ...enC49SmsSignIn,
+  ...enC48AccountDeletion,
+  ...enC50StripeFees,
+  ...enC47PayRequest,
+  ...enC51LiveLocation,
+  ...enC53SosPressTime,
+  ...enC54Sessions,
+  ...enC55OfferBackup,
+  ...enC56DriverIncome,
+  ...enC57AppUpdate,
 } as const;
 
 export type MessageKey = keyof typeof en;
+

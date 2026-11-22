@@ -287,3 +287,25 @@ console.log("large change checks ok");
   assert(rounded.lines.some((line) => line.kind === "rounding") || rounded.lines.reduce((sum, line) => sum + line.amount, 0).toFixed(3) === rounded.total.toFixed(3), "price rounding is shown as its own line");
 }
 console.log("exact split checks ok");
+
+// Launch fix 2026-11-20 (audit admin-every-control): Start surge in a zone without published prices answered 503
+// (pricing_not_published) with no warning. The button is now off with the reason, before it is pressed.
+{
+  const { unpublishedPriceZones } = await import("./zonePricing.ts");
+  const drafts: Record<string, { liveVersion: number; usesStandard?: boolean } | null> = {
+    "standard-SE": { liveVersion: 2 }, Z001: { liveVersion: 0, usesStandard: true }, Z002: { liveVersion: 3 },
+    "standard-NO": { liveVersion: 0 }, N001: { liveVersion: 0, usesStandard: true }, N002: { liveVersion: 0 },
+  };
+  const markets = [{ id: "SE", zones: [{ id: "Z001" }, { id: "Z002" }, { id: "Z009" }] }, { id: "NO", zones: [{ id: "N001" }, { id: "N002" }] }];
+  assert(JSON.stringify(unpublishedPriceZones(markets, (id) => drafts[id], (country) => `standard-${country}`)) === '["N001","N002"]', "only zones with no published prices are marked; a zone not read (Z009) is not");
+  const marked = { ...store, noPrices: ["Z003"] };
+  const refused = startManualSurge(marked, "Z003", 1.5, 60, "nora", "x", AT);
+  assert(refused.error === "Publish prices for this zone first.", "Start surge is refused before the server is asked");
+  assert(refused.store === marked, "the store is unchanged");
+  assert(normalizeStore(marked).noPrices?.[0] === "Z003", "the mark survives a re-read of the store");
+  const unread = unpublishedPriceZones([{ id: "DK", zones: [{ id: "D1" }, { id: "D2" }] }], (id) => ({ D1: { liveVersion: 0, usesStandard: true }, D2: { liveVersion: 0 } } as Record<string, { liveVersion: number; usesStandard?: boolean }>)[id] ?? null, (country) => `standard-${country}`);
+  assert(JSON.stringify(unread) === '["D2"]', "a zone on a standard that was not read is not marked");
+  const { surgeStartNote } = await import("./zonePricing.ts");
+  assert(surgeStartNote(refused.error, 1.5) === "Publish prices for this zone first.", "the reason shows under Start surge");
+  assert(surgeStartNote(undefined, 1.5) === "" && surgeStartNote("x", 1) === "", "no note when the button can start, or at ×1.0");
+}

@@ -505,11 +505,24 @@ export type ZoneDispatch = {
    */
   shareTrip?: { on: boolean };
   /**
+   * v0.18.144 (owner 2026-11-20; contract.json#liveLocation.setting): two-way live location (default off) and the rider
+   * app's adjust-pickup banner distance. Dispatch › Safety. Sent as the rider document's liveLocation. Optional so rules
+   * saved before it still load (off, 30 m then).
+   */
+  liveLocation?: { share: boolean; adjustPickupMeters: number };
+  /**
    * L20 stream (owner 2026-11-17 "Yes, with switch (Rec.)"; contract v0.18.122 contract.json#driverOneStream): the driver
    * app opens one live connection (GET /driver/stream) instead of two. Dispatch › Drivers. Sent as the driver document's
    * realtime.oneStream. Optional so rules saved before it still load (off then).
    */
   oneStream?: { on: boolean };
+  /**
+   * v0.18.150 L20 stream backup (owner 2026-11-21 "Switch to old two (Rec.)"; contract.json#driverOneStreamFallback): after
+   * failuresInARow (1-10) failed tries of the one connection in a row the driver phone uses the two old connections, and
+   * tries the one connection again after retryOneAfterMinutes (1-60). Dispatch › Drivers, under the switch. Sent as the
+   * driver document's realtime.oneStreamFallback. Optional so rules saved before it still load (defaults 3 / 10 then).
+   */
+  oneStreamFallback?: { failuresInARow: number; retryOneAfterMinutes: number };
   airport: { on: boolean; order: "fifo" | "best"; maxQueueMin: number; queueAreas: { id: string; name: string; ring: [number, number][] }[] };
   goingHome: { on: boolean; perDay: number; maxOffDeg: number };
   /** R13-9: Destination mode, each part on or off with its own number. */

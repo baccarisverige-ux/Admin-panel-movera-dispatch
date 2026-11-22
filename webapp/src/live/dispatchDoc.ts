@@ -2,9 +2,10 @@
  * The Dispatch rules read back from the server's documents (split from configDocs.ts so the first load carries only
  * this part: dispatch/rules.ts needs it; the save / publish code stays in the lazily loaded live chunk).
  */
+import { liveLocationOf } from "../dispatch/rules/liveLocation.ts";
 import { completeBookingWindow, completeEarlyEnd, RIDE_CHECK_LIMITS, rideCheckDefault, type ZoneDispatch } from "../dispatch/rules.ts";
 import { completeOfferCard } from "../dispatch/offers.ts";
-import { headingValue } from "../config/zoneDefaults.ts";
+import { CONFIG_DEFAULTS, headingValue } from "../config/zoneDefaults.ts";
 import { AUTO_ARRIVE_DEFAULT_METERS, LEAVE_DEFAULT_METERS, validAutoArrive } from "../dispatch/offerRules.ts";
 import { validPickupMove, validRaiseFactor, validSamePoint } from "../dispatch/offerRules.ts";
 
@@ -96,6 +97,14 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   if (driver) {
     const one = (driver["realtime"] as { oneStream?: unknown } | undefined)?.oneStream;
     zone.oneStream = { on: typeof one === "boolean" ? one : false };
+    // v0.18.150 L20 stream backup (contract.json#driverOneStreamFallback.server): the two numbers as the server serves
+    // them; a missing or out-of-range value (a document published before v0.18.150) reads as its default (3 / 10).
+    const fallback = (driver["realtime"] as { oneStreamFallback?: { failuresInARow?: unknown; retryOneAfterMinutes?: unknown } } | undefined)?.oneStreamFallback;
+    const whole = (value: unknown, max: number, deflt: number) => (typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= max ? value : deflt);
+    zone.oneStreamFallback = {
+      failuresInARow: whole(fallback?.failuresInARow, 10, CONFIG_DEFAULTS.driverOneStreamFallback.failuresInARow),
+      retryOneAfterMinutes: whole(fallback?.retryOneAfterMinutes, 60, CONFIG_DEFAULTS.driverOneStreamFallback.retryOneAfterMinutes),
+    };
   }
   // One rider document read serves both rider switches below; no rider document (not read, or the read failed) keeps the
   // rules' own values.
@@ -109,6 +118,8 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     const on = (rider["shareTrip"] as { on?: unknown } | undefined)?.on;
     const older = (rider["features"] as { shareTrip?: unknown } | undefined)?.shareTrip;
     zone.shareTrip = { on: typeof on === "boolean" ? on : typeof older === "boolean" ? older : true };
+    // v0.18.144 (contract.json#liveLocation.setting): never saved or a bad value = the default (off, 30 m), as the server.
+    zone.liveLocation = liveLocationOf({ liveLocation: rider["liveLocation"] as ZoneDispatch["liveLocation"] });
   }
   // v0.18.8 (G6): the free wait at each stop the server charges by (waiting.stopFreeWaitMin, 0–20; 0 while stops are off).
   const stopFree = (driver?.["waiting"] as { stopFreeWaitMin?: unknown } | undefined)?.stopFreeWaitMin;

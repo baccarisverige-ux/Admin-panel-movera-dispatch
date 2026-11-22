@@ -265,7 +265,7 @@ export function tripFacts(trip: Trip): LiveTripFacts {
       pausedSeconds: typeof trip.waiting.pausedSeconds === "number" ? trip.waiting.pausedSeconds : 0,
       pauseCount: typeof trip.waiting.pauseCount === "number" ? trip.waiting.pauseCount : 0 } : null,
     rideCheck: trip.rideCheck ? { checkId: trip.rideCheck.checkId, trigger: trip.rideCheck.trigger, askedAt: trip.rideCheck.askedAt, answerBy: trip.rideCheck.answerBy, answers: { ...trip.rideCheck.answers }, alertedAt: trip.rideCheck.alertedAt ?? null } : null,
-    routeChange: trip.routeChange ? { status: trip.routeChange.status, dropoff: trip.routeChange.dropoff, stops: trip.routeChange.stops ?? [], totalMinor: trip.routeChange.total.amountMinor, differenceMinor: trip.routeChange.difference.amountMinor, askedAt: trip.routeChange.askedAt, answerBy: trip.routeChange.answerBy, answeredBy: trip.routeChange.answeredBy ?? null, driverEarningsMinor: minorOf(trip.routeChange.driverEarnings), earningsDifferenceMinor: minorOf(trip.routeChange.earningsDifference), driverTotalMinor: minorOf(trip.routeChange.driverTotal) } : null,
+    routeChange: trip.routeChange ? { status: trip.routeChange.status, dropoff: trip.routeChange.dropoff, stops: trip.routeChange.stops ?? [], totalMinor: trip.routeChange.total.amountMinor, differenceMinor: trip.routeChange.difference.amountMinor, askedAt: trip.routeChange.askedAt, answerBy: trip.routeChange.answerBy, answeredBy: trip.routeChange.answeredBy ?? null, driverEarningsMinor: minorOf(trip.routeChange.driverEarnings), earningsDifferenceMinor: minorOf(trip.routeChange.earningsDifference), driverTotalMinor: minorOf(trip.routeChange.driverTotal), pickup: trip.routeChange.pickup ?? null, reason: trip.routeChange.reason ?? null } : null,
     adminFlag: trip.adminFlag ? { flagged: trip.adminFlag.flagged, reason: trip.adminFlag.reason ?? null, by: trip.adminFlag.by ?? null, at: trip.adminFlag.at ?? null } : null,
     pin: trip.pinRequired ? { code: typeof trip.pickupPin === "string" ? trip.pickupPin : null, verified: Boolean(trip.pinVerified), attempts: typeof trip.pinAttempts === "number" ? trip.pinAttempts : null, blocked: trip.pinBlocked === true } : null,
     cancellation: trip.cancellation ? { actor: trip.cancellation.actor, reasonCode: trip.cancellation.reasonCode, at: trip.cancellation.at, feeMinor: minorOf(trip.cancellation.fee), feeStatus: trip.cancellation.feeStatus ?? null, feeKind: trip.cancellation.feeKind ?? null, driverShareMinor: minorOf(trip.cancellation.driverShare), note: trip.cancellation.note ?? null,
@@ -874,6 +874,18 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", retryable: false });
       const next = await client.post<Driver>(`/admin/drivers/${encodeURIComponent(input.targetId)}/payout-hold`, { held, reason: reason.slice(0, 300) }).catch(explained);
       if (next?.driverId) drivers.set(next.driverId, next);
+      return done("Saved.");
+    }
+    // v0.18.149 (owner G12 Q6 "Real, riders + drivers", contract.json#adminSessions): sign one phone ({ sessionId }) or
+    // every phone ({ all: true }) of a rider / driver out, with the admin's reason (live/LiveSessions.tsx).
+    if (input.action === "admin.rider.signOut" || input.action === "admin.driver.signOut") {
+      const { sessionId, all } = (input.value ?? {}) as { sessionId?: unknown; all?: unknown };
+      const reason = (input.reason ?? "").trim();
+      if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", reason: "reason_required", retryable: false });
+      const one = typeof sessionId === "string" && sessionId ? sessionId : undefined;
+      if (!one && all !== true) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", reason: "session_or_all", retryable: false });
+      const list = input.action === "admin.rider.signOut" ? "riders" : "drivers";
+      await client.post(`/admin/${list}/${encodeURIComponent(input.targetId)}/sessions/sign-out`, { ...(one ? { sessionId: one } : { all: true }), reason: reason.slice(0, 500) }).catch(explained);
       return done("Saved.");
     }
     // v0.18.29 A2 (fix job 0) (owner G16 Q16-2): Warn → Pause → Ban with the admin's reason; level none clears it.

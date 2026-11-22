@@ -250,7 +250,7 @@ export { SECONDS_DEFAULT, rulesOfDispatch, reservationOfDriverDoc } from "./disp
 
 /** The parts of the rider and driver documents each admin page owns; publishing a page writes only its parts. */
 export const OWNED: Record<"dispatch" | "settings" | "content", { rider: string[]; driver: string[] }> = {
-  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons", "shareTrip"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange", "headingCheck", "realtime"] },
+  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons", "shareTrip", "liveLocation"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange", "headingCheck", "realtime"] },
   settings: { rider: ["features", "appUpdate"], driver: ["features", "appUpdate"] },
   content: { rider: [], driver: ["texts", "notices"] },
 };
@@ -266,7 +266,7 @@ export type OwnedParts = { rider: string[]; driver: string[]; riderServerKeeps?:
  * back on. (S10 admin rebase over V21: before, pickupSpots was still published after a failed read.)
  */
 export function dispatchOwnedFor(riderRead: boolean): OwnedParts {
-  return riderRead ? OWNED.dispatch : { ...OWNED.dispatch, rider: OWNED.dispatch.rider.filter((key) => key !== "shareTrip"), riderServerKeeps: ["booking.pickupSpots"] };
+  return riderRead ? OWNED.dispatch : { ...OWNED.dispatch, rider: OWNED.dispatch.rider.filter((key) => key !== "shareTrip" && key !== "liveLocation"), riderServerKeeps: ["booking.pickupSpots"] };
 }
 
 /**
@@ -415,7 +415,7 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; bonusCampaignMax?: number; maxRiderDebt?: number; driverOwesLimit?: { enabled: boolean; max: number | null }; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number; connectTimeoutSeconds?: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }>; sosContactsSms?: boolean };
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; bonusCampaignMax?: number; maxRiderDebt?: number; driverOwesLimit?: { enabled: boolean; max: number | null }; driverPayRequest?: { enabled: boolean; dayOfMonth: number; payLink: string; minAmount: number | null }; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number; connectTimeoutSeconds?: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }>; sosContactsSms?: boolean; smsSignIn?: { enabled: boolean; dailyCap: number }; riderFeeStripe?: boolean };
 
 /**
  * F1 (MONEY, Rules audits/impact/f1-tips-save-payout-mode.md): the keys of a country_rules document the Tips & limits
@@ -424,7 +424,7 @@ export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBo
  * fixed list and the server stores what it is sent, so Finance › Payouts settings' payoutMode and payoutSchedule (same
  * document) were dropped by every Tips & limits Save: a manual country went back to automatic, Monday 08:00.
  */
-export const COUNTRY_RULES_PANEL_KEYS = ["version", "publishedAt", "country", "currency", "tips", "raiseSteps", "driverBonus", "driverPayChangeMax", "onTripOffers", "limits", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms"] as const;
+export const COUNTRY_RULES_PANEL_KEYS = ["version", "publishedAt", "country", "currency", "tips", "raiseSteps", "driverBonus", "driverPayChangeMax", "onTripOffers", "limits", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms", "smsSignIn"] as const;
 
 /**
  * Kept from the stored document on a country Standard only. A zone's base can be its Standard's document (a zone
@@ -432,9 +432,13 @@ export const COUNTRY_RULES_PANEL_KEYS = ["version", "publishedAt", "country", "c
  * Standard only (contract payoutSchedule "read from the country standard only"; J9 v0.18.84 maxRiderDebt and
  * driverOwesLimit: "the country standard only; a zone's own value is ignored") and refuses the SOS / emergency keys
  * on a zone (400 *_country_only). The panel's own Standard-only keys (walletCreditMax, emergencyNumbers,
- * sosContactsSms) are in COUNTRY_RULES_PANEL_KEYS and only sent on the Standard by the caller.
+ * sosContactsSms, smsSignIn) are in COUNTRY_RULES_PANEL_KEYS and only sent on the Standard by the caller.
+ * v0.18.134 accountDeletion ("on the country standard ...; a zone's own value is ignored") is written by Riders ›
+ * Account deletion requests only (live/accountDeletion.ts) and kept here like the payout keys.
  */
-export const COUNTRY_RULES_STANDARD_ONLY_KEPT = ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit"] as const;
+export const COUNTRY_RULES_STANDARD_ONLY_KEPT = ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit", "driverPayRequest", "accountDeletion"] as const;
+/** v0.18.136 stripeFees (in the contract copy since the launch re-sync to 0.18.154): Standard-only too, never in a zone's own rules. */
+export const COUNTRY_RULES_DRAFT_STANDARD_ONLY = ["riderFeeStripe"] as const;
 
 /** Never stored in a document: the server's marks on a read. */
 const COUNTRY_RULES_READ_MARKS = ["usesStandard", "zoneId"] as const;
@@ -445,7 +449,7 @@ const COUNTRY_RULES_READ_MARKS = ["usesStandard", "zoneId"] as const;
  */
 export function countryRulesOf(country: string, currency: CurrencyCode, input: CountryRulesInput, base: Doc | null, { standard = true }: { standard?: boolean } = {}): Doc {
   const option = (amount: number) => ({ amount: toMinor(amount, currency), enabled: true });
-  const drop = new Set<string>([...COUNTRY_RULES_PANEL_KEYS, ...COUNTRY_RULES_READ_MARKS, ...(standard ? [] : COUNTRY_RULES_STANDARD_ONLY_KEPT)]);
+  const drop = new Set<string>([...COUNTRY_RULES_PANEL_KEYS, ...COUNTRY_RULES_READ_MARKS, ...(standard ? [] : [...COUNTRY_RULES_STANDARD_ONLY_KEPT, ...COUNTRY_RULES_DRAFT_STANDARD_ONLY])]);
   const kept = structuredClone(Object.fromEntries(Object.entries(base ?? {}).filter(([key]) => !drop.has(key)))) as Doc;
   // U2 (Rules audits/impact/safe-config-saves.md, SAFETY): a block the panel writes starts from the stored block, so a
   // key the panel does not show (calls.adminCallRoles, calls.phoneProvider, ...) is kept; the panel's own keys win.
@@ -480,6 +484,9 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     // rebuilt from these inputs, so the standard's save always sends both (a field left out is dropped).
     ...(input.maxRiderDebt !== undefined ? { maxRiderDebt: toMinor(input.maxRiderDebt, currency) } : {}),
     ...(input.driverOwesLimit ? { driverOwesLimit: { enabled: input.driverOwesLimit.enabled, max: input.driverOwesLimit.max !== null && input.driverOwesLimit.max > 0 ? toMinor(input.driverOwesLimit.max, currency) : null } } : {}),
+    // v0.18.139 driverPayRequest (TEMPORARY monthly pay request), on the country standard only: the switch, the day, the
+    // payment link as typed (trimmed) and the minimum in minor units (0 is a real minimum; null = none).
+    ...(input.driverPayRequest ? { driverPayRequest: { enabled: input.driverPayRequest.enabled, dayOfMonth: input.driverPayRequest.dayOfMonth, payLink: input.driverPayRequest.payLink.trim(), minAmount: input.driverPayRequest.minAmount !== null && input.driverPayRequest.minAmount >= 0 ? toMinor(input.driverPayRequest.minAmount, currency) : null } } : {}),
     // v0.18.110 BQ-V44: the largest driver bonus campaign (per country standard or zone; the server refuses above it).
     ...(input.bonusCampaignMax !== undefined ? { bonusCampaignMax: toMinor(input.bonusCampaignMax, currency) } : base?.["bonusCampaignMax"] ? { bonusCampaignMax: base["bonusCampaignMax"] } : {}),
     // v0.18.38 §62 (fix job 8): Tips & limits › Calls; a save without it keeps the stored block.
@@ -492,6 +499,10 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     ...(input.emergencyNumbers ? { emergencyNumbers: input.emergencyNumbers.map((row) => ({ kind: row.kind, number: row.number, label: { ...row.label } })) } : {}),
     // v0.18.101 §92 (BQ-V34): the SMS to the driver's emergency contacts on SOS, on the country standard only (a zone's own rules → 400 sos_sms_country_only).
     ...(input.sosContactsSms !== undefined ? { sosContactsSms: input.sosContactsSms } : {}),
+    // v0.18.133 (contract.json#smsSignIn): real SMS sign-in codes and the daily SMS limit, on the country standard only (a zone's own rules → 400 sms_sign_in_country_only).
+    ...(input.smsSignIn !== undefined ? { smsSignIn: { enabled: input.smsSignIn.enabled === true, dailyCap: input.smsSignIn.dailyCap } } : {}),
+    // v0.18.136 stripeFees.setting (DRAFT): the Stripe rider fee switch, on the country standard only; a save without it keeps the stored one.
+    ...(input.riderFeeStripe !== undefined && standard ? { riderFeeStripe: { enabled: input.riderFeeStripe } } : {}),
   };
 }
 

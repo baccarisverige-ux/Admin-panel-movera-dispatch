@@ -118,6 +118,10 @@
   "shareTrip": {
     "on": true
   },
+  "liveLocation": {
+    "share": false,
+    "adjustPickupMeters": 30
+  },
   "paymentMethods": [
     "cash",
     "card",

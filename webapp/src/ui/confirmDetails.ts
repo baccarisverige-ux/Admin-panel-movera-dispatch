@@ -68,6 +68,8 @@ export function moneyFor(command: string) {
   // src/admin/trips.ts:512 (trip.adjust) and :614 (trip.refund) run when the request is approved.
   if (command === "admin.approval.approve") return "The waiting action is carried out. If it is a refund or a change of a driver's pay, the money moves now, for the amount in the request." as const;
   if (command === "admin.approval.reject") return "The waiting action is not carried out, so it moves no money." as const;
+  // v0.18.149 contract.json#adminSessions.signOut.effect: sessions end, no fee, no wallet or payout line.
+  if (command === "admin.rider.signOut" || command === "admin.driver.signOut") return "No money moves." as const;
   if (command === "admin.rider.walletCredit") return "The amount shown is added to the rider's wallet, at most the country's wallet credit maximum (Pricing › Tips & limits)." as const;
   // src/riders/feeMarkPaid.ts:19-39.
   if (command === "admin.rider.feeMarkPaid") return "The owed fee is marked as paid by hand: the rider is not charged for it and it is no longer added to the next trip. No money is sent." as const;

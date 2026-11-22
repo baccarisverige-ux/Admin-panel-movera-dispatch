@@ -59,8 +59,10 @@ import { isLiveData, liveRiderOf, liveTripsOfRider } from "../live/realData";
 import { INCIDENTS_OF_RIDER_LIST } from "../live/incidents";
 import { LiveRiderSavedPlaces } from "../live/LiveProfileData";
 import { LiveRiderModeration } from "../live/LiveRiderModeration";
+import { LiveSessions } from "../live/LiveSessions";
 import { LiveBlockedPairs } from "../live/LiveBlockedPairs";
 import { LiveWalletCredit } from "../live/LiveWalletCredit";
+import { LiveStripeFeePayments } from "../live/LiveStripeFeePayments";
 import { LiveUnlockSignIn } from "../live/LiveUnlockSignIn";
 import { LiveMessagePerson } from "../live/LiveMessagePerson";
 import { feeKindOf, owedByCurrency, owedText, tripMoney, walletByCurrency, walletText } from "../live/tripLive";
@@ -373,6 +375,7 @@ export function RiderDetailPage() {
 
         <TabPanel id="wallet" activeId={tab}>
           <div className="rd-money">
+            {liveData ? <LiveStripeFeePayments riderId={rider.id} /> : null}
             {liveData ? <LiveWalletCredit riderId={rider.id} version={rider.version} walletMinor={liveRiderOf(rider)?.walletMinor ?? null} currency={liveRiderOf(rider)?.currency ?? null} /> : (
             <section className="fd-box rd-wallet">
               <h3>{trn("{0} Movera wallet", <Wallet size={16} aria-hidden="true" />)}</h3>
@@ -535,11 +538,14 @@ export function RiderDetailPage() {
 
         <TabPanel id="account" activeId={tab}>
           <div className="rd-overview">
-            <section className="fd-box">
-              <h3>{trn("{0} Sessions", <Smartphone size={16} aria-hidden="true" />)}</h3>
-              <ul className="rd-ledger" aria-label={tr("Rider sessions")}>{ops.sessions.map((session) => <li key={session.id}><b>{session.platform} · {session.device}</b><span>{session.active ? tr("Signed in") : tr("Signed out")}</span></li>)}</ul>
-              <CommandButton command="admin.rider.signOut" className="dash-btn small ghost" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={`${activeSessions.length} active sessions`} after="0 active sessions" expectedSliceRev={book.draftRev} sliceKey="riderOps" value={revokeRiderSessions(book, seed, me)} disabled={activeSessions.length === 0} onDone={() => setNotice(tr("Signed out of every active rider session."))}>{tr("Sign out all sessions")}</CommandButton>
-            </section>
+            {/* v0.18.149 (owner G12 Q6): on live the real sessions from the server, signed out one or all with a reason. */}
+            {liveData ? <LiveSessions kind="rider" id={rider.id} /> : (
+              <section className="fd-box">
+                <h3>{trn("{0} Sessions", <Smartphone size={16} aria-hidden="true" />)}</h3>
+                <ul className="rd-ledger" aria-label={tr("Rider sessions")}>{ops.sessions.map((session) => <li key={session.id}><b>{session.platform} · {session.device}</b><span>{session.active ? tr("Signed in") : tr("Signed out")}</span></li>)}</ul>
+                <CommandButton command="admin.rider.signOut" className="dash-btn small ghost" targetId={rider.id} confirmTarget={false} scope={rider.zoneId} before={`${activeSessions.length} active sessions`} after="0 active sessions" expectedSliceRev={book.draftRev} sliceKey="riderOps" value={revokeRiderSessions(book, seed, me)} disabled={activeSessions.length === 0} onDone={() => setNotice(tr("Signed out of every active rider session."))}>{tr("Sign out all sessions")}</CommandButton>
+              </section>
+            )}
             <section className="fd-box">
               <h3>{trn("{0} Merge duplicate account", <Link2 size={16} aria-hidden="true" />)}</h3>
               <p className="fine">{tr("Same person with two accounts? Keep the other one; this one points to it.")}</p>

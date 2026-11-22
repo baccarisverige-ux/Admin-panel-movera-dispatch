@@ -10,6 +10,7 @@ import { LIVE_HIDDEN_PAGES, MENU, menuItem, pageForPath, redirectTarget, type Me
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundRecord } from "./ui/NotFoundRecord";
 import { ChunkBoundary } from "./ui/ChunkBoundary";
+import { loadPage } from "./ui/chunkError";
 import { I18nProvider } from "./i18n/I18nProvider";
 import { tr, trx } from "./i18n";
 import { useAdminApi } from "./api/AdminApiContext";
@@ -21,7 +22,8 @@ import { connectionOf } from "./live/connection";
 // Pages load on first visit, so the sign-in screen and the shell do not wait for every page and map library.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- same constraint as React.lazy itself
 function lazyPage<M extends Record<K, ComponentType<any>>, K extends keyof M & string>(load: () => Promise<M>, name: K): LazyExoticComponent<M[K]> {
-  return lazy(() => load().then((module) => ({ default: module[name] })));
+  // Launch fix 2026-11-20: a file that fails once is fetched once more (ui/chunkError.ts loadPage); then ChunkBoundary shows Reload.
+  return lazy(() => loadPage(load).then((module) => ({ default: module[name] })));
 }
 const AuditPage = lazyPage(() => import("./pages/AuditPage"), "AuditPage");
 const ComingPage = lazyPage(() => import("./pages/ComingPage"), "ComingPage");
@@ -47,6 +49,7 @@ const OnboardingPage = lazyPage(() => import("./pages/OnboardingPage"), "Onboard
 const PaymentsPage = lazyPage(() => import("./pages/PaymentsPage"), "PaymentsPage");
 const PaymentPage = lazyPage(() => import("./pages/PaymentPage"), "PaymentPage");
 const PayoutsPage = lazyPage(() => import("./pages/PayoutsPage"), "PayoutsPage");
+const DriverIncomePage = lazyPage(() => import("./pages/DriverIncomePage"), "DriverIncomePage");
 const PricingPage = lazyPage(() => import("./pages/PricingPage"), "PricingPage");
 const RecordPage = lazyPage(() => import("./pages/RecordPage"), "RecordPage");
 const ReportsPage = lazyPage(() => import("./pages/ReportsPage"), "ReportsPage");
@@ -84,6 +87,7 @@ function Screen({ id }: { id: string }) {
   if (id === "zones") return <ZonesPage />;
   if (id === "payments") return <PaymentsPage />;
   if (id === "payouts") return <PayoutsPage />;
+  if (id === "driver-income") return <DriverIncomePage />;
   if (id === "pricing") return <PricingPage />;
   if (id === "reservations") return <ReservationsPage />;
   if (id === "reports") return <ReportsPage />;
@@ -217,6 +221,7 @@ function Authed() {
         <Route path="payments" element={<Screen id="payments" />} />
         <Route path="payments/:id" element={<PaymentPage />} />
         <Route path="payouts" element={<Screen id="payouts" />} />
+        <Route path="driver-income" element={<Screen id="driver-income" />} />
         <Route path="payouts/:id" element={<RecordPage kind="payouts" label={tr("Payout")} list="/payouts" back={tr("Back to payouts")} />} />
         <Route path="zones" element={<Screen id="zones" />} />
         <Route path="zones/:zoneId" element={<ZoneDetailPage />} />

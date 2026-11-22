@@ -3,16 +3,18 @@
  * Reading a slice loads the server's drafts of every zone and of each country's Standard into the demo store;
  * publishing a page saves and publishes the server documents it owns at once (no second admin, owner 2026-10-27).
  */
+import { liveLocationOf } from "../dispatch/rules/liveLocation.ts";
 import { callSettingsOf } from "../config/callSettings.ts";
 import { chatSettingsOf } from "../config/chatSettings.ts";
 import { dontMatchOf } from "../config/dontMatchSettings.ts";
 import { emergencyNumbersOf } from "../config/emergencyNumbers.ts";
 import { sosContactsSmsOf } from "../config/sosContactsSms.ts";
+import { smsSignInOf } from "../config/smsSignIn.ts";
 import { MARKETS, hasLiveMarketZones, marketOfZone, standardZoneId, zoneById, type Market, type MarketId } from "../markets/markets.ts";
-import { normalizeStore, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
+import { normalizeStore, unpublishedPriceZones, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { catalogChanges, readPricingExtras, scheduleOf, sendCatalog, surgeChanges, type HistoryIndex } from "./livePricingOps.ts";
 import { DISPATCH_KEY, draftRules, zoneDefault, normalizeDispatchBook, liveRules, type DispatchBook } from "../dispatch/rules.ts";
-import { COUNTRY_SETTINGS_KEY, debtSettingsOfRules, personLimitsOf, TIP_CASH_IN_CAR_MINUTES, TIP_FLAGS, ZONE_RULES_KEY, languagesChanged, methodsChanged, walletFirstChanged, mixedTipAcross, type MixedTipRules, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
+import { COUNTRY_SETTINGS_KEY, debtSettingsOfRules, payRequestOfRules, personLimitsOf, TIP_CASH_IN_CAR_MINUTES, TIP_FLAGS, ZONE_RULES_KEY, languagesChanged, methodsChanged, walletFirstChanged, mixedTipAcross, type MixedTipRules, normalizeCountrySettingsBook, countrySettingsOf, driverBonusHardMax, zoneSettingsOf, type CountrySettings, type CountrySettingsBook } from "../config/countrySettings.ts";
 import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appConfigs.ts";
 import {
   OWNED,
@@ -214,7 +216,9 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     const extras = await readPricingExtras(http, normalizeStore({ ...store, zones }), known);
     historyIndex = extras.index;
     surgeVersions = extras.surgeVersions;
-    const next = extras.store;
+    // Launch fix 2026-11-20: zones with no published prices, so Start surge is off with the reason (not a 503 after).
+    const noPrices = unpublishedPriceZones(readMarkets(), (id) => drafts.get(key("pricing", id)), (country) => standardZoneId(country as MarketId));
+    const next: PricingStore = { ...extras.store, noPrices };
     slices.set(PRICING_KEY, next);
     baseline.pricing = next;
     return next;
@@ -365,11 +369,15 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       emergencyNumbers: emergencyNumbersOf((document as { emergencyNumbers?: unknown }).emergencyNumbers, market.id as MarketId),
       // v0.18.101 §92 (BQ-V34): CountryRules.sosContactsSms (missing = on).
       sosContactsSms: sosContactsSmsOf((document as { sosContactsSms?: unknown }).sosContactsSms),
+      // v0.18.133 (contract.json#smsSignIn): CountryRules.smsSignIn (missing = off, 200 a day).
+      smsSignIn: smsSignInOf((document as { smsSignIn?: unknown }).smsSignIn),
       onTripMinDonePct: (() => { const v = (document as { onTripOffers?: { minRouteDonePct?: unknown } }).onTripOffers?.minRouteDonePct; return typeof v === "number" && v >= 0 && v <= 100 ? v : 70; })(),
       // Fix job 0 (owner A2-1): read on the Standard; the server ignores a zone's own value.
       ...((document as { walletCreditMax?: { amountMinor: number } }).walletCreditMax ? { walletCreditMax: (document as { walletCreditMax: { amountMinor: number } }).walletCreditMax.amountMinor / market.minorUnits } : {}),
       // S5 J9 (v0.18.84): Max rider debt and the driver owes-limit (the Standard's; missing or another currency = default).
       ...debtSettingsOfRules(document, market.id as MarketId),
+      // v0.18.139: the monthly pay request (the Standard's; missing = off).
+      ...payRequestOfRules(document, market.id as MarketId),
       // v0.18.110 BQ-V44: CountryRules.bonusCampaignMax (missing = the contract default).
       ...((document as { bonusCampaignMax?: { amountMinor: number } }).bonusCampaignMax ? { bonusCampaignMax: (document as { bonusCampaignMax: { amountMinor: number } }).bonusCampaignMax.amountMinor / market.minorUnits } : {}),
       ...((document as { driverPayChangeMax?: { amountMinor: number } }).driverPayChangeMax ? { driverPayChangeMax: (document as { driverPayChangeMax: { amountMinor: number } }).driverPayChangeMax.amountMinor / market.minorUnits } : {}),
@@ -687,6 +695,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const next = liveRules(book, id);
       if ((next.shareTrip?.on ?? true) !== (was.shareTrip?.on ?? true)) throw new Error("Share trip could not be read from the server for this zone. Reload the page and try again.");
       if ((next.pickupSpots?.on ?? true) !== (was.pickupSpots?.on ?? true)) throw new Error("Pickup entrance chips could not be read from the server for this zone. Reload the page and try again.");
+      // v0.18.144: the same for Live location (switch and banner distance), read from the same rider document.
+      if (JSON.stringify(liveLocationOf(next)) !== JSON.stringify(liveLocationOf(was))) throw new Error("Live location could not be read from the server for this zone. Reload the page and try again.");
     }
     slices.set(DISPATCH_KEY, book);
     const state = stateWith({ dispatch: book });
@@ -780,7 +790,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       }
       const facts = zoneFacts(id);
       const hardMax = driverBonusHardMax(market.id as MarketId);
-      const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax }, driverPayChangeMax: next.driverPayChangeMax, bonusCampaignMax: next.bonusCampaignMax, personLimits: next.personLimits, onTripMinDonePct: next.onTripMinDonePct, chainLateFreeCancelMin: next.chainLateFreeCancelMin, calls: next.calls, chat: next.chat, dontMatchAgain: next.dontMatchAgain, ...(id === standardKey(market.id) ? { walletCreditMax: next.walletCreditMax, maxRiderDebt: next.maxRiderDebt, driverOwesLimit: next.driverOwesLimit, emergencyNumbers: next.emergencyNumbers, sosContactsSms: next.sosContactsSms } : {}) }, current?.document ?? null, { standard: id === standardKey(market.id) });
+      const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax }, driverPayChangeMax: next.driverPayChangeMax, bonusCampaignMax: next.bonusCampaignMax, personLimits: next.personLimits, onTripMinDonePct: next.onTripMinDonePct, chainLateFreeCancelMin: next.chainLateFreeCancelMin, calls: next.calls, chat: next.chat, dontMatchAgain: next.dontMatchAgain, ...(id === standardKey(market.id) ? { walletCreditMax: next.walletCreditMax, maxRiderDebt: next.maxRiderDebt, driverOwesLimit: next.driverOwesLimit, riderFeeStripe: next.riderFeeStripe, driverPayRequest: next.driverPayRequest, emergencyNumbers: next.emergencyNumbers, sosContactsSms: next.sosContactsSms, smsSignIn: next.smsSignIn } : {}) }, current?.document ?? null, { standard: id === standardKey(market.id) });
       await savePublish(http, "country_rules", id, current, doc, saveNote(saveId, current?.usesStandard === true));
       drafts.delete(key("country_rules", id));
       standardMarks.set("country_rules", id, false);

@@ -73,6 +73,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.server.legalPublish", label: "Publish terms and privacy", reason: false, permission: "settings.publish" },
   // S5 J9 (v0.18.84 debtModel.driverOwes.paidMovera): Drivers › Owe Movera › "Driver paid Movera" (reason, audited by the server).
   { id: "admin.server.driverPaidMovera", label: "Driver paid Movera", reason: false, permission: "finance.edit" },
+  // v0.18.134 (contract.json#accountDeletion.setting): Riders › Account deletion requests › erase setting (country Standard).
+  { id: "admin.server.accountDeletionSetting", label: "Save the account erase setting", reason: false, permission: "settings.publish" },
   // v0.18.5 (owner G9): the trip's chat in the trip details (GET /trips/{tripId}/messages, support.reply).
   { id: "admin.server.tripChat", label: "Show the trip chat", reason: false, permission: "trips.read" },
   // BASE B13 (contract v0.18.26 §47): a safety case shows the driver's emergency contacts (read-only, audited by the server).
@@ -131,6 +133,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.driver.reactivate", label: "Reactivate driver", reason: true, permission: "drivers.activate" },
   { id: "admin.driver.bankReview", label: "Review driver bank details", reason: true, permission: "documents.approve" },
   { id: "admin.driver.note", label: "Save private driver note", reason: true, permission: "drivers.activate" },
+  { id: "admin.driver.signOut", label: "Sign driver out", reason: true, permission: "drivers.activate" },
   { id: "admin.driver.category", label: "Change driver category eligibility", reason: true, permission: "drivers.activate" },
   { id: "admin.driver.docExpiry", label: "Set document expiry date", reason: false, permission: "documents.approve" },
   { id: "admin.driver.message", label: "Message driver", reason: false, permission: "support.reply" },
@@ -312,6 +315,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.rider.markPaid", label: "Mark unpaid balance as paid", reason: true, permission: "finance.edit" },
   { id: "admin.rider.walletCredit", label: "Add money to wallet", reason: true, permission: "finance.edit" },
   { id: "admin.rider.feeMarkPaid", label: "Mark the owed fee as paid", reason: true, permission: "finance.edit" },
+  // v0.18.136 stripeFees (DRAFT): refund a card payment of a fee (Stripe), with a reason.
+  { id: "admin.server.feeStripeRefund", label: "Refund a card payment of a fee", reason: true, permission: "finance.edit" },
   { id: "admin.rider.refund", label: "Refund rider", reason: true, permission: "payments.refund" },
   { id: "admin.rider.refundDecide", label: "Approve or reject refund", reason: true, permission: "approval.decide" },
   { id: "admin.rider.activate", label: "Activate rider", reason: true, permission: "riders.block" },
@@ -489,6 +494,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.payment.dispute", label: "Answer a payment dispute", reason: true, permission: "finance.edit" },
   { id: "admin.payment.rules", label: "Save payment rules", reason: true, permission: "approval.decide" },
   { id: "admin.payout.view", label: "Payouts view", reason: false, permission: "finance.read" },
+  { id: "admin.server.driverIncome", label: "Driver income (year)", reason: false, permission: "finance.read" },
   { id: "admin.payout.hold", label: "Hold or release a payout", reason: true, permission: "finance.edit" },
   { id: "admin.payout.settings", label: "Publish payout settings", reason: false, permission: "settings.publish" },
   { id: "admin.payout.retry", label: "Retry a failed payout", reason: true, permission: "finance.edit" },

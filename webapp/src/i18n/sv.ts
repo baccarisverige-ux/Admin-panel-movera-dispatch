@@ -37,6 +37,7 @@ import { svC6InAppCalls } from "./sv/c6-in-app-calls.ts";
 import { svC8NoDriverNearby } from "./sv/c8-no-driver-nearby.ts";
 import { svC9BlockedPairs } from "./sv/c9-blocked-pairs.ts";
 import { svC9SameAddress } from "./sv/c9-same-address.ts";
+import { svC10RouteChangeSearching } from "./sv/c10-route-change-searching.ts";
 import { svC10Lifecycle } from "./sv/c10-lifecycle.ts";
 import { svC11BookedWaiting } from "./sv/c11-booked-waiting.ts";
 import { svC12AdminMasking } from "./sv/c12-admin-masking.ts";
@@ -71,6 +72,16 @@ import { svC32ShareTrip } from "./sv/c32-share-trip.ts";
 import { svC37AutoOfflineOutage } from "./sv/c37-auto-offline-outage.ts";
 import { svC40OneStream } from "./sv/c40-one-stream.ts";
 import { svC41LaneLate } from "./sv/c41-lane-late.ts";
+import { svC49SmsSignIn } from "./sv/c49-sms-sign-in.ts";
+import { svC48AccountDeletion } from "./sv/c48-account-deletion.ts";
+import { svC50StripeFees } from "./sv/c50-stripe-fees.ts";
+import { svC47PayRequest } from "./sv/c47-pay-request.ts";
+import { svC51LiveLocation } from "./sv/c51-live-location.ts";
+import { svC53SosPressTime } from "./sv/c53-sos-press-time.ts";
+import { svC54Sessions } from "./sv/c54-sessions.ts";
+import { svC55OfferBackup } from "./sv/c55-offer-backup.ts";
+import { svC56DriverIncome } from "./sv/c56-driver-income.ts";
+import { svC57AppUpdate } from "./sv/c57-app-update.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./sv/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -113,6 +124,7 @@ export const sv: Record<MessageKey, string> = {
   ...svC8NoDriverNearby,
   ...svC9BlockedPairs,
   ...svC9SameAddress,
+  ...svC10RouteChangeSearching,
   ...svC10Lifecycle,
   ...svC11BookedWaiting,
   ...svC12AdminMasking,
@@ -147,4 +159,14 @@ export const sv: Record<MessageKey, string> = {
   ...svC37AutoOfflineOutage,
   ...svC40OneStream,
   ...svC41LaneLate,
+  ...svC49SmsSignIn,
+  ...svC48AccountDeletion,
+  ...svC50StripeFees,
+  ...svC47PayRequest,
+  ...svC51LiveLocation,
+  ...svC53SosPressTime,
+  ...svC54Sessions,
+  ...svC55OfferBackup,
+  ...svC56DriverIncome,
+  ...svC57AppUpdate,
 };

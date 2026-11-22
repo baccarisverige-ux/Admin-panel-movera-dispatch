@@ -1,4 +1,5 @@
 import { marketOfZone, type MarketId } from "../markets/markets.ts";
+import { liveLocationOf } from "../dispatch/rules/liveLocation.ts";
 import { raiseCap } from "../dispatch/rules.ts";
 import { fromMajor, type CurrencyCode, type Money } from "../domain/money.ts";
 import { activeCategories, normalizeStore, zoneBook, type PricingStore } from "../pricing/zonePricing.ts";
@@ -350,6 +351,7 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
       shareTrip: shareTrip(base.zone).on,
     },
     shareTrip: shareTrip(base.zone),
+    liveLocation: liveLocationOf(base.zone),
     paymentMethods: paymentMethods(base, state, zoneId),
     // v0.18.33 (fix job 5, owner Q6): Settings › Payment methods "Use wallet first" (default on); the rider's per-ride switch starts on.
     wallet: { usedFirst: base.settings.walletFirst !== false },
@@ -613,7 +615,8 @@ export function driverAppConfig(zoneId: string, state: AppConfigState) {
     rideCheck: rideCheck(base, state),
     routeChange: routeChange(base),
     // v0.18.122 L20 stream (contract.json#driverOneStream.setting): Dispatch › Drivers "One live connection per driver phone", default off.
-    realtime: { oneStream: zone.oneStream?.on ?? CONFIG_DEFAULTS.driverOneStream },
+    // v0.18.150 L20 stream backup (contract.json#driverOneStreamFallback.setting): the two numbers under that switch.
+    realtime: { oneStream: zone.oneStream?.on ?? CONFIG_DEFAULTS.driverOneStream, oneStreamFallback: { ...(zone.oneStreamFallback ?? CONFIG_DEFAULTS.driverOneStreamFallback) } },
     texts: driverTexts(base, state),
     notices: driverAppNotices(state.driverNotices, base.info.id),
     appUpdate: appUpdate(base, "driver"),

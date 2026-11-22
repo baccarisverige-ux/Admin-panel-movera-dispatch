@@ -117,6 +117,14 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "300 kr: a rider who owes 300 kr can only book with card or wallet until they pay.",
     "A very small amount blocks cash booking after one fee; a very large one lets a debt grow with no stop.",
   ),
+  "tips.riderFeeStripe": t(
+    "When on: a rider who owes a cancel or no-show fee can pay it by card or Apple Pay in the app (Stripe). Rides are still paid in the car. Under the switch: the server's Stripe mode, Live (real money), Test (no real money) or Off with the reason.",
+    `${STANDARD_ONLY} Rider app (debt line, cancel notice); the rider page shows each card payment.`,
+    "On or off.",
+    "Off in every country.",
+    "On in Sweden: a rider who owes 65 kr sees Pay 65 kr now.",
+    "Off: owed fees stay debt, paid on the next ride or in the car.",
+  ),
   "tips.driverOwesLimit": t(
     "When on: a driver who owes Movera this much or more (commission and rider debt they kept in cash) gets no cash trips. They can still go online.",
     `${STANDARD_ONLY} Driver app (Home line and Accept), dispatch, and Drivers › Owe Movera.`,
@@ -124,6 +132,14 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "Off everywhere (Tunisia keeps 150 DT stored).",
     "On, 500 kr: a driver who owes 520 kr is not offered cash trips until they pay Movera.",
     "Off: a driver's debt is never checked at Accept; a very small amount stops cash trips after one trip.",
+  ),
+  "tips.driverPayRequest": t(
+    "Temporary. When on: once a month, on this day, each driver who owes Movera more than the smallest amount gets a notification and a Pay Movera screen with the amount and a button to pay by card or Apple Pay in the app.",
+    `${STANDARD_ONLY} Driver app (notification, push and the Pay Movera screen). A card payment lowers what they owe by itself; record any other payment in Drivers › Owe Movera with "Driver paid Movera".`,
+    "On or off; day 1 to 28; the smallest amount is money, 0 or above.",
+    "Off everywhere, day 1.",
+    "On, day 1, 100 kr: on the 1st from 09:00 a driver who owes 250 kr is asked to pay 250 kr; one who owes 80 kr is not asked.",
+    "A small amount asks many drivers; a large one asks few. The amount to pay is always the server's.",
   ),
   "tips.onTripMinDonePct": t(
     "A driver on a trip gets offers (Exclusive only) only after they have driven this share of their route to the drop-off.",
@@ -348,5 +364,21 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "On.",
     "On: the driver's sister gets an SMS with the map position.",
     "Off: contacts get no SMS on SOS; On: each contact gets one SMS with the position.",
+  ),
+  "tips.smsSignIn.enabled": t(
+    "Real riders and drivers get their sign-in code by SMS. Off: only the test numbers can sign in; every other number is told sign-in is not open yet and can join the waiting list.",
+    `${STANDARD_ONLY} Rider and driver apps, mobile numbers of this country (+46 Sweden, +33 France, +216 Tunisia). It works only when the SMS company's two keys are also set on the server; each SMS costs money.`,
+    "On or off.",
+    "Off.",
+    "On for Sweden: rider Sara types +46 70 123 45 67 and gets an SMS with the words Movera: din inloggningskod är 482193.",
+    "Off: no real person can sign in, no SMS is sent; On: every real number of this country can ask for a code, up to the daily limit.",
+  ),
+  "tips.smsSignIn.dailyCap": t(
+    "The most sign-in SMS sent to this country's numbers in 24 hours. It protects against someone making the server send thousands of paid SMS. At the limit new sign-in codes stop and an alert opens; from 80 % an earlier alert warns.",
+    `${STANDARD_ONLY} Rider and driver apps: at the limit they say We cannot send more SMS codes right now. Admins get the alert (System) when the System health alert is on for the country. Test numbers are never counted.`,
+    "10 to 100 000 SMS per 24 hours, whole numbers.",
+    "200.",
+    "200: the 201st SMS in 24 hours is not sent; that person must wait until the oldest SMS is a day old, or until an admin raises the limit. A code asked for twice counts twice.",
+    "10: only ten SMS per day, so about ten people can sign in; 100 000: almost no protection against SMS cost.",
   ),
 };
