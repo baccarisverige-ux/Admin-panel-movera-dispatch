@@ -10,6 +10,7 @@ import { LiveTripTools } from "../live/LiveTripTools";
 import { stoppedMinutes } from "../live/stopVisits";
 import { useFreeDriverIds } from "../dispatch/RideProgress";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
+import { tripPageState } from "../ui/recordState";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Banknote, Car, Clock3, Coins, Eye, FileText, Flag, History, ListOrdered, Lock, MapPinned, MessagesSquare, Radar, Route as RouteIcon, ShieldCheck, Star, Users, Wrench } from "lucide-react";
@@ -152,7 +153,8 @@ export function TripPage() {
   const single = useQuery({
     queryKey: ["trip-record", tripId, agent?.id ?? "signed-out"],
     queryFn: () => (api.trip ? api.trip(tripId) : Promise.resolve(null)),
-    enabled: Boolean(tripId) && !trips.isLoading && !listed && Boolean(api.trip),
+    // Launch fix 2026-11-20: a link read by id starts at once, so a wrong link does not wait on the whole list.
+    enabled: Boolean(tripId) && !listed && Boolean(api.trip),
   });
   const trip = listed ?? (single.data as NonNullable<typeof trips.data>[number] | null | undefined) ?? undefined;
   const dispatchOffers = useTripOffers(tripId, can(role, "trips.read"));
@@ -176,7 +178,10 @@ export function TripPage() {
   // the car's position, the rider summary, the terms and the cancel fee); the list's copy is the fallback.
   const facts = dispatchOffers.data?.live ?? (trip ? liveTripOf(trip) : null);
 
-  if (trips.isLoading || drivers.isLoading || vehicles.isLoading || (!listed && single.isLoading)) return <p className="state-line">{tr("Loading trip.")}</p>;
+  // Launch fix 2026-11-20 (audit: /trips/trp_bogus stayed on "Loading trip."): the read by id saying "no such trip"
+  // (or failing) shows "Trip not found"; the driver and car lists are only waited for when the trip is there.
+  const tripState = tripPageState({ found: Boolean(trip), listed: Boolean(listed), trips, single, others: drivers.isLoading || vehicles.isLoading });
+  if (tripState === "loading") return <p className="state-line">{tr("Loading trip.")}</p>;
   if (!trip || !route) {
     return <NotFoundRecord kind="Trip" id={tripId} list="/trips" back={tr("Back to trips")} />;
   }
