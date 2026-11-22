@@ -433,9 +433,11 @@ export const COUNTRY_RULES_PANEL_KEYS = ["version", "publishedAt", "country", "c
  * driverOwesLimit: "the country standard only; a zone's own value is ignored") and refuses the SOS / emergency keys
  * on a zone (400 *_country_only). The panel's own Standard-only keys (walletCreditMax, emergencyNumbers,
  * sosContactsSms, smsSignIn) are in COUNTRY_RULES_PANEL_KEYS and only sent on the Standard by the caller.
+ * v0.18.134 accountDeletion ("on the country standard ...; a zone's own value is ignored") is written by Riders ›
+ * Account deletion requests only (live/accountDeletion.ts) and kept here like the payout keys.
  */
-export const COUNTRY_RULES_STANDARD_ONLY_KEPT = ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit", "driverPayRequest"] as const;
-/** v0.18.136 stripeFees (DRAFT; not in this admin's contract copy yet): Standard-only too, never in a zone's own rules. */
+export const COUNTRY_RULES_STANDARD_ONLY_KEPT = ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit", "driverPayRequest", "accountDeletion"] as const;
+/** v0.18.136 stripeFees (in the contract copy since the launch re-sync to 0.18.154): Standard-only too, never in a zone's own rules. */
 export const COUNTRY_RULES_DRAFT_STANDARD_ONLY = ["riderFeeStripe"] as const;
 
 /** Never stored in a document: the server's marks on a read. */

@@ -68,7 +68,9 @@ export type TripCommand =
   | "head_to_pickup" | "arrive" | "board" | "start_trip" | "near_dropoff" | "complete"
   | "cancel" | "end_early" | "no_show" | "reassign" | "expire" | "system_cancel" | "fail"
   // v0.18.17 Book later.
-  | "release" | "unassign" | "reschedule";
+  | "release" | "unassign" | "reschedule"
+  // v0.18.143 change the ride while searching.
+  | "change_route";
 
 export type Transition = {
   command: TripCommand;
@@ -91,6 +93,8 @@ export const TRANSITIONS: readonly Transition[] = [
   { command: "start_search", actor: "system", from: ["requested"], to: "searching" },
   // v0.5.5: the rider raises their offer while the search is on; a new search starts.
   { command: "raise_price", actor: "rider", from: ["searching", "offered"], to: "searching" },
+  // v0.18.143 (contract.json#onTrip.routeChange.whileSearching): no driver has accepted; the rider's new route applies at once and a new search starts.
+  { command: "change_route", actor: "rider", from: ["requested", "searching", "offered"], to: "searching", when: "live" },
   { command: "send_offer", actor: "system", from: ["searching"], to: "offered" },
   { command: "offer_lapsed", actor: "system", from: ["offered"], to: "searching" },
   { command: "accept", actor: "driver", from: ["offered"], to: "accepted" },
