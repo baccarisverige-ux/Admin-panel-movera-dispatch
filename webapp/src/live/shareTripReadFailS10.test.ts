@@ -75,7 +75,8 @@ test("the Dispatch publish keys leave shareTrip out when the rider document was 
   assert.deepEqual(dispatchOwnedFor(true), OWNED.dispatch);
   assert.ok(!dispatchOwnedFor(false).rider.includes("shareTrip"));
   // v0.18.144: Live location lives in the same rider document, so it is left out too.
-  assert.deepEqual(dispatchOwnedFor(false).rider, OWNED.dispatch.rider.filter((key) => key !== "shareTrip" && key !== "liveLocation"));
+  assert.deepEqual(dispatchOwnedFor(false).rider, OWNED.dispatch.rider.filter((key) => key !== "shareTrip" && key !== "liveLocation" && key !== "driverProfile"));
+  // v0.18.155: the driver profile switches live in the same rider document, so they are left out too.
   assert.deepEqual(dispatchOwnedFor(false).driver, OWNED.dispatch.driver);
 });
 
