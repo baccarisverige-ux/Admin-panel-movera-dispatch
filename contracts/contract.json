@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.139",
+  "version": "0.18.153",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -1339,8 +1339,7 @@
         "maxRiderDebt",
         "driverOwesLimit",
         "calls.adminCallRoles",
-        "calls.phoneProvider",
-        "driverPayRequest"
+        "calls.phoneProvider"
       ],
       "dispatch": [
         "radar.reaskAfterSeconds",
@@ -4048,13 +4047,7 @@
     },
     "pickupSpotsOn": true,
     "shareTripOn": true,
-    "driverOneStream": false,
-    "driverPayRequest": {
-      "enabled": false,
-      "dayOfMonth": 1,
-      "payLink": "",
-      "minAmount": null
-    }
+    "driverOneStream": false
   },
   "realtime": {
     "envelope": [
@@ -4473,7 +4466,7 @@
     "list": "GET /admin/config/{doc}/history?zoneId&cursor&limit (settings.read): newest first, ConfigHistoryEntry { version, publishedAt, publishedBy, note?, action: publish | restore, restoredFrom?, document } v0.18.118 (Rules audits/impact/country-undo.md; server branch claude/rules-email-key-browserstack-f5y0p3-cfgundo fad59d5 src/config/scope.ts scopeKey, src/pricing/routes.ts HistoryQuery / RestoreBody, src/config/service.ts configHistory): History names exactly one of zoneId or country (ISO alpha-2: the country's standard), as GET, PUT and publish (configDocs.scope: both or neither → 400 invalid_request, reason scope_required; a country the admin has no zone in → 403 zone_out_of_scope; a country with no zone → 404 country_not_found). An entry of a country's standard carries country instead of zoneId.",
     "restore": "POST /admin/config/{doc}/restore { zoneId, version, expectedVersion, note? } (the publish permission): publishes that version's document again as the next version (action restore, restoredFrom), with every effect of a publish (§6.2 app documents for pricing). Undo last publish = restore the version before the live one. A version not in the history: 404; the live version: 409 invalid_transition (already_live). v0.18.118 (Rules audits/impact/country-undo.md; server branch claude/rules-email-key-browserstack-f5y0p3-cfgundo fad59d5 src/config/scope.ts scopeKey, src/pricing/routes.ts HistoryQuery / RestoreBody, src/config/service.ts configHistory): { zoneId | country, version, expectedVersion, note? }: exactly one of zoneId or country (configDocs.scope, the same reasons as History), so a country's standard is restored (Undo last publish) like a zone's own document.",
     "audit": "one audit row per pricing publish or restore: action config.publish, details { doc, zoneId, version, restoredFrom?, appDocuments: [{ doc, version }] } (the app documents the publish rewrote)",
-    "restoreKeeps": "v0.18.123 (SF-F1-3 safe config saves; owner 2026-11-17 Q-SCS-1 \"Keep values, save rest (Rec.)\", 2026-11-16 Q-SCS-2 \"No, keep current (Rec.)\", Rules audits/impact/safe-config-saves.md §3, decisions/session-2026-11-06.md): a Restore or Undo last publish of country_rules does not bring back the old payoutMode, payoutSchedule, maxRiderDebt or driverOwesLimit (MONEY), nor the old calls.adminCallRoles or calls.phoneProvider (owner 2026-11-17: Undo/Restore keeps the current call settings, the same rule as payout/debt): each takes the value the scope's live document has now, and one the live document lacks is left out of the restored document (calls.on and the other calls fields are restored as before). The four payout/debt keys are changed in Finance › Payouts settings only. Every other field, and every other document, is restored as before. The restored document is saved through the same draft path, so configDocs.keptKeys applies to it too. v0.18.139 (driverPayRequest.setting): CountryRules.driverPayRequest is kept the same way (the switch, the day, the payment link and the minimum amount stay as they are live now)."
+    "restoreKeeps": "v0.18.123 (SF-F1-3 safe config saves; owner 2026-11-17 Q-SCS-1 \"Keep values, save rest (Rec.)\", 2026-11-16 Q-SCS-2 \"No, keep current (Rec.)\", Rules audits/impact/safe-config-saves.md §3, decisions/session-2026-11-06.md): a Restore or Undo last publish of country_rules does not bring back the old payoutMode, payoutSchedule, maxRiderDebt or driverOwesLimit (MONEY), nor the old calls.adminCallRoles or calls.phoneProvider (owner 2026-11-17: Undo/Restore keeps the current call settings, the same rule as payout/debt): each takes the value the scope's live document has now, and one the live document lacks is left out of the restored document (calls.on and the other calls fields are restored as before). The four payout/debt keys are changed in Finance › Payouts settings only. Every other field, and every other document, is restored as before. The restored document is saved through the same draft path, so configDocs.keptKeys applies to it too."
   },
   "categoryCatalog": {
     "note": "v0.7.1 (owner 2026-10-27): one catalog of car types for every country and zone (admin Pricing › Manage categories); each zone switches a category on or off in its pricing document.",
@@ -5122,6 +5115,85 @@
       "fleets": "Fleet views get only the driver earnings; there is no owners' share.",
       "missing": "A value the server does not send reads \"Not connected yet\" (sv \"Inte kopplad än\"), never 0."
     }
+  },
+  "driverIncomeYear": {
+    "note": "v0.18.153 (P29, owner 2026-11-21 \"Don't only save ! Execute ! Add section in admin all what need and in code and everywhere\" + \"Also another one ( yearly but with monthly details ) and can choose with monthly and daily or monthly and dayly and even all trip per day also\"; Rules LAUNCH-RULE.md row P29, plan/NUMBERS.md P29; Rule 0; X-Api-Version stays 0.5; additive: three new read endpoints, no new status, no change to any existing answer; server migration 0132 (one index, CONCURRENTLY, Rule 46); no admin setting (a read-only report: nothing to adjust); rider app not affected; follows v0.18.132; 0.18.133-0.18.152 reserved for other drafts).",
+    "why": "EU DAC7 (Council Directive (EU) 2021/514; Sweden: lag (2022:1681) om plattformsoperatörers rapportering; France: CGI art. 1649 ter A-E): every year the platform reports what each seller (a driver, or the taxi company he drives for) was paid or credited through the app. The owner's accountant files it to the tax office (Skatteverket in Sweden, DGFiP in France) by 31 January of the next year; Movera gives the accountant a file (CSV) and never builds the tax office's XML. The driver is told what was reported: the driver app shows his own year statement (GET /driver/income-statement).",
+    "payee": "One row per payee per currency. The payee is the driver's company when he drives for one (his fleet: kind company, payeeId = the fleetId, name, orgNumber and address of the fleet, every driver of the fleet who earned in the year in driverIds); a driver with no fleet is his own payee (kind driver, payeeId = the driverId, name = his first and last name, orgNumber null, address null: Movera does not store a driver's home address or ID number yet). The fleet is read as it is now (drivers.fleet_id), for the whole year. country = the fleet's country, else the driver's country, else the country of his first zone. bank = { holder, last4 } when Movera stores the payee's bank details as data, else null; never the full account number. Today bank details are an uploaded document (driverOnboarding.adminActions.bankType), so bank is null until a later job stores them as data.",
+    "money": {
+      "note": "Every amount is Money in minor units of the row's currency, read from the earnings entries (the single money base: moneyBase, kpis.money, the same kinds GET /driver/earnings and GET /driver/trips use); no new formula. The paid_to_movera entries (money the driver paid Movera another way, debtModel) are in no field. Never added across currencies: a payee who earned in two currencies has two rows.",
+      "rides": "Number of the payee's trip entries (kind trip: every paid trip end: completed, ended early by the rider, ended by the driver with the rider on board, admin complete), pay in the car (cash) included.",
+      "grossFares": "Σ gross of the trip entries: the fare the rider paid without the outstanding_fee line (moneyBase.kpiMoney gross). VAT included, tips not included.",
+      "tips": "Σ tip entries (cash tips included).",
+      "bonuses": "Σ bonus entries (the trip bonus at the paid end, an admin bonus after it, a lost-driver payment, bonus campaigns).",
+      "adjustments": "Σ adjustment entries (Movera's pay changes, an admin's driverPay change, a refund taken back from the driver; may be negative).",
+      "pickupPay": "Σ pickup_pay entries (Movera-paid pickup km).",
+      "feeShare": "Σ fee_share entries: the driver's share of cancel and no-show fees.",
+      "moveraCommission": "Σ commission of the trip entries: what Movera kept at each trip's paid end (moneyBase.commission, the one formula fare − debtCollected − driverEarnings − pickupPay − driverBonus).",
+      "moveraFees": "Movera's share of the cancel and no-show fees the payee got a fee_share of (the fee trip's commission, as Payout.summary moveraGets reads it).",
+      "netEarnings": "What the payee earned: Σ the entries of the kinds trip, pickup_pay, fee_share, tip, adjustment and bonus. netEarnings = GET /driver/earnings net for the same period (the same entries, by the same entry time). This is the DAC7 consideration.",
+      "cashCollectedByDriver": "Σ cash of the trip and tip entries: money the driver took in the car (pay in the car). Part of netEarnings already in his hand.",
+      "paidOutByMovera": "Σ max(0, payouts.amount_minor) of the payee's drivers' payouts marked paid, counted on the zone-local day of payouts.paid_at (the payout's zone, else the driver's first zone, else his country); never below 0 (a payout where the driver owed Movera pays nothing out). Not derived from the entries. A pending payout never counts."
+    },
+    "periods": "v0.18.153 review SHOULD-1 (coordinator): DAC7 counts what was paid or credited in the period, so each earnings entry is placed on the zone-local day of its OWN time (earnings_entries.at, when it was credited), exactly as GET /driver/earnings: in the time zone of its trip's zone, else the driver's first zone, else his country's (payouts.schedule.countryTimeZones), else Europe/Stockholm. A paid payout is placed on its paid_at. The year, quarter (Q1 = January-March), month (YYYY-MM) and day (YYYY-MM-DD) come from that local day. A tip or a pay change credited in January on a December trip belongs to the new year; the old year's totals do not move.",
+    "addUp": "The totals add up exactly at every level: Σ trip lines = the day, Σ days = the month, Σ months = the quarter, Σ quarters = the year, for every money field and rides, because every level is the sum of the same rows. A day or month with nothing is left out. In the trips detail each line has lineKind: trip (the trip's own entries credited that day: the trip entry and what came with it; tripId and paymentMethod of the trip), credit (money credited that day without the trip entry: a later tip, pay change or bonus of a trip, shown with that trip's tripId, rides 0; or an entry with no trip such as a bonus campaign, tripId null) or payout (one paid payout: paidOutByMovera only, tripId null).",
+    "partial": "v0.18.153 review SHOULD-4: on a zone-limited answer (an admin with some zones, or a zoneId / zoneIds / country filter) a payee row whose payee also has money rows (entries or paid payouts) outside those zones, or with no zone, in the same period carries partial: true; the row holds only the zones in scope. Absent otherwise. Admin shows 'Only your zones' with an (i); the CSV has a partial column (true or empty). The driver's statement is never partial.",
+    "admin": {
+      "endpoint": "GET /admin/finance/driver-income (permission finance.read) → DriverIncomePage { year, detail, month?, items: DriverIncomeRow[], nextCursor, generatedAt }.",
+      "query": "year (required, 4 digits), country, zoneId / zoneIds (adminListFilters.params), detail = quarter | month | day | trips (default quarter), month (YYYY-MM, inside year), payeeId (a fleetId or a driverId), cursor, limit (payees per page, 1-200, default 50).",
+      "scope": "Zone scope exactly as adminListFilters (v0.17.2): an entry is in its trip's zone, else the driver's first zone; only the admin's zones count; a zone named outside them is 403 forbidden, reason zone_out_of_scope; country alone = the zones of that country the admin covers. A payee row holds only the money of the zones in scope.",
+      "detail": "quarter: totals + quarters[]. month: + months[]. day: + months[] each with days[]. trips: + months[] → days[] → trips[] (one line per entry group of a trip). With month, only that month is counted (the year totals are then that month).",
+      "tooBig": "detail=trips needs month or payeeId: else 400 invalid_request, reason income_detail_too_big. Also 400 income_detail_too_big when the query (all its payees, not one page) holds more than maxTripLines (10 000) trip lines: ask with month or payeeId.",
+      "maxTripLines": 10000,
+      "errors": "400 invalid_request: reason income_year_invalid (not 4 digits, before 2020 or after the current year), income_month_invalid (not YYYY-MM or not in year), unknown_country (no zone of that country), income_detail_too_big; unknown query key: unknown_filter (adminListFilters). 403 zone_out_of_scope.",
+      "paging": "Cursor-paged over the payee rows, ordered by payeeId then currency; nextCursor null on the last page. A page never splits one payee row. The CSV holds every row in the same order.",
+      "csv": "GET /admin/finance/driver-income.csv: same query, permission and scope (no cursor or limit: every payee). text/csv; charset=utf-8, UTF-8 with BOM, streamed (every payee, read 200 at a time; the first 200 are read before the headers go out, so a failure there is a clean JSON error), comma separated, CRLF, header line, one line per payee and level: level (year | quarter | month | day | trip), period, payeeKind, payeeId, name, orgNumber, address, country, currency, bankHolder, bankLast4, driverIds (space separated), partial (true or empty), rides, the money fields in major units with a dot (12.50; TND 3 decimals), and for a trip line: localTime, tripId, zoneId, paymentMethod, lineKind. Content-Disposition attachment; filename movera-driver-income-<year>[-<month>]-<detail>.csv. Formula guard: a text cell that starts with = + - @, a tab or a carriage return gets a leading single quote ('). The same tooBig rule applies.",
+      "audit": "Every download (JSON or CSV) writes one admin audit row: action finance.driver_income.read (JSON) or finance.driver_income.csv (CSV), target driver_income / <year>, detail { year, detail, month?, country?, zoneIds?, payeeId?, format, rows? } (rows: the payee rows of a JSON page; the CSV is streamed, so its row is written before it). No personal data in the detail.",
+      "panel": "Admin › Finance › Driver income (year), next to Payouts: year picker (default last year), the country / zone filters of the top bar, Details: Quarters / Months / Months + days / All trips per day; drill-down payee → months → month → days → day → trips; buttons Download CSV for accountant (the chosen level) and Print; help line 'For your accountant: DAC7 platform report to Skatteverket, due 31 January.'; an (i) text on each column. Live data only: in demo mode the page shows the usual not-connected note."
+    },
+    "driver": {
+      "endpoint": "GET /driver/income-statement?year&detail=month|day|trips&month (signed-in driver) → DriverIncomeStatement { year, detail, month?, items: DriverIncomeRow[] }: only the calling driver's own payee rows, one per currency, all zones (no zone filter); detail default month; detail=trips needs month (else 400 income_detail_too_big); bank last4 only. Same 400 reasons as the admin.",
+      "fleetDriver": "A driver with no fleet gets his own row. The OWNER of a fleet (fleets.owner_driver_id) gets the fleet's row, the same row the accountant files (every driver of the fleet in it). Any other driver of a fleet gets a row with the fleet's kind, name and orgNumber but only HIS OWN entries in the money, and ownPartOnly true (another driver's money is never sent to him, as moneyBase.lostDriverPaid.driverView).",
+      "screen": "Driver app › Earnings › Year statement: year → months → days → trips, the same totals as the server sends; share (the system share sheet) as plain text when the app has a share package."
+    },
+    "texts": {
+      "title": {
+        "en": "Year statement",
+        "sv": "Årsbesked",
+        "fr": "Relevé annuel"
+      },
+      "reported": {
+        "en": "What Movera reports to the tax office for {year}",
+        "sv": "Det Movera rapporterar till Skatteverket för {year}",
+        "fr": "Ce que Movera déclare à l'administration fiscale pour {year}"
+      },
+      "tooBig": {
+        "en": "Too many trips to show at once. Pick a month.",
+        "sv": "För många resor att visa på en gång. Välj en månad.",
+        "fr": "Trop de courses à afficher en une fois. Choisissez un mois."
+      },
+      "badYear": {
+        "en": "Pick a year up to this year.",
+        "sv": "Välj ett år till och med i år.",
+        "fr": "Choisissez une année jusqu'à cette année."
+      },
+      "empty": {
+        "en": "No earnings in this year.",
+        "sv": "Inga intäkter detta år.",
+        "fr": "Aucun revenu cette année."
+      },
+      "helpAdmin": {
+        "en": "For your accountant: DAC7 platform report to Skatteverket, due 31 January.",
+        "sv": "Till din redovisningskonsult: DAC7-rapport till Skatteverket, senast 31 januari.",
+        "fr": "Pour votre comptable : déclaration DAC7 de la plateforme à l'administration fiscale, avant le 31 janvier."
+      },
+      "partial": {
+        "en": "Only your zones",
+        "sv": "Bara dina zoner",
+        "fr": "Seulement vos zones"
+      }
+    },
+    "apps": "Rule 0: contract (this) → server (src/finance/driverIncome.ts + routes; migration 0132 index earnings_at) → admin (Finance › Driver income (year), c56-driver-income) → driver app (Earnings › Year statement) → rider app (no effect: riders earn nothing through the app; no change)."
   },
   "content": {
     "note": "v0.10.0 (owner Content answers 2026-10-28): the admin's Content page publishes texts to the apps. One admin is enough (no second admin). A publish goes only to the zones chosen at the top ('All zones' = every zone of the country).",
@@ -10568,41 +10640,5 @@
     "driver": "realtime.oneStream true: open GET /driver/stream (off-trip and on a trip; the trip stream as before) and give its events to the two existing readers (offers by sequence, settings by kind); do not open the two old streams. false or missing, or GET /driver/stream answers 404 (an older server): the two streams as before, and after a 404 the app does not try the one stream again until it restarts. When the switch changes, the app closes what it holds and opens the other within one settings update.",
     "rider": "Not affected: the rider app has no offer feed; GET /rider/config/stream and the trip stream are unchanged.",
     "admin": "Admin › Dispatch, per zone: the switch 'One live connection per driver phone' (default off), with an 'i' text (what it does, what it saves, who it affects, when to turn it on, the way back, older apps). It is the way back without an app release."
-  },
-  "driverWalletBalance": {
-    "note": "v0.18.139 (driver wallet D5; owner button 2026-11-20 'Yes, server + app (Rec.)', Rules decisions/session-2026-11-06.md and audits/impact/driver-wallet-cash.md; earlier answers kept: decisions/driver-g10.md item 4 'driver app shows the carried amount in earnings', Q-M3 'Next payout', Q-S5-7 'Carry over', 2026-11-13 14:59 'What he owes Movera'): the driver sees in his wallet the cash he collected this week and what he owes Movera now (or what Movera owes him), as the server counts it. Additive: one optional field on GET /driver/earnings; X-Api-Version stays 0.5; no migration, no admin setting; rider app and admin not affected (the admin already shows the same owed, debtModel.driverOwes.adminList).",
-    "field": "EarningsReport.moveraBalance { owedToMovera: Money, moveraOwesYou: Money } on every GET /driver/earnings, in the report's currency (EarningsReport.currency; with ?currency=SEK|EUR it is the balance of that currency; kr, EUR and DT are never added). It is the balance NOW: it does not follow ?period, ?from or ?to. Both amounts are 0 or above and at least one of them is 0.",
-    "sum": "One signed sum S per driver and currency, the same expression as debtModel.driverOwes.owed (server src/drivers/owes.ts): his next payout worked out now (payouts.lines of his unpaid entries: every amount, less the cash he already holds for trip and tip entries; a 'Driver paid Movera' entry adds) plus the rest carried from his open payouts below 0 (status pending or pending_approval; Payout.amount + the paid_to_movera money linked to it after it was made). owedToMovera = max(0, -S), so it is always equal to debtModel.driverOwes.owed of that currency (the number of GET /admin/drivers-owing, of the owes-limit and of the Home line owes_movera_over_limit); moveraOwesYou = max(0, S). When the carry rule of a later version changes debtModel.driverOwes.owed, this field follows it (one expression on the server).",
-    "cash": "The cash he collected is EarningsPeriod.cashCollected of the same report (the cash of the period's trip and tip entries, the rider's old fee he collected with a fare included): the wallet shows the week's.",
-    "driver": "Driver app, Wallet, under the week's earnings: 'Cash collected' = cashCollected of the week's period (0 when the week has no entry); then 'You owe Movera' with owedToMovera when it is above 0, else 'Movera owes you' with moveraOwesYou when it is above 0, else 'Settled'; then 'Settled in your next payout.' All amounts are the server's: the app never adds or subtracts (never net - cashCollected, never a sum of trips). A report without moveraBalance (an older server) shows the cash line only, no owed line. sv / fr / en, existing texts.",
-    "admin": "Not affected: Finance already lists the same owed (GET /admin/drivers-owing). No setting.",
-    "rider": "Not affected: the rider never sees driver money."
-  },
-  "driverPayRequest": {
-    "note": "v0.18.139 (owner 2026-11-20 \"We are making system temporary so ask driver monthly to pay how much due to Movera, so adding notification and push screen with link to pay\" + pay button \"Link sumup for exp\", Rules decisions/session-2026-11-06.md, audits/impact/driver-wallet-cash.md): a TEMPORARY monthly settlement. Once a month the driver is asked to pay what he owes Movera: a bell notice + push and a 'Pay Movera' screen with the amount, a reference and a button that opens the payment link the admin set (a SumUp link for example). Movera takes no payment in the app. Off by default in every country; while off nothing is asked and nothing changes. The weekly payout rules do not change (Q-M3 'Next payout', Q-S5-7 'Carry over', payoutLines): what he owes is still taken from his next payouts; money he pays by the link lowers what he owes only when an admin records it (confirm).",
-    "setting": "CountryRules.driverPayRequest { enabled (default false), dayOfMonth (1-28, default 1), payLink (an https:// link, at most 500 characters, '' = none), minAmount (Money in the country's currency, 0 or above, or null) } on the country standard only (Admin > Pricing > Tips & limits; a zone's own value is ignored). configDefaults.driverPayRequest: off, day 1, no link, no amount, in every country. Saving enabled true needs payLink (else 400 invalid_request, reason pay_request_needs_link) and minAmount in the country's currency (else 400 invalid_request, reason pay_request_needs_amount); a dayOfMonth outside 1-28 or a payLink that is not https or is too long is 400 invalid_request, reason pay_request_invalid. A kept key of country_rules (configDocs.keptKeys.country_rules): a whole-document save that leaves it out keeps the stored value, and a Restore or Undo last publish keeps today's live value, so no other screen switches it off or changes the link by a save. A change applies at once (the next run of the job and the next read of the screen).",
-    "job": "One recurring server job (timer kind pay_request_scan, hourly, in GET /healthz/jobs like the other recurring jobs). For each country whose live standard has it enabled: on the day dayOfMonth of the month, from 09:00, in the time zone of the country's first zone (the same day only: a month the server missed is not asked late), every driver of that country (Driver.country) whose owed (debtModel.driverOwes.owed, the country's currency) is ABOVE minAmount gets one request for that month. Idempotent: one row per driver and month (driver_pay_requests, primary key driver_id + month 'YYYY-MM'; server migration 0122); a second run, a retry or a second server copy asks nobody twice (insert ... on conflict do nothing; the notice is written only with the new row, in the same transaction). Drivers are read in bounded batches (Rule 33). A driver at or below minAmount, a driver of another country and a country that is off are not asked.",
-    "notice": {
-      "kind": "driver_pay_movera",
-      "deepLink": "movera-driver://pay-movera",
-      "title": {
-        "sv": "Betala Movera",
-        "fr": "Payer Movera",
-        "en": "Pay Movera"
-      },
-      "body": {
-        "sv": "Du är skyldig Movera {amount}. Öppna för att betala.",
-        "fr": "Vous devez {amount} à Movera. Ouvrez pour payer.",
-        "en": "You owe Movera {amount}. Open to pay."
-      },
-      "rule": "One bell notice + push per request, in the driver's language ({amount} = the owed at that moment, moneyDisplay with decimals; data { month, amountMinor, currency }). Tapping the bell row or the push opens the Pay Movera screen."
-    },
-    "read": "GET /driver/pay-movera (driver) → DriverPayMovera { enabled, owedToMovera (Money: what he owes NOW in his country's currency, the same sum as EarningsReport.moveraBalance.owedToMovera and debtModel.driverOwes.owed), reference, payLink? (only while enabled and set), minAmount? (while enabled), request? { month, askedAt, askedAmount } (his newest request, if any) }. reference = '<driverId>-<YYYYMM>' with the month of his newest request, else the current month in the country's time zone: the text he writes on the payment so Movera finds him. A driver with no country yet: 404 not_found, reason no_country.",
-    "driver": "Driver app, Pay Movera screen (opened from the bell row, the push, and the wallet's 'You owe Movera' line): the amount owedToMovera (the server's, never worked out on the phone), the reference with a copy button, and — while enabled with a payLink and owedToMovera above 0 — a button 'Pay Movera' that opens payLink in the browser. The link is opened as it is: the app adds no amount to it (a payment link may be generic), so the screen tells him to enter the amount and the reference on the payment page. It also says the amount goes down when Movera has confirmed the payment. With nothing owed it shows 'Settled'; while off it shows the amount and 'Settled in your next payout.' with no button. sv / fr / en.",
-    "confirm": "Manual, by the existing admin button 'Driver paid Movera' (POST /admin/drivers/{driverId}/paid-movera, debtModel.driverOwes.paidMovera, v0.18.84 / v0.18.118): the admin sees the payment in the payment company's own list (the reference names the driver and the month) and records the amount; the entry kind paid_to_movera lowers owed at once, for the wallet, the Pay Movera screen, the owing list and the owes-limit. Nothing is confirmed automatically; no payment company is called by the server. An amount above the owed now is refused as before (400 paid_above_owed).",
-    "payouts": "No payout rule changes. Until the admin records a payment, the debt is still inside owed, so a payout made in between takes it from his earnings as before (Q-M3) — with pay-in-car only a payout has nothing to take it from, so the monthly payment is how it is settled. If a payout took the debt before the admin recorded the payment, the admin records what is still owed (not more) and gives the rest back outside the app.",
-    "admin": "Admin > Pricing > Tips & limits, the country standard: a card 'Monthly pay request' with the switch, the day of the month, the payment link and the minimum amount, with an 'i' text. Finance > Drivers who owe Movera is unchanged (the confirm button). sv / fr / en.",
-    "rider": "Not affected: the rider never sees driver money.",
-    "oldApps": "The notice is written for every driver; an older driver app shows the bell row and the push with their texts, and a tap opens nothing new (unknown deep link = the inbox). The route is new, so no older app calls it."
   }
 }

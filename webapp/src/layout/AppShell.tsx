@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import {
   Banknote,
+  FileSpreadsheet,
   BarChart3,
   CalendarClock,
   Building2,
@@ -70,6 +71,7 @@ const ICONS: Record<NavIcon, typeof Menu> = {
   Building2,
   Wallet,
   Banknote,
+  FileSpreadsheet,
   MapPinned,
   Tags,
   LifeBuoy,

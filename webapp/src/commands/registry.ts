@@ -494,6 +494,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.payment.dispute", label: "Answer a payment dispute", reason: true, permission: "finance.edit" },
   { id: "admin.payment.rules", label: "Save payment rules", reason: true, permission: "approval.decide" },
   { id: "admin.payout.view", label: "Payouts view", reason: false, permission: "finance.read" },
+  { id: "admin.server.driverIncome", label: "Driver income (year)", reason: false, permission: "finance.read" },
   { id: "admin.payout.hold", label: "Hold or release a payout", reason: true, permission: "finance.edit" },
   { id: "admin.payout.settings", label: "Publish payout settings", reason: false, permission: "settings.publish" },
   { id: "admin.payout.retry", label: "Retry a failed payout", reason: true, permission: "finance.edit" },

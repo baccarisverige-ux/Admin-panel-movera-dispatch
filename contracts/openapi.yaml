@@ -1,11 +1,11 @@
-# Movera API v0.18.139 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.153 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.139
+  version: 0.18.153
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.139 in this folder; this file must agree with them.
+    v0.18.153 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.139
+  version: 0.18.153
   source: contract.json
 paths:
   /auth/otp/request:
@@ -3595,15 +3595,6 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
-      description: 'v0.18.139 (driverWalletBalance): EarningsReport.moveraBalance { owedToMovera: Money, moveraOwesYou: Money
-        } on every GET /driver/earnings, in the report''s currency (EarningsReport.currency; with ?currency=SEK|EUR it is
-        the balance of that currency; kr, EUR and DT are never added). It is the balance NOW: it does not follow ?period,
-        ?from or ?to. Both amounts are 0 or above and at least one of them is 0. Driver app, Wallet, under the week''s earnings:
-        ''Cash collected'' = cashCollected of the week''s period (0 when the week has no entry); then ''You owe Movera'' with
-        owedToMovera when it is above 0, else ''Movera owes you'' with moveraOwesYou when it is above 0, else ''Settled'';
-        then ''Settled in your next payout.'' All amounts are the server''s: the app never adds or subtracts (never net -
-        cashCollected, never a sum of trips). A report without moveraBalance (an older server) shows the cash line only, no
-        owed line. sv / fr / en, existing texts.'
   /driver/payouts:
     get:
       operationId: listDriverPayouts
@@ -9406,35 +9397,26 @@ paths:
         pricing with invalid CategoryPricing.commissionSteps → invalid_request, reason commission_steps_invalid, details ["step:<index>",
         "problem:<code>"] (not_a_list, too_many_steps, pct_or_amount, up_to_missing, pct_out_of_range, amount_out_of_range,
         above_not_last, last_not_above, up_to_out_of_range, up_to_not_increasing); nothing is saved. v0.18.123 (configDocs.keptKeys;
-        country_rules: payoutMode, payoutSchedule, maxRiderDebt, driverOwesLimit, calls.adminCallRoles, calls.phoneProvider,
-        driverPayRequest; dispatch: radar.reaskAfterSeconds, exclusive.reaskAfterSeconds): v0.18.123 (SF-F1-3 safe config
-        saves; owner 2026-11-17 Q-SCS-1 "Keep values, save rest (Rec.)", 2026-11-16 Q-SCS-2 "No, keep current (Rec.)", Rules
-        audits/impact/safe-config-saves.md §3, decisions/session-2026-11-06.md): PUT /admin/config/{doc} replaces the draft,
-        except the kept keys of the document listed here (dotted paths). A kept key that the stored document (the scope''s
-        draft, else the scope''s own live document) has and the sent document leaves out is kept by the server: its stored
-        value is copied into the draft, the rest is saved as sent. The save is never refused for a missing kept key. A key
-        the request names in removeKeys is really removed (left out as sent). A scope with no own document (a zone on the
-        standard, a first save) has no stored document and keeps nothing, so a Standard-only key never gets into a zone document.
-        The answer (ConfigDraft.keptKeys) and the audit line config.draft (details.kept) list the paths the server kept; both
-        are absent when nothing was kept. Publish is unchanged (the draft is already whole). Rule for later: a field that
-        no whole-document admin screen owns goes on this list in the same contract version that adds it. ConfigDraftUpdate.removeKeys
-        (optional, array of dotted paths): each must be a kept key of that document, else 400 invalid_request, reason unknown_kept_key,
-        details ["key:<path>"], nothing saved. A named key that the sent document carries is saved as sent (removeKeys only
-        stops the keep). v0.18.130 (configDocs.keptKeys; driver_app_config: realtime.oneStream): v0.18.130 (SCS guard re-check
-        follow-up, owner Q-SCS-1 "Keep values, save rest (Rec.)"): the driver document keeps realtime.oneStream (driverOneStream,
-        v0.18.122) when a save leaves out realtime, so the one-live-connection switch never falls back to off by a save from
-        another screen. offers.autoOffline is not listed: every admin save of the driver document starts from the server document
-        and writes offers whole from the Dispatch page that owns it. Publish and Restore are unchanged (Restore names a removed
-        kept key in removeKeys, as for the other documents). v0.18.139 (driverPayRequest): CountryRules.driverPayRequest {
-        enabled (default false), dayOfMonth (1-28, default 1), payLink (an https:// link, at most 500 characters, '''' = none),
-        minAmount (Money in the country''s currency, 0 or above, or null) } on the country standard only (Admin > Pricing
-        > Tips & limits; a zone''s own value is ignored). configDefaults.driverPayRequest: off, day 1, no link, no amount,
-        in every country. Saving enabled true needs payLink (else 400 invalid_request, reason pay_request_needs_link) and
-        minAmount in the country''s currency (else 400 invalid_request, reason pay_request_needs_amount); a dayOfMonth outside
-        1-28 or a payLink that is not https or is too long is 400 invalid_request, reason pay_request_invalid. A kept key
-        of country_rules (configDocs.keptKeys.country_rules): a whole-document save that leaves it out keeps the stored value,
-        and a Restore or Undo last publish keeps today''s live value, so no other screen switches it off or changes the link
-        by a save. A change applies at once (the next run of the job and the next read of the screen).'
+        country_rules: payoutMode, payoutSchedule, maxRiderDebt, driverOwesLimit, calls.adminCallRoles, calls.phoneProvider;
+        dispatch: radar.reaskAfterSeconds, exclusive.reaskAfterSeconds): v0.18.123 (SF-F1-3 safe config saves; owner 2026-11-17
+        Q-SCS-1 "Keep values, save rest (Rec.)", 2026-11-16 Q-SCS-2 "No, keep current (Rec.)", Rules audits/impact/safe-config-saves.md
+        §3, decisions/session-2026-11-06.md): PUT /admin/config/{doc} replaces the draft, except the kept keys of the document
+        listed here (dotted paths). A kept key that the stored document (the scope''s draft, else the scope''s own live document)
+        has and the sent document leaves out is kept by the server: its stored value is copied into the draft, the rest is
+        saved as sent. The save is never refused for a missing kept key. A key the request names in removeKeys is really removed
+        (left out as sent). A scope with no own document (a zone on the standard, a first save) has no stored document and
+        keeps nothing, so a Standard-only key never gets into a zone document. The answer (ConfigDraft.keptKeys) and the audit
+        line config.draft (details.kept) list the paths the server kept; both are absent when nothing was kept. Publish is
+        unchanged (the draft is already whole). Rule for later: a field that no whole-document admin screen owns goes on this
+        list in the same contract version that adds it. ConfigDraftUpdate.removeKeys (optional, array of dotted paths): each
+        must be a kept key of that document, else 400 invalid_request, reason unknown_kept_key, details ["key:<path>"], nothing
+        saved. A named key that the sent document carries is saved as sent (removeKeys only stops the keep). v0.18.130 (configDocs.keptKeys;
+        driver_app_config: realtime.oneStream): v0.18.130 (SCS guard re-check follow-up, owner Q-SCS-1 "Keep values, save
+        rest (Rec.)"): the driver document keeps realtime.oneStream (driverOneStream, v0.18.122) when a save leaves out realtime,
+        so the one-live-connection switch never falls back to off by a save from another screen. offers.autoOffline is not
+        listed: every admin save of the driver document starts from the server document and writes offers whole from the Dispatch
+        page that owns it. Publish and Restore are unchanged (Restore names a removed kept key in removeKeys, as for the other
+        documents).'
       tags:
       - Admin · Config
       x-actor:
@@ -12111,9 +12093,7 @@ paths:
         now, and one the live document lacks is left out of the restored document (calls.on and the other calls fields are
         restored as before). The four payout/debt keys are changed in Finance › Payouts settings only. Every other field,
         and every other document, is restored as before. The restored document is saved through the same draft path, so configDocs.keptKeys
-        applies to it too. v0.18.139 (driverPayRequest.setting): CountryRules.driverPayRequest is kept the same way (the switch,
-        the day, the payment link and the minimum amount stay as they are live now). v0.18.139 (driverPayRequest): Restore
-        keeps driverPayRequest (pricingHistory.restoreKeeps).'
+        applies to it too.'
       tags:
       - Admin · Config
       x-actor:
@@ -18645,12 +18625,7 @@ paths:
         already_paid, a click that lost gets 409 owed_changed. Answer: the fresh OwingDriver. v0.18.97 (priceDisplay.payoutSummary.frozenWhenPaid,
         paidToMovera): a payout below 0 whose carried rest this money covers in full is closed as paid (note "Driver paid
         Movera", audit payout.paid) and its Payout.summary is frozen in the same step; the paid_to_movera entry is never in
-        driverGets or moveraGets. v0.18.139 (driverPayRequest): Manual, by the existing admin button ''Driver paid Movera''
-        (POST /admin/drivers/{driverId}/paid-movera, debtModel.driverOwes.paidMovera, v0.18.84 / v0.18.118): the admin sees
-        the payment in the payment company''s own list (the reference names the driver and the month) and records the amount;
-        the entry kind paid_to_movera lowers owed at once, for the wallet, the Pay Movera screen, the owing list and the owes-limit.
-        Nothing is confirmed automatically; no payment company is called by the server. An amount above the owed now is refused
-        as before (400 paid_above_owed).'
+        driverGets or moveraGets.'
       tags:
       - Admin · People
       x-actor:
@@ -19614,33 +19589,71 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
-  /driver/pay-movera:
+  /admin/finance/driver-income:
     get:
-      operationId: getDriverPayMovera
-      summary: What the driver owes Movera and where to pay (monthly pay request)
-      description: 'v0.18.139 (driverPayRequest): GET /driver/pay-movera (driver) → DriverPayMovera { enabled, owedToMovera
-        (Money: what he owes NOW in his country''s currency, the same sum as EarningsReport.moveraBalance.owedToMovera and
-        debtModel.driverOwes.owed), reference, payLink? (only while enabled and set), minAmount? (while enabled), request?
-        { month, askedAt, askedAmount } (his newest request, if any) }. reference = ''<driverId>-<YYYYMM>'' with the month
-        of his newest request, else the current month in the country''s time zone: the text he writes on the payment so Movera
-        finds him. A driver with no country yet: 404 not_found, reason no_country. Driver app, Pay Movera screen (opened from
-        the bell row, the push, and the wallet''s ''You owe Movera'' line): the amount owedToMovera (the server''s, never
-        worked out on the phone), the reference with a copy button, and — while enabled with a payLink and owedToMovera above
-        0 — a button ''Pay Movera'' that opens payLink in the browser. The link is opened as it is: the app adds no amount
-        to it (a payment link may be generic), so the screen tells him to enter the amount and the reference on the payment
-        page. It also says the amount goes down when Movera has confirmed the payment. With nothing owed it shows ''Settled'';
-        while off it shows the amount and ''Settled in your next payout.'' with no button. sv / fr / en. Manual, by the existing
-        admin button ''Driver paid Movera'' (POST /admin/drivers/{driverId}/paid-movera, debtModel.driverOwes.paidMovera,
-        v0.18.84 / v0.18.118): the admin sees the payment in the payment company''s own list (the reference names the driver
-        and the month) and records the amount; the entry kind paid_to_movera lowers owed at once, for the wallet, the Pay
-        Movera screen, the owing list and the owes-limit. Nothing is confirmed automatically; no payment company is called
-        by the server. An amount above the owed now is refused as before (400 paid_above_owed).'
+      operationId: adminDriverIncome
+      summary: Yearly income per driver or company (DAC7, for the accountant)
+      description: 'v0.18.153 (contract.json#driverIncomeYear): Zone scope exactly as adminListFilters (v0.17.2): an entry
+        is in its trip''s zone, else the driver''s first zone; only the admin''s zones count; a zone named outside them is
+        403 forbidden, reason zone_out_of_scope; country alone = the zones of that country the admin covers. A payee row holds
+        only the money of the zones in scope. quarter: totals + quarters[]. month: + months[]. day: + months[] each with days[].
+        trips: + months[] → days[] → trips[] (one line per entry group of a trip). With month, only that month is counted
+        (the year totals are then that month). detail=trips needs month or payeeId: else 400 invalid_request, reason income_detail_too_big.
+        Also 400 income_detail_too_big when the query (all its payees, not one page) holds more than maxTripLines (10 000)
+        trip lines: ask with month or payeeId. 400 invalid_request: reason income_year_invalid (not 4 digits, before 2020
+        or after the current year), income_month_invalid (not YYYY-MM or not in year), unknown_country (no zone of that country),
+        income_detail_too_big; unknown query key: unknown_filter (adminListFilters). 403 zone_out_of_scope. Cursor-paged over
+        the payee rows, ordered by payeeId then currency; nextCursor null on the last page. A page never splits one payee
+        row. The CSV holds every row in the same order. Every download (JSON or CSV) writes one admin audit row: action finance.driver_income.read
+        (JSON) or finance.driver_income.csv (CSV), target driver_income / <year>, detail { year, detail, month?, country?,
+        zoneIds?, payeeId?, format, rows? } (rows: the payee rows of a JSON page; the CSV is streamed, so its row is written
+        before it). No personal data in the detail.'
       tags:
-      - Driver · Account
+      - Admin · Money
       x-actor:
-      - driver
-      x-read-only: true
+      - admin
+      x-permission: finance.read
       parameters:
+      - name: year
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 2020
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
+      - name: detail
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - quarter
+          - month
+          - day
+          - trips
+          default: quarter
+      - name: month
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^\d{4}-\d{2}$
+      - name: payeeId
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/Cursor'
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
       responses:
@@ -19654,7 +19667,150 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DriverPayMovera'
+                $ref: '#/components/schemas/DriverIncomePage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /admin/finance/driver-income.csv:
+    get:
+      operationId: adminDriverIncomeCsv
+      summary: The same as a CSV file for the accountant
+      description: 'v0.18.153 GET /admin/finance/driver-income.csv: same query, permission and scope (no cursor or limit:
+        every payee). text/csv; charset=utf-8, UTF-8 with BOM, streamed (every payee, read 200 at a time; the first 200 are
+        read before the headers go out, so a failure there is a clean JSON error), comma separated, CRLF, header line, one
+        line per payee and level: level (year | quarter | month | day | trip), period, payeeKind, payeeId, name, orgNumber,
+        address, country, currency, bankHolder, bankLast4, driverIds (space separated), partial (true or empty), rides, the
+        money fields in major units with a dot (12.50; TND 3 decimals), and for a trip line: localTime, tripId, zoneId, paymentMethod,
+        lineKind. Content-Disposition attachment; filename movera-driver-income-<year>[-<month>]-<detail>.csv. Formula guard:
+        a text cell that starts with = + - @, a tab or a carriage return gets a leading single quote (''). The same tooBig
+        rule applies. Every download (JSON or CSV) writes one admin audit row: action finance.driver_income.read (JSON) or
+        finance.driver_income.csv (CSV), target driver_income / <year>, detail { year, detail, month?, country?, zoneIds?,
+        payeeId?, format, rows? } (rows: the payee rows of a JSON page; the CSV is streamed, so its row is written before
+        it). No personal data in the detail.'
+      tags:
+      - Admin · Money
+      x-actor:
+      - admin
+      x-permission: finance.read
+      parameters:
+      - name: year
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 2020
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
+      - name: detail
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - quarter
+          - month
+          - day
+          - trips
+          default: quarter
+      - name: month
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^\d{4}-\d{2}$
+      - name: payeeId
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/Id'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: CSV file
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /driver/income-statement:
+    get:
+      operationId: driverIncomeStatement
+      summary: The driver's own year statement
+      description: 'v0.18.153 GET /driver/income-statement?year&detail=month|day|trips&month (signed-in driver) → DriverIncomeStatement
+        { year, detail, month?, items: DriverIncomeRow[] }: only the calling driver''s own payee rows, one per currency, all
+        zones (no zone filter); detail default month; detail=trips needs month (else 400 income_detail_too_big); bank last4
+        only. Same 400 reasons as the admin. A driver with no fleet gets his own row. The OWNER of a fleet (fleets.owner_driver_id)
+        gets the fleet''s row, the same row the accountant files (every driver of the fleet in it). Any other driver of a
+        fleet gets a row with the fleet''s kind, name and orgNumber but only HIS OWN entries in the money, and ownPartOnly
+        true (another driver''s money is never sent to him, as moneyBase.lostDriverPaid.driverView).'
+      tags:
+      - Driver · Money
+      x-actor:
+      - driver
+      parameters:
+      - name: year
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 2020
+      - name: detail
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - month
+          - day
+          - trips
+          default: month
+      - name: month
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^\d{4}-\d{2}$
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverIncomeStatement'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -24678,34 +24834,6 @@ components:
           description: 'v0.18.14: GET /driver/earnings?currency=SEK|EUR: one currency per report (default the currency of
             the driver''s first zone, in that zone''s time zone). EarningsReport gains currency and currencies (every currency
             he earned in during the range, for a kr / € switch). Amounts of another currency are never added in.'
-        moveraBalance:
-          type: object
-          description: 'v0.18.139 (driverWalletBalance): EarningsReport.moveraBalance { owedToMovera: Money, moveraOwesYou:
-            Money } on every GET /driver/earnings, in the report''s currency (EarningsReport.currency; with ?currency=SEK|EUR
-            it is the balance of that currency; kr, EUR and DT are never added). It is the balance NOW: it does not follow
-            ?period, ?from or ?to. Both amounts are 0 or above and at least one of them is 0. One signed sum S per driver
-            and currency, the same expression as debtModel.driverOwes.owed (server src/drivers/owes.ts): his next payout worked
-            out now (payouts.lines of his unpaid entries: every amount, less the cash he already holds for trip and tip entries;
-            a ''Driver paid Movera'' entry adds) plus the rest carried from his open payouts below 0 (status pending or pending_approval;
-            Payout.amount + the paid_to_movera money linked to it after it was made). owedToMovera = max(0, -S), so it is
-            always equal to debtModel.driverOwes.owed of that currency (the number of GET /admin/drivers-owing, of the owes-limit
-            and of the Home line owes_movera_over_limit); moveraOwesYou = max(0, S). When the carry rule of a later version
-            changes debtModel.driverOwes.owed, this field follows it (one expression on the server).'
-          required:
-          - owedToMovera
-          - moveraOwesYou
-          additionalProperties: false
-          properties:
-            owedToMovera:
-              allOf:
-              - $ref: '#/components/schemas/Money'
-              description: 'v0.18.139 (driverWalletBalance): what the driver owes Movera now (= debtModel.driverOwes.owed
-                of the report''s currency); 0 when nothing.'
-            moveraOwesYou:
-              allOf:
-              - $ref: '#/components/schemas/Money'
-              description: 'v0.18.139 (driverWalletBalance): what Movera owes the driver now (his next payout worked out now,
-                less the carried rest); 0 when nothing.'
     AreaZone:
       type: object
       description: 'v0.18.4: one of the driver''s own zones.'
@@ -25229,8 +25357,6 @@ components:
             amount of one bonus campaign (CountryRules.bonusCampaignMax, per country standard or zone, Admin › Pricing › Tips
             & limits, settings.publish). Builder default values (plan §12 D13), admin-changeable. Defaults SE 2 000,00 kr
             (200000 SEK), FR 200,00 € (20000 EUR), TN 200.000 DT (200000 TND). Optional: absent → configDefaults.bonusCampaignMax.'
-        driverPayRequest:
-          $ref: '#/components/schemas/DriverPayRequestSetting'
       x-server-only: true
     FeeRule:
       type: object
@@ -31474,14 +31600,13 @@ components:
             - calls.adminCallRoles
             - calls.phoneProvider
             - driverOwesLimit
-            - driverPayRequest
             - exclusive.reaskAfterSeconds
             - maxRiderDebt
             - payoutMode
             - payoutSchedule
             - radar.reaskAfterSeconds
             - realtime.oneStream
-          maxItems: 10
+          maxItems: 9
           description: 'v0.18.123 (configDocs.keptKeys.removeKeys): ConfigDraftUpdate.removeKeys (optional, array of dotted
             paths): each must be a kept key of that document, else 400 invalid_request, reason unknown_kept_key, details ["key:<path>"],
             nothing saved. A named key that the sent document carries is saved as sent (removeKeys only stops the keep).'
@@ -39196,87 +39321,324 @@ components:
           - string
           - 'null'
           description: Opaque; null on the last page.
-    DriverPayRequestSetting:
+    DriverIncomeTotals:
       type: object
-      description: 'v0.18.139 (driverPayRequest): CountryRules.driverPayRequest { enabled (default false), dayOfMonth (1-28,
-        default 1), payLink (an https:// link, at most 500 characters, '''' = none), minAmount (Money in the country''s currency,
-        0 or above, or null) } on the country standard only (Admin > Pricing > Tips & limits; a zone''s own value is ignored).
-        configDefaults.driverPayRequest: off, day 1, no link, no amount, in every country. Saving enabled true needs payLink
-        (else 400 invalid_request, reason pay_request_needs_link) and minAmount in the country''s currency (else 400 invalid_request,
-        reason pay_request_needs_amount); a dayOfMonth outside 1-28 or a payLink that is not https or is too long is 400 invalid_request,
-        reason pay_request_invalid. A kept key of country_rules (configDocs.keptKeys.country_rules): a whole-document save
-        that leaves it out keeps the stored value, and a Restore or Undo last publish keeps today''s live value, so no other
-        screen switches it off or changes the link by a save. A change applies at once (the next run of the job and the next
-        read of the screen).'
+      description: 'v0.18.153 Every amount is Money in minor units of the row''s currency, read from the earnings entries
+        (the single money base: moneyBase, kpis.money, the same kinds GET /driver/earnings and GET /driver/trips use); no
+        new formula. The paid_to_movera entries (money the driver paid Movera another way, debtModel) are in no field. Never
+        added across currencies: a payee who earned in two currencies has two rows.'
       required:
-      - enabled
+      - rides
+      - grossFares
+      - tips
+      - bonuses
+      - adjustments
+      - pickupPay
+      - feeShare
+      - moveraCommission
+      - moveraFees
+      - netEarnings
+      - cashCollectedByDriver
+      - paidOutByMovera
       properties:
-        enabled:
-          type: boolean
-          description: 'Off by default in every country: nothing is asked until the admin switches it on.'
-          default: false
-        dayOfMonth:
+        rides:
           type: integer
-          minimum: 1
-          maximum: 28
-          description: The day of the month the drivers are asked (from 09:00 in the country's time zone).
-          default: 1
-        payLink:
-          type: string
-          maxLength: 500
-          pattern: ^(https://[^\s]+)?$
-          description: The payment link the Pay Movera button opens (https only; '' = none). Required when enabled.
-          default: ''
-        minAmount:
-          oneOf:
-          - $ref: '#/components/schemas/Money'
-          - type: 'null'
-          description: Only a driver who owes MORE than this is asked. The country's currency, 0 or above; required when enabled.
-      additionalProperties: false
-    DriverPayMovera:
-      type: object
-      description: 'v0.18.139 (driverPayRequest): GET /driver/pay-movera (driver) → DriverPayMovera { enabled, owedToMovera
-        (Money: what he owes NOW in his country''s currency, the same sum as EarningsReport.moveraBalance.owedToMovera and
-        debtModel.driverOwes.owed), reference, payLink? (only while enabled and set), minAmount? (while enabled), request?
-        { month, askedAt, askedAmount } (his newest request, if any) }. reference = ''<driverId>-<YYYYMM>'' with the month
-        of his newest request, else the current month in the country''s time zone: the text he writes on the payment so Movera
-        finds him. A driver with no country yet: 404 not_found, reason no_country.'
-      required:
-      - enabled
-      - owedToMovera
-      - reference
-      properties:
-        enabled:
-          type: boolean
-          description: The country's monthly pay request is on.
-        owedToMovera:
+          minimum: 0
+          description: 'v0.18.153 Number of the payee''s trip entries (kind trip: every paid trip end: completed, ended early
+            by the rider, ended by the driver with the rider on board, admin complete), pay in the car (cash) included.'
+        grossFares:
           allOf:
           - $ref: '#/components/schemas/Money'
-          description: What the driver owes Movera now (= debtModel.driverOwes.owed); 0 when nothing.
-        reference:
+          description: 'v0.18.153 Σ gross of the trip entries: the fare the rider paid without the outstanding_fee line (moneyBase.kpiMoney
+            gross). VAT included, tips not included.'
+        tips:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: v0.18.153 Σ tip entries (cash tips included).
+        bonuses:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: v0.18.153 Σ bonus entries (the trip bonus at the paid end, an admin bonus after it, a lost-driver payment,
+            bonus campaigns).
+        adjustments:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: v0.18.153 Σ adjustment entries (Movera's pay changes, an admin's driverPay change, a refund taken back
+            from the driver; may be negative).
+        pickupPay:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: v0.18.153 Σ pickup_pay entries (Movera-paid pickup km).
+        feeShare:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.153 Σ fee_share entries: the driver''s share of cancel and no-show fees.'
+        moveraCommission:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.153 Σ commission of the trip entries: what Movera kept at each trip''s paid end (moneyBase.commission,
+            the one formula fare − debtCollected − driverEarnings − pickupPay − driverBonus).'
+        moveraFees:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: v0.18.153 Movera's share of the cancel and no-show fees the payee got a fee_share of (the fee trip's
+            commission, as Payout.summary moveraGets reads it).
+        netEarnings:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.153 What the payee earned: Σ the entries of the kinds trip, pickup_pay, fee_share, tip, adjustment
+            and bonus. netEarnings = GET /driver/earnings net for the same period (the same entries, by the same entry time).
+            This is the DAC7 consideration.'
+        cashCollectedByDriver:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: 'v0.18.153 Σ cash of the trip and tip entries: money the driver took in the car (pay in the car). Part
+            of netEarnings already in his hand.'
+        paidOutByMovera:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: v0.18.153 Σ max(0, payouts.amount_minor) of the payee's drivers' payouts marked paid, counted on the
+            zone-local day of payouts.paid_at (the payout's zone, else the driver's first zone, else his country); never below
+            0 (a payout where the driver owed Movera pays nothing out). Not derived from the entries. A pending payout never
+            counts.
+    DriverIncomeTripLine:
+      allOf:
+      - $ref: '#/components/schemas/DriverIncomeTotals'
+      - type: object
+        required:
+        - localTime
+        - lineKind
+        - tripId
+        - zoneId
+        - paymentMethod
+        properties:
+          localTime:
+            type: string
+            pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$
+            description: 'Zone-local time ''YYYY-MM-DDTHH:MM'' the line''s money was credited (a payout: paid).'
+          lineKind:
+            type: string
+            enum:
+            - trip
+            - credit
+            - payout
+          tripId:
+            type:
+            - string
+            - 'null'
+            description: The trip; null for an entry with no trip (a bonus campaign).
+          zoneId:
+            type:
+            - string
+            - 'null'
+          paymentMethod:
+            type:
+            - string
+            - 'null'
+            description: The trip's payment method (cash = pay in the car); null with no trip.
+      description: 'v0.18.153 One trip line (detail trips): The totals add up exactly at every level: Σ trip lines = the day,
+        Σ days = the month, Σ months = the quarter, Σ quarters = the year, for every money field and rides, because every
+        level is the sum of the same rows. A day or month with nothing is left out. In the trips detail each line has lineKind:
+        trip (the trip''s own entries credited that day: the trip entry and what came with it; tripId and paymentMethod of
+        the trip), credit (money credited that day without the trip entry: a later tip, pay change or bonus of a trip, shown
+        with that trip''s tripId, rides 0; or an entry with no trip such as a bonus campaign, tripId null) or payout (one
+        paid payout: paidOutByMovera only, tripId null).'
+    DriverIncomeDay:
+      allOf:
+      - $ref: '#/components/schemas/DriverIncomeTotals'
+      - type: object
+        required:
+        - day
+        properties:
+          day:
+            type: string
+            pattern: ^\d{4}-\d{2}-\d{2}$
+          trips:
+            type: array
+            items:
+              $ref: '#/components/schemas/DriverIncomeTripLine'
+            description: detail trips only.
+      description: v0.18.153 One zone-local day.
+    DriverIncomeMonth:
+      allOf:
+      - $ref: '#/components/schemas/DriverIncomeTotals'
+      - type: object
+        required:
+        - month
+        properties:
+          month:
+            type: string
+            pattern: ^\d{4}-\d{2}$
+          days:
+            type: array
+            items:
+              $ref: '#/components/schemas/DriverIncomeDay'
+            description: detail day and trips only.
+      description: v0.18.153 One month.
+    DriverIncomeQuarter:
+      allOf:
+      - $ref: '#/components/schemas/DriverIncomeTotals'
+      - type: object
+        required:
+        - quarter
+        properties:
+          quarter:
+            type: integer
+            minimum: 1
+            maximum: 4
+      description: v0.18.153 One quarter (Q1 = January-March).
+    DriverIncomeRow:
+      allOf:
+      - $ref: '#/components/schemas/DriverIncomeTotals'
+      - type: object
+        required:
+        - kind
+        - payeeId
+        - name
+        - orgNumber
+        - address
+        - country
+        - currency
+        - bank
+        - driverIds
+        - quarters
+        properties:
+          kind:
+            type: string
+            enum:
+            - company
+            - driver
+          payeeId:
+            type: string
+            description: The fleetId (company) or the driverId (driver).
+          name:
+            type: string
+          orgNumber:
+            type:
+            - string
+            - 'null'
+          address:
+            type:
+            - string
+            - 'null'
+          country:
+            type:
+            - string
+            - 'null'
+            pattern: ^[A-Z]{2}$
+          currency:
+            $ref: '#/components/schemas/CurrencyCode'
+          bank:
+            oneOf:
+            - type: object
+              required:
+              - holder
+              - last4
+              properties:
+                holder:
+                  type: string
+                last4:
+                  type: string
+                  pattern: ^[0-9A-Z]{1,4}$
+            - type: 'null'
+            description: Holder and last 4 only, never the full account; null when not stored as data.
+          driverIds:
+            type: array
+            items:
+              $ref: '#/components/schemas/Id'
+          ownPartOnly:
+            type: boolean
+            description: A driver with no fleet gets his own row. The OWNER of a fleet (fleets.owner_driver_id) gets the fleet's
+              row, the same row the accountant files (every driver of the fleet in it). Any other driver of a fleet gets a
+              row with the fleet's kind, name and orgNumber but only HIS OWN entries in the money, and ownPartOnly true (another
+              driver's money is never sent to him, as moneyBase.lostDriverPaid.driverView).
+          partial:
+            type: boolean
+            description: 'v0.18.153 review SHOULD-4: on a zone-limited answer (an admin with some zones, or a zoneId / zoneIds
+              / country filter) a payee row whose payee also has money rows (entries or paid payouts) outside those zones,
+              or with no zone, in the same period carries partial: true; the row holds only the zones in scope. Absent otherwise.
+              Admin shows ''Only your zones'' with an (i); the CSV has a partial column (true or empty). The driver''s statement
+              is never partial.'
+          quarters:
+            type: array
+            items:
+              $ref: '#/components/schemas/DriverIncomeQuarter'
+          months:
+            type: array
+            items:
+              $ref: '#/components/schemas/DriverIncomeMonth'
+            description: detail month, day and trips.
+      description: 'v0.18.153 One row per payee per currency. The payee is the driver''s company when he drives for one (his
+        fleet: kind company, payeeId = the fleetId, name, orgNumber and address of the fleet, every driver of the fleet who
+        earned in the year in driverIds); a driver with no fleet is his own payee (kind driver, payeeId = the driverId, name
+        = his first and last name, orgNumber null, address null: Movera does not store a driver''s home address or ID number
+        yet). The fleet is read as it is now (drivers.fleet_id), for the whole year. country = the fleet''s country, else
+        the driver''s country, else the country of his first zone. bank = { holder, last4 } when Movera stores the payee''s
+        bank details as data, else null; never the full account number. Today bank details are an uploaded document (driverOnboarding.adminActions.bankType),
+        so bank is null until a later job stores them as data. v0.18.153 review SHOULD-1 (coordinator): DAC7 counts what was
+        paid or credited in the period, so each earnings entry is placed on the zone-local day of its OWN time (earnings_entries.at,
+        when it was credited), exactly as GET /driver/earnings: in the time zone of its trip''s zone, else the driver''s first
+        zone, else his country''s (payouts.schedule.countryTimeZones), else Europe/Stockholm. A paid payout is placed on its
+        paid_at. The year, quarter (Q1 = January-March), month (YYYY-MM) and day (YYYY-MM-DD) come from that local day. A
+        tip or a pay change credited in January on a December trip belongs to the new year; the old year''s totals do not
+        move.'
+    DriverIncomePage:
+      type: object
+      description: v0.18.153 Page of GET /admin/finance/driver-income.
+      required:
+      - year
+      - detail
+      - items
+      - nextCursor
+      - generatedAt
+      properties:
+        year:
+          type: integer
+          minimum: 2020
+        detail:
           type: string
-          maxLength: 80
-          description: '''<driverId>-<YYYYMM>'': the text he writes on the payment.'
-        payLink:
-          type: string
-          maxLength: 500
-          description: 'Only while enabled and set: opened as it is (no amount added).'
-        minAmount:
-          $ref: '#/components/schemas/Money'
-        request:
-          type: object
-          description: His newest monthly request, if any.
-          required:
+          enum:
+          - quarter
           - month
-          - askedAt
-          - askedAmount
-          properties:
-            month:
-              type: string
-              pattern: ^\d{4}-\d{2}$
-            askedAt:
-              $ref: '#/components/schemas/Timestamp'
-            askedAmount:
-              $ref: '#/components/schemas/Money'
-          additionalProperties: false
-      additionalProperties: false
+          - day
+          - trips
+        month:
+          type: string
+          pattern: ^\d{4}-\d{2}$
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DriverIncomeRow'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+        generatedAt:
+          $ref: '#/components/schemas/Timestamp'
+    DriverIncomeStatement:
+      type: object
+      description: 'v0.18.153 GET /driver/income-statement?year&detail=month|day|trips&month (signed-in driver) → DriverIncomeStatement
+        { year, detail, month?, items: DriverIncomeRow[] }: only the calling driver''s own payee rows, one per currency, all
+        zones (no zone filter); detail default month; detail=trips needs month (else 400 income_detail_too_big); bank last4
+        only. Same 400 reasons as the admin.'
+      required:
+      - year
+      - detail
+      - items
+      properties:
+        year:
+          type: integer
+          minimum: 2020
+        detail:
+          type: string
+          enum:
+          - month
+          - day
+          - trips
+        month:
+          type: string
+          pattern: ^\d{4}-\d{2}$
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DriverIncomeRow'

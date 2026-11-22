@@ -80,6 +80,7 @@ import { frC51LiveLocation } from "./fr/c51-live-location.ts";
 import { frC53SosPressTime } from "./fr/c53-sos-press-time.ts";
 import { frC54Sessions } from "./fr/c54-sessions.ts";
 import { frC55OfferBackup } from "./fr/c55-offer-backup.ts";
+import { frC56DriverIncome } from "./fr/c56-driver-income.ts";
 
 /** French. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./fr/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -165,4 +166,5 @@ export const fr: Record<MessageKey, string> = {
   ...frC53SosPressTime,
   ...frC54Sessions,
   ...frC55OfferBackup,
+  ...frC56DriverIncome,
 };

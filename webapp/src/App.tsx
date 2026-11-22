@@ -49,6 +49,7 @@ const OnboardingPage = lazyPage(() => import("./pages/OnboardingPage"), "Onboard
 const PaymentsPage = lazyPage(() => import("./pages/PaymentsPage"), "PaymentsPage");
 const PaymentPage = lazyPage(() => import("./pages/PaymentPage"), "PaymentPage");
 const PayoutsPage = lazyPage(() => import("./pages/PayoutsPage"), "PayoutsPage");
+const DriverIncomePage = lazyPage(() => import("./pages/DriverIncomePage"), "DriverIncomePage");
 const PricingPage = lazyPage(() => import("./pages/PricingPage"), "PricingPage");
 const RecordPage = lazyPage(() => import("./pages/RecordPage"), "RecordPage");
 const ReportsPage = lazyPage(() => import("./pages/ReportsPage"), "ReportsPage");
@@ -86,6 +87,7 @@ function Screen({ id }: { id: string }) {
   if (id === "zones") return <ZonesPage />;
   if (id === "payments") return <PaymentsPage />;
   if (id === "payouts") return <PayoutsPage />;
+  if (id === "driver-income") return <DriverIncomePage />;
   if (id === "pricing") return <PricingPage />;
   if (id === "reservations") return <ReservationsPage />;
   if (id === "reports") return <ReportsPage />;
@@ -219,6 +221,7 @@ function Authed() {
         <Route path="payments" element={<Screen id="payments" />} />
         <Route path="payments/:id" element={<PaymentPage />} />
         <Route path="payouts" element={<Screen id="payouts" />} />
+        <Route path="driver-income" element={<Screen id="driver-income" />} />
         <Route path="payouts/:id" element={<RecordPage kind="payouts" label={tr("Payout")} list="/payouts" back={tr("Back to payouts")} />} />
         <Route path="zones" element={<Screen id="zones" />} />
         <Route path="zones/:zoneId" element={<ZoneDetailPage />} />
