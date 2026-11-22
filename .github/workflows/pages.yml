@@ -73,6 +73,44 @@ jobs:
           echo "${BUILD_SHA}" > _site/app/version.txt
           echo "${BUILD_SHA}" > _site/live/version.txt
 
+      # Owner 2026-11-19 (Rules plan/NEW-SERVER-PLAN.md option a): the REAL admin for the new real server, at
+      # /Admin-panel-movera-dispatch/prod/ (/app/ stays the old redirect to /live/), in the same Pages deploy. Built
+      # only when the repository variable MOVERA_PROD_API_URL is set; while it is not set this step is skipped and
+      # the site is exactly as before. It runs after "Assemble the site": /live/ is already in _site and never changes.
+      # The new server's ADMIN_PANEL_URL is .../Admin-panel-movera-dispatch/prod (password links open /prod/setup-password).
+      - name: Build and add the real admin (new real server)
+        if: ${{ vars.MOVERA_PROD_API_URL != '' }}
+        working-directory: webapp
+        env:
+          VITE_BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          VITE_GOOGLE_MAPS_KEY: ${{ secrets.VITE_GOOGLE_MAPS_KEY }}
+          VITE_ADMIN_API: ${{ vars.MOVERA_PROD_API_URL }}
+          LIVE_API: ${{ vars.MOVERA_LIVE_API_URL }}
+        run: |
+          case "$VITE_ADMIN_API" in https://*) ;; *) echo "::error::MOVERA_PROD_API_URL must start with https://"; exit 1 ;; esac
+          # Never a "real" admin that talks to the test server.
+          if [ "${VITE_ADMIN_API%/}" = "${LIVE_API%/}" ]; then
+            echo "::error::MOVERA_PROD_API_URL is the test server (same as MOVERA_LIVE_API_URL)."
+            exit 1
+          fi
+          # npm ci and the tests already ran in "Test and build the live admin"; only the second build here.
+          npx vite build --base=/Admin-panel-movera-dispatch/prod/
+          mkdir -p ../_site/prod/setup-password
+          cp -r dist/. ../_site/prod/
+          cp ../_site/prod/index.html ../_site/prod/setup-password/index.html
+          echo "${VITE_BUILD_SHA}" > ../_site/prod/version.txt
+          # Deep links under /prod/ must reopen the REAL admin (?p= as for /live/), never the test admin.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('../_site/404.html')
+          s = p.read_text()
+          old = '(function(){var b="/Admin-panel-movera-dispatch/live/";'
+          if s.count(old) != 1:
+              raise SystemExit('404.html deep-link script not found')
+          s = s.replace(old, '(function(){var b="/Admin-panel-movera-dispatch/live/";var r="/Admin-panel-movera-dispatch/prod/";if(location.pathname.indexOf(r)===0){b=r}', 1)
+          p.write_text(s)
+          PY
+
       - uses: actions/configure-pages@v5
         with:
           enablement: true
