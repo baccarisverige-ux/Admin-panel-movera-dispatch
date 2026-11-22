@@ -13,6 +13,7 @@ import { useCountrySettings } from "../config/useCountrySettings";
 import { countrySettingsOf } from "../config/countrySettings";
 import { emergencyLabel } from "../config/emergencyNumbers";
 import { contactsSmsLine } from "../config/sosContactsSms";
+import { pressTimeLines } from "../safety/pressTime";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { AlertOctagon, ArrowLeft, Car, Clock3, FileDown, History, ListChecks, MapPin, MessageSquareText, Phone, PhoneCall, Settings2, ShieldAlert, ShieldCheck, Siren, UserRound, Users } from "lucide-react";
@@ -575,6 +576,8 @@ function CaseView({ item, record, all, ops, store, storeLoading, now, time, trip
           {isLiveData() ? <LiveRevealContacts incidentId={item.id} status={caseIsOpen(item.state) ? "open" : "closed"} /> : null}
           {isLiveData() ? <LiveEmergencyContacts incidentId={item.id} hasDriver={Boolean(item.driverId ?? trip?.driverId)} hasRider={Boolean(rider)} open={caseIsOpen(item.state)} /> : null}
           {/* v0.18.101 §92 (BQ-V34): Incident.contactsSms, what happened to the SMS to the driver's emergency contacts. */}
+          {/* v0.18.148 (sosPressTime): an SOS kept on the phone without network: when it was pressed vs when Movera got it. */}
+          {pressTimeLines(item.pressedAt, item.openedAt, time).map((line) => <p key={line} className="op-help" data-testid="sos-press-time-line"><Clock3 size={13} aria-hidden="true" /> {line}</p>)}
           {item.contactsSms ? <p className="op-help" data-testid="sos-contacts-sms-line"><MessageSquareText size={13} aria-hidden="true" /> {contactsSmsLine(item.contactsSms)}</p> : null}
           {settings.pastCases ? (
             <>

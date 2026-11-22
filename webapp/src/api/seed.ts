@@ -78,6 +78,8 @@ export type DemoRecord = {
   liveRideCheck?: LiveRideCheck;
   /** Live SOS incidents (contract v0.18.101 §92, BQ-V34): Incident.contactsSms, the SMS to the driver's emergency contacts. */
   liveContactsSms?: ContactsSms;
+  /** Live SOS incidents (contract v0.18.148 sosPressTime): Incident.pressedAt, when the SOS that opened the case was pressed. */
+  livePressedAt?: string;
   /** Live build: the record came from the Movera server. Nothing on it may be invented (owner rule, part 3). */
   live?: true;
   /**

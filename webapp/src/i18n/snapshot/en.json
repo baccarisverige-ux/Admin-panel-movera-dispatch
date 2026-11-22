@@ -9460,4 +9460,6 @@
 ["Off: the apps hide Share my location in this zone. Usual value: off until the load test passes.","Off: the apps hide Share my location in this zone. Usual value: off until the load test passes."],
 ["Adjust-pickup banner from","Adjust-pickup banner from"],
 ["0 = off, or 10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.","0 = off, or 10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup."],
-["Live location could not be read from the server for this zone. Reload the page and try again.","Live location could not be read from the server for this zone. Reload the page and try again."]]
+["Live location could not be read from the server for this zone. Reload the page and try again.","Live location could not be read from the server for this zone. Reload the page and try again."],
+["SOS pressed {0} · received by Movera {1}","SOS pressed {0} · received by Movera {1}"],
+["Reached Movera {0} min after the press (the phone had no network).","Reached Movera {0} min after the press (the phone had no network)."]]

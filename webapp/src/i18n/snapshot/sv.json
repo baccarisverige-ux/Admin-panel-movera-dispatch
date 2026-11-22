@@ -9460,4 +9460,6 @@
 ["Off: the apps hide Share my location in this zone. Usual value: off until the load test passes.","Av: apparna döljer Dela min plats i zonen. Vanligt värde: av tills belastningstestet är godkänt."],
 ["Adjust-pickup banner from","Banner för att justera upphämtning från"],
 ["0 = off, or 10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.","0 = av, eller 10 till 500 m. Resenärsappen erbjuder att flytta upphämtningen till resenärens GPS när resenären är längre bort än så från upphämtningen."],
-["Live location could not be read from the server for this zone. Reload the page and try again.","Liveposition kunde inte läsas från servern för den här zonen. Ladda om sidan och försök igen."]]
+["Live location could not be read from the server for this zone. Reload the page and try again.","Liveposition kunde inte läsas från servern för den här zonen. Ladda om sidan och försök igen."],
+["SOS pressed {0} · received by Movera {1}","SOS trycktes {0} · mottaget av Movera {1}"],
+["Reached Movera {0} min after the press (the phone had no network).","Nådde Movera {0} min efter trycket (telefonen hade ingen täckning)."]]

@@ -9460,4 +9460,6 @@
 ["Off: the apps hide Share my location in this zone. Usual value: off until the load test passes.","Désactivé : les applis masquent Partager ma position dans cette zone. Valeur habituelle : désactivé jusqu'à la réussite du test de charge."],
 ["Adjust-pickup banner from","Bandeau d'ajustement de la prise en charge à partir de"],
 ["0 = off, or 10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.","0 = désactivé, ou 10 à 500 m. L'appli passager propose de déplacer la prise en charge à la position GPS du passager quand il est plus loin que cela."],
-["Live location could not be read from the server for this zone. Reload the page and try again.","La position en direct n'a pas pu être lue depuis le serveur pour cette zone. Rechargez la page et réessayez."]]
+["Live location could not be read from the server for this zone. Reload the page and try again.","La position en direct n'a pas pu être lue depuis le serveur pour cette zone. Rechargez la page et réessayez."],
+["SOS pressed {0} · received by Movera {1}","SOS appuyé {0} · reçu par Movera {1}"],
+["Reached Movera {0} min after the press (the phone had no network).","Arrivé chez Movera {0} min après l'appui (le téléphone n'avait pas de réseau)."]]

@@ -142,6 +142,8 @@ export type Case = {
   rideCheck?: LiveRideCheck;
   /** Live SOS (contract v0.18.101 §92, BQ-V34): what happened to the SMS to the driver's emergency contacts. */
   contactsSms?: ContactsSms;
+  /** Live SOS (contract v0.18.148 sosPressTime): when it was pressed on the phone (openedAt = received by Movera). */
+  pressedAt?: number;
 };
 
 const OPEN = new Set(["queued", "taken"]);
@@ -204,6 +206,7 @@ export function caseOf(row: DemoRecord, safety: SafetyBook, ops: IncidentOps, no
     falseAlarm: row.status === "dismissed",
     ...(row.liveRideCheck ? { rideCheck: row.liveRideCheck } : {}),
     ...(row.liveContactsSms ? { contactsSms: row.liveContactsSms } : {}),
+    ...(row.livePressedAt ? { pressedAt: Date.parse(row.livePressedAt) } : {}),
   };
 }
 
