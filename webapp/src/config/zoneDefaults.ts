@@ -42,6 +42,10 @@ export const CONFIG_DEFAULTS = {
   liveLocationShare: false,
   /** v0.18.144: the rider app's adjust-pickup banner shows when the rider is farther than this from the pickup (contract configDefaults.adjustPickupMeters). */
   adjustPickupMeters: 30,
+  /** v0.18.155 driver profile (owner 2026-11-20 "Now build all"): the rider sees the driver profile sheet (contract configDefaults.driverProfileOn). */
+  driverProfileOn: true,
+  /** v0.18.155: written reviews on the profile, each shown only after an admin approves it; off until a zone has moderators (contract configDefaults.driverReviewsOn). */
+  driverReviewsOn: false,
   /** v0.18.122 L20 stream (owner 2026-11-17 "Yes, with switch (Rec.)", off until tested): one live connection per driver phone (contract configDefaults.driverOneStream). */
   driverOneStream: false,
   /**

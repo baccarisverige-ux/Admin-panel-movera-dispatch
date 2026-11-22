@@ -185,6 +185,7 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.promo.autoStop", label: "Turn auto-stop at budget on or off", reason: true, permission: "settings.publish" },
   { id: "admin.review.view", label: "Reviews view", reason: false, permission: "settings.read" },
   { id: "admin.review.rules", label: "Save review rules", reason: true, permission: "settings.publish" },
+  { id: "admin.review.driverReview", label: "Approve or hide a driver review", reason: false, permission: "settings.publish" },
   { id: "admin.message.testSend", label: "Test send", reason: false, permission: "settings.read" },
   { id: "admin.message.mark", label: "Mark delivery", reason: false, permission: "settings.read" },
   { id: "admin.payment.markPaid", label: "Mark payout paid", reason: true, permission: "finance.edit" },
