@@ -36,6 +36,7 @@ import { enC6InAppCalls } from "./en/c6-in-app-calls.ts";
 import { enC8NoDriverNearby } from "./en/c8-no-driver-nearby.ts";
 import { enC9BlockedPairs } from "./en/c9-blocked-pairs.ts";
 import { enC9SameAddress } from "./en/c9-same-address.ts";
+import { enC10RouteChangeSearching } from "./en/c10-route-change-searching.ts";
 import { enC10Lifecycle } from "./en/c10-lifecycle.ts";
 import { enC11BookedWaiting } from "./en/c11-booked-waiting.ts";
 import { enC12AdminMasking } from "./en/c12-admin-masking.ts";
@@ -116,6 +117,7 @@ export const en = {
   ...enC8NoDriverNearby,
   ...enC9BlockedPairs,
   ...enC9SameAddress,
+  ...enC10RouteChangeSearching,
   ...enC10Lifecycle,
   ...enC11BookedWaiting,
   ...enC12AdminMasking,

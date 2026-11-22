@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { searchingChangeLines } from "./routeChangeSearching.ts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, Flag, Headset, ShieldCheck, Shuffle, StickyNote } from "lucide-react";
 import { tr } from "../i18n";
@@ -98,6 +99,7 @@ function Tools({ tripId, facts, hasDriver }: { tripId: string; facts: LiveTripFa
 
   const check = facts?.rideCheck ?? null;
   const change = facts?.routeChange ?? null;
+  const searching = change ? searchingChangeLines(change) : null;
   const driverGets = change ? routeChangeDriverGets(change) : null;
   return (
     <div className="op-actions-grid" data-testid="live-trip-tools">
@@ -113,6 +115,7 @@ function Tools({ tripId, facts, hasDriver }: { tripId: string; facts: LiveTripFa
         <div className="op-action blue" data-testid="trip-route-change">
           <h4><Shuffle size={15} aria-hidden="true" /> {tr("Route change")}</h4>
           <p>{routeStatusText(change.status)}</p>
+          {searching ? <p data-testid="trip-route-change-searching"><b>{searching.title}</b>{searching.pickup ? <> · {tr("New pickup")}: {searching.pickup}</> : null}</p> : null}
           <p>{tr("New destination")}: {change.dropoff.address ?? `${change.dropoff.lat}, ${change.dropoff.lng}`}{change.stops.length ? ` · ${tr("Stops")}: ${change.stops.length}` : ""}</p>
           <p>{tr("New price")}: <b>{liveMoney({ amountMinor: change.totalMinor, currency })}</b> ({change.differenceMinor >= 0 ? "+" : "−"}{liveMoney({ amountMinor: Math.abs(change.differenceMinor), currency })})</p>
           {/* BQ-A29 (v0.18.89 §90 priceDisplay.routeChange): what he gets for the whole trip = TripRouteChange.driverTotal as sent; absent → hidden. */}
