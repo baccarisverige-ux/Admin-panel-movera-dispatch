@@ -73,6 +73,7 @@ import { enC41LaneLate } from "./en/c41-lane-late.ts";
 import { enC49SmsSignIn } from "./en/c49-sms-sign-in.ts";
 import { enC48AccountDeletion } from "./en/c48-account-deletion.ts";
 import { enC50StripeFees } from "./en/c50-stripe-fees.ts";
+import { enC47PayRequest } from "./en/c47-pay-request.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -152,6 +153,7 @@ export const en = {
   ...enC49SmsSignIn,
   ...enC48AccountDeletion,
   ...enC50StripeFees,
+  ...enC47PayRequest,
 } as const;
 
 export type MessageKey = keyof typeof en;

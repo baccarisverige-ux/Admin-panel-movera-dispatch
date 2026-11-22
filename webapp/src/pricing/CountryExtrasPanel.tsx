@@ -11,6 +11,8 @@ import {
   MAX_AMOUNTS,
   addAmount,
   countrySettingsIssues,
+  isPayLink,
+  PAY_LINK_MAX,
   countrySettingsLines,
   countrySettingsOf,
   shownSettingsOf,
@@ -274,6 +276,22 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
                 <small>{tr("The rider can pay an owed fee by card or Apple Pay in the app. Off by default.")}</small>
                 {/* Stripe live mode (owner 2026-11-21, stripeFees.status): the server's Stripe mode, Live / Test / Off + reason. */}
                 <LiveStripeStatus />
+              </div>
+              {/* v0.18.139 driverPayRequest (owner 2026-11-20, TEMPORARY): the monthly pay request, country Standard only, off by default. */}
+              <div className="cx-owes-limit" data-testid="driver-pay-request">
+                <label className="mini-switch">
+                  <input type="checkbox" aria-label={tr("Monthly pay request on")} checked={shown.driverPayRequest.enabled} disabled={!canEdit || !onStandard} onChange={(event) => edit({ driverPayRequest: { ...shown.driverPayRequest, enabled: event.target.checked, minAmount: event.target.checked && shown.driverPayRequest.minAmount === null ? 0 : shown.driverPayRequest.minAmount } })} />
+                  <span aria-hidden="true"><i /></span>
+                  {tr("Monthly pay request")}<SettingInfo id="tips.driverPayRequest" />
+                </label>
+                <NumberField info="tips.driverPayRequest" label={tr("Day of the month")} value={shown.driverPayRequest.dayOfMonth} unit="" step={1} min={1} max={28} disabled={!canEdit || !onStandard} invalid={!Number.isInteger(shown.driverPayRequest.dayOfMonth) || shown.driverPayRequest.dayOfMonth < 1 || shown.driverPayRequest.dayOfMonth > 28} changed={shown.driverPayRequest.dayOfMonth !== saved.driverPayRequest.dayOfMonth} onChange={(dayOfMonth) => edit({ driverPayRequest: { ...shown.driverPayRequest, dayOfMonth } })} />
+                <label className="cx-pay-link" style={{ display: "grid", gap: 4 }}>
+                  <span>{tr("Payment link")}</span>
+                  {/* info-at: tips.driverPayRequest (the card's "i", next to the switch) */}
+                  <input type="url" inputMode="url" data-testid="driver-pay-request-link" aria-label={tr("Payment link")} placeholder="https://" style={{ width: "100%" }} maxLength={PAY_LINK_MAX} value={shown.driverPayRequest.payLink} disabled={!canEdit || !onStandard} aria-invalid={(shown.driverPayRequest.payLink !== "" && !isPayLink(shown.driverPayRequest.payLink)) || (shown.driverPayRequest.enabled && shown.driverPayRequest.payLink === "")} onChange={(event) => edit({ driverPayRequest: { ...shown.driverPayRequest, payLink: event.target.value.trim() } })} />
+                </label>
+                <NumberField info="tips.driverPayRequest" label={tr("Smallest amount to ask for")} value={shown.driverPayRequest.minAmount ?? 0} unit={symbol} step={moneyStep(country)} disabled={!canEdit || !onStandard} invalid={shown.driverPayRequest.enabled && shown.driverPayRequest.minAmount === null} changed={shown.driverPayRequest.minAmount !== saved.driverPayRequest.minAmount} onChange={(minAmount) => edit({ driverPayRequest: { ...shown.driverPayRequest, minAmount: minAmount >= 0 ? minAmount : null } })} />
+                <small>{tr("Temporary: once a month a driver who owes Movera more than this is asked to pay with the link. Record the payment in Drivers › Owe Movera (Driver paid Movera).")}</small>
               </div>
               <small data-testid="driver-bonus-hard-max">{trn("{0} Hard max {1}: the limit can never be higher.", <TrendingUp size={12} aria-hidden="true" />, money(hardMax, country))}</small>
             </div>

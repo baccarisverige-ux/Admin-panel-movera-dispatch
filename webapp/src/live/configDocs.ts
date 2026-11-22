@@ -415,7 +415,7 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; bonusCampaignMax?: number; maxRiderDebt?: number; driverOwesLimit?: { enabled: boolean; max: number | null }; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number; connectTimeoutSeconds?: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }>; sosContactsSms?: boolean; smsSignIn?: { enabled: boolean; dailyCap: number }; riderFeeStripe?: boolean };
+export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; bonusCampaignMax?: number; maxRiderDebt?: number; driverOwesLimit?: { enabled: boolean; max: number | null }; driverPayRequest?: { enabled: boolean; dayOfMonth: number; payLink: string; minAmount: number | null }; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number; connectTimeoutSeconds?: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }>; sosContactsSms?: boolean; smsSignIn?: { enabled: boolean; dailyCap: number }; riderFeeStripe?: boolean };
 
 /**
  * F1 (MONEY, Rules audits/impact/f1-tips-save-payout-mode.md): the keys of a country_rules document the Tips & limits
@@ -434,7 +434,7 @@ export const COUNTRY_RULES_PANEL_KEYS = ["version", "publishedAt", "country", "c
  * on a zone (400 *_country_only). The panel's own Standard-only keys (walletCreditMax, emergencyNumbers,
  * sosContactsSms, smsSignIn) are in COUNTRY_RULES_PANEL_KEYS and only sent on the Standard by the caller.
  */
-export const COUNTRY_RULES_STANDARD_ONLY_KEPT = ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit"] as const;
+export const COUNTRY_RULES_STANDARD_ONLY_KEPT = ["payoutMode", "payoutSchedule", "maxRiderDebt", "driverOwesLimit", "driverPayRequest"] as const;
 /** v0.18.136 stripeFees (DRAFT; not in this admin's contract copy yet): Standard-only too, never in a zone's own rules. */
 export const COUNTRY_RULES_DRAFT_STANDARD_ONLY = ["riderFeeStripe"] as const;
 
@@ -482,6 +482,9 @@ export function countryRulesOf(country: string, currency: CurrencyCode, input: C
     // rebuilt from these inputs, so the standard's save always sends both (a field left out is dropped).
     ...(input.maxRiderDebt !== undefined ? { maxRiderDebt: toMinor(input.maxRiderDebt, currency) } : {}),
     ...(input.driverOwesLimit ? { driverOwesLimit: { enabled: input.driverOwesLimit.enabled, max: input.driverOwesLimit.max !== null && input.driverOwesLimit.max > 0 ? toMinor(input.driverOwesLimit.max, currency) : null } } : {}),
+    // v0.18.139 driverPayRequest (TEMPORARY monthly pay request), on the country standard only: the switch, the day, the
+    // payment link as typed (trimmed) and the minimum in minor units (0 is a real minimum; null = none).
+    ...(input.driverPayRequest ? { driverPayRequest: { enabled: input.driverPayRequest.enabled, dayOfMonth: input.driverPayRequest.dayOfMonth, payLink: input.driverPayRequest.payLink.trim(), minAmount: input.driverPayRequest.minAmount !== null && input.driverPayRequest.minAmount >= 0 ? toMinor(input.driverPayRequest.minAmount, currency) : null } } : {}),
     // v0.18.110 BQ-V44: the largest driver bonus campaign (per country standard or zone; the server refuses above it).
     ...(input.bonusCampaignMax !== undefined ? { bonusCampaignMax: toMinor(input.bonusCampaignMax, currency) } : base?.["bonusCampaignMax"] ? { bonusCampaignMax: base["bonusCampaignMax"] } : {}),
     // v0.18.38 §62 (fix job 8): Tips & limits › Calls; a save without it keeps the stored block.

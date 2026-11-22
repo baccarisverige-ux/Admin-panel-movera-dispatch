@@ -105,7 +105,7 @@ const countryInput = {
   driverPayChangeMax: settings.driverPayChangeMax, bonusCampaignMax: settings.bonusCampaignMax, personLimits: settings.personLimits,
   onTripMinDonePct: settings.onTripMinDonePct, chainLateFreeCancelMin: settings.chainLateFreeCancelMin, calls: settings.calls, chat: settings.chat,
   dontMatchAgain: settings.dontMatchAgain, walletCreditMax: settings.walletCreditMax, maxRiderDebt: settings.maxRiderDebt,
-  driverOwesLimit: settings.driverOwesLimit, emergencyNumbers: settings.emergencyNumbers, sosContactsSms: settings.sosContactsSms, smsSignIn: settings.smsSignIn,
+  driverOwesLimit: settings.driverOwesLimit, driverPayRequest: settings.driverPayRequest, emergencyNumbers: settings.emergencyNumbers, sosContactsSms: settings.sosContactsSms, smsSignIn: settings.smsSignIn,
 };
 
 /** The keys each admin publish of an app document passes to patchChanged (liveSettings.ts publishAppParts callers). */

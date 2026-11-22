@@ -104,8 +104,21 @@ export type CountrySettings = {
    * standard only, default OFF: the rider can pay an owed cancel or no-show fee by card or Apple Pay in the app.
    */
   riderFeeStripe: boolean;
+  /**
+   * v0.18.139 driverPayRequest.setting (owner 2026-11-20 "ask driver monthly to pay how much due to Movera ... link to
+   * pay", "Link sumup for exp"; TEMPORARY): CountryRules.driverPayRequest, country standard only: a switch, the day of
+   * the month (1-28), the payment link (https) and the minimum amount (local money, null = none). Shipped OFF. ON needs
+   * the link (400 pay_request_needs_link) and an amount of 0 or above (400 pay_request_needs_amount).
+   */
+  driverPayRequest: DriverPayRequest;
 };
 export type DriverOwesLimit = { enabled: boolean; max: number | null };
+export type DriverPayRequest = { enabled: boolean; dayOfMonth: number; payLink: string; minAmount: number | null };
+/** contract.json#configDefaults.driverPayRequest: off, day 1, no link, no amount, in every country. */
+export const DRIVER_PAY_REQUEST_DEFAULT: DriverPayRequest = { enabled: false, dayOfMonth: 1, payLink: "", minAmount: null };
+export const PAY_LINK_MAX = 500;
+/** An https link with no white space, at most 500 characters (the server's rule, src/drivers/payRequestSetting.ts). */
+export const isPayLink = (value: unknown): value is string => typeof value === "string" && value.length <= PAY_LINK_MAX && /^https:\/\/[^\s]+$/.test(value) && URL.canParse(value);
 export type PersonLimits = { savedPlacesPerPerson: number; emergencyContactsPerPerson: number };
 export const PERSON_LIMITS_DEFAULT: PersonLimits = { savedPlacesPerPerson: 50, emergencyContactsPerPerson: 10 };
 export const PERSON_LIMITS_RANGE: Record<keyof PersonLimits, [number, number]> = { savedPlacesPerPerson: [1, 500], emergencyContactsPerPerson: [1, 50] };
@@ -155,7 +168,7 @@ export const ON_TRIP_MIN_DONE_PCT_DEFAULT = 70;
 /** v0.18.33 (owner Q5): CountryRules.onTripOffers.lateFreeCancelMin default. */
 export const CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT = 10;
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "mixedCashInCar", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms", "smsSignIn", "maxRiderDebt", "driverOwesLimit", "riderFeeStripe"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "mixedCashInCar", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms", "smsSignIn", "maxRiderDebt", "driverOwesLimit", "riderFeeStripe", "driverPayRequest"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "walletFirst", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
@@ -214,6 +227,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     maxRiderDebt: MAX_RIDER_DEBT[country],
     driverOwesLimit: { ...DRIVER_OWES_LIMIT[country] },
     riderFeeStripe: false,
+    driverPayRequest: { ...DRIVER_PAY_REQUEST_DEFAULT },
   };
 }
 
@@ -271,6 +285,7 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     maxRiderDebt: finite(raw.maxRiderDebt) ? raw.maxRiderDebt : base.maxRiderDebt,
     driverOwesLimit: owesLimitOf(raw.driverOwesLimit, base.driverOwesLimit),
     riderFeeStripe: raw.riderFeeStripe === true,
+    driverPayRequest: payRequestOf(raw.driverPayRequest),
     ...mixedOf(raw.mixedMethods),
     ...mixedTipOf(raw.mixedTipRules),
   };
@@ -282,6 +297,34 @@ function owesLimitOf(stored: unknown, fallback: DriverOwesLimit): DriverOwesLimi
   const raw = stored as Record<string, unknown>;
   if (typeof raw["enabled"] !== "boolean") return { ...fallback };
   return { enabled: raw["enabled"], max: finite(raw["max"]) ? raw["max"] : null };
+}
+
+/** v0.18.139: a stored pay request { enabled, dayOfMonth, payLink, minAmount } in local money; anything else is the default (off). */
+function payRequestOf(stored: unknown): DriverPayRequest {
+  if (!stored || typeof stored !== "object") return { ...DRIVER_PAY_REQUEST_DEFAULT };
+  const raw = stored as Record<string, unknown>;
+  if (typeof raw["enabled"] !== "boolean") return { ...DRIVER_PAY_REQUEST_DEFAULT };
+  // Kept as they are (also a wrong day or link), for the checks to see before Save.
+  return { enabled: raw["enabled"], dayOfMonth: finite(raw["dayOfMonth"]) ? raw["dayOfMonth"] : 1, payLink: typeof raw["payLink"] === "string" ? raw["payLink"] : "", minAmount: finite(raw["minAmount"]) ? raw["minAmount"] : null };
+}
+
+/**
+ * v0.18.139: driverPayRequest of a country_rules document (the standard's) in local money. Missing or not an object is
+ * left out (the panel shows the default: off); a minimum in another currency reads as none.
+ */
+export function payRequestOfRules(document: unknown, country: MarketId): Partial<Pick<CountrySettings, "driverPayRequest">> {
+  const set = (document && typeof document === "object" ? (document as { driverPayRequest?: unknown }).driverPayRequest : undefined) as { enabled?: unknown; dayOfMonth?: unknown; payLink?: unknown; minAmount?: unknown } | undefined;
+  if (!set || typeof set !== "object" || typeof set.enabled !== "boolean") return {};
+  const { currency, minorUnits } = market(country);
+  const min = set.minAmount as { amountMinor?: unknown; currency?: unknown } | null | undefined;
+  return {
+    driverPayRequest: {
+      enabled: set.enabled,
+      dayOfMonth: typeof set.dayOfMonth === "number" ? set.dayOfMonth : 1,
+      payLink: typeof set.payLink === "string" ? set.payLink : "",
+      minAmount: min && typeof min.amountMinor === "number" && min.currency === currency ? min.amountMinor / minorUnits : null,
+    },
+  };
 }
 
 /**
@@ -505,6 +548,14 @@ export function countrySettingsIssues(country: MarketId, settings: CountrySettin
   if (owes.max !== null && (!finite(owes.max) || owes.max < 0)) issues.push(tr("{0}: the driver owes-limit must be above 0.", [name]));
   else if (owes.enabled && !(owes.max !== null && owes.max > 0)) issues.push(tr("{0}: set an amount above 0 to switch the driver owes-limit on.", [name]));
   else if (owes.max !== null && hasMoreDecimals(owes.max, country)) issues.push(tr("{0}: the driver owes-limit has too many decimals.", [name]));
+  // v0.18.139 driverPayRequest: day 1-28, an https link, a minimum of 0 or above; ON needs the link and the minimum.
+  const ask = settings.driverPayRequest;
+  if (!Number.isInteger(ask.dayOfMonth) || ask.dayOfMonth < 1 || ask.dayOfMonth > 28) issues.push(tr("{0}: the day of the monthly pay request must be 1 to 28.", [name]));
+  if (ask.payLink !== "" && !isPayLink(ask.payLink)) issues.push(tr("{0}: the payment link must start with https:// and have no spaces (at most {1} characters).", [name, PAY_LINK_MAX]));
+  else if (ask.enabled && ask.payLink === "") issues.push(tr("{0}: set the payment link to switch the monthly pay request on.", [name]));
+  if (ask.minAmount !== null && (!finite(ask.minAmount) || ask.minAmount < 0)) issues.push(tr("{0}: the smallest amount to ask for must be 0 or above.", [name]));
+  else if (ask.enabled && ask.minAmount === null) issues.push(tr("{0}: set the smallest amount to ask for to switch the monthly pay request on.", [name]));
+  else if (ask.minAmount !== null && hasMoreDecimals(ask.minAmount, country)) issues.push(tr("{0}: the smallest amount to ask for has too many decimals.", [name]));
   // v0.18.26: limits per person, whole numbers in their range.
   for (const key of ["savedPlacesPerPerson", "emergencyContactsPerPerson"] as const) {
     const value = settings.personLimits[key];
@@ -545,6 +596,15 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   if (JSON.stringify(before.driverOwesLimit) !== JSON.stringify(after.driverOwesLimit)) {
     const owes = (limit: DriverOwesLimit) => `${tr(limit.enabled ? "on" : "off")}${limit.max !== null ? `, ${short(limit.max)} ${symbol}` : ""}`;
     lines.push(tr("Driver owes-limit: {0} → {1}", [owes(before.driverOwesLimit), owes(after.driverOwesLimit)]));
+  }
+  // v0.18.139: each part of the monthly pay request on its own line (the link in full: it is where the money goes).
+  const askBefore = before.driverPayRequest, askAfter = after.driverPayRequest;
+  if (askBefore.enabled !== askAfter.enabled) lines.push(tr("Monthly pay request: {0} → {1}", [tr(askBefore.enabled ? "on" : "off"), tr(askAfter.enabled ? "on" : "off")]));
+  if (askBefore.dayOfMonth !== askAfter.dayOfMonth) lines.push(tr("Monthly pay request, day of the month: {0} → {1}", [askBefore.dayOfMonth, askAfter.dayOfMonth]));
+  if (askBefore.payLink !== askAfter.payLink) lines.push(tr("Monthly pay request, payment link: {0} → {1}", [askBefore.payLink || tr("none"), askAfter.payLink || tr("none")]));
+  if (askBefore.minAmount !== askAfter.minAmount) {
+    const amount = (value: number | null) => (value === null ? tr("none") : `${short(value)} ${symbol}`);
+    lines.push(tr("Monthly pay request, smallest amount: {0} → {1}", [amount(askBefore.minAmount), amount(askAfter.minAmount)]));
   }
   if (before.personLimits.savedPlacesPerPerson !== after.personLimits.savedPlacesPerPerson) lines.push(tr("Saved places per person: {0} → {1}", [before.personLimits.savedPlacesPerPerson, after.personLimits.savedPlacesPerPerson]));
   if (before.personLimits.emergencyContactsPerPerson !== after.personLimits.emergencyContactsPerPerson) lines.push(tr("Emergency contacts per person: {0} → {1}", [before.personLimits.emergencyContactsPerPerson, after.personLimits.emergencyContactsPerPerson]));

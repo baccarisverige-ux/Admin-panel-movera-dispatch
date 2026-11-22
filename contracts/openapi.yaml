@@ -1,11 +1,11 @@
-# Movera API v0.18.133 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.139 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.133
+  version: 0.18.139
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.133 in this folder; this file must agree with them.
+    v0.18.139 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.133
+  version: 0.18.139
   source: contract.json
 paths:
   /auth/otp/request:
@@ -118,24 +118,7 @@ paths:
         the app says "Too many wrong codes today. Try again later." with the wait from retryAfterSeconds and disables Send
         code v0.18.119 (S7 W2 Q118, owner OQ-1 "Lock at 60 for 24 h (Rec.)"): also when the number alone reaches 4 × wrongCodesPerDay
         wrong codes in 24 h over all addresses (default 60): then every address gets it for that number, even with the right
-        code, for up to 24 h or until an admin unlocks it (auth.otp.note). The app text and handling are unchanged. v0.18.133
-        (contract.json#smsSignIn): A number that is not a test number gets a real code only when ALL hold: (1) the server
-        has the SMS company''s two keys (serverKeys; set by the owner on the server, never in a repository, never sent to
-        an app or the admin panel); (2) the number is a mobile number of a country Movera serves (countries, mobileNumbers);
-        (3) CountryRules.smsSignIn.enabled of that country''s standard is true. Otherwise the answer is 403 forbidden, reason
-        sign_in_restricted, exactly as before (the apps offer the waiting list). A test number (outside production) never
-        gets an SMS and keeps the fixed test code, whatever the switch says. Cost guard (SMS pumping): per country, the sign-in
-        SMS handed to the SMS company in the last 24 hours are counted, and the new one is booked, in one step per country
-        (two requests at once can never both pass the limit). Counted: accepted, still being sent, and every hand-over the
-        company did not answer or answered with a server error (a time-out, a broken connection, a 5xx answer: it may still
-        have sent and billed it); only an SMS the company answered with a refusal (a 4xx answer) is not counted. At dailyCap
-        the request is refused: 503 unavailable, reason sms_daily_limit, Retry-After = until the oldest leaves the 24 h window
-        (at most 24 h); no code is made and nothing is sent (fail closed). Test numbers are not counted and not stopped. The
-        code is stored first, then the SMS is handed to the SMS company (one try, short time limit) before the answer. Accepted:
-        200 as before (requestId, sessionId, expiresAt, retryAfterSeconds) plus codeLength (codeLengthNote). Refused by the
-        company, answered with an error, or not answered (a time-out or a broken connection): the code is void at once and
-        the answer is 503 unavailable, reason sms_not_sent, Retry-After = auth.otp.retryAfterSeconds; the app may ask again
-        after that wait. The try still counts on the hourly limits.'
+        code, for up to 24 h or until an admin unlocks it (auth.otp.note). The app text and handling are unchanged.'
       tags:
       - Auth
       x-actor:
@@ -3612,6 +3595,15 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+      description: 'v0.18.139 (driverWalletBalance): EarningsReport.moveraBalance { owedToMovera: Money, moveraOwesYou: Money
+        } on every GET /driver/earnings, in the report''s currency (EarningsReport.currency; with ?currency=SEK|EUR it is
+        the balance of that currency; kr, EUR and DT are never added). It is the balance NOW: it does not follow ?period,
+        ?from or ?to. Both amounts are 0 or above and at least one of them is 0. Driver app, Wallet, under the week''s earnings:
+        ''Cash collected'' = cashCollected of the week''s period (0 when the week has no entry); then ''You owe Movera'' with
+        owedToMovera when it is above 0, else ''Movera owes you'' with moveraOwesYou when it is above 0, else ''Settled'';
+        then ''Settled in your next payout.'' All amounts are the server''s: the app never adds or subtracts (never net -
+        cashCollected, never a sum of trips). A report without moveraBalance (an older server) shows the cash line only, no
+        owed line. sv / fr / en, existing texts.'
   /driver/payouts:
     get:
       operationId: listDriverPayouts
@@ -9414,26 +9406,35 @@ paths:
         pricing with invalid CategoryPricing.commissionSteps → invalid_request, reason commission_steps_invalid, details ["step:<index>",
         "problem:<code>"] (not_a_list, too_many_steps, pct_or_amount, up_to_missing, pct_out_of_range, amount_out_of_range,
         above_not_last, last_not_above, up_to_out_of_range, up_to_not_increasing); nothing is saved. v0.18.123 (configDocs.keptKeys;
-        country_rules: payoutMode, payoutSchedule, maxRiderDebt, driverOwesLimit, calls.adminCallRoles, calls.phoneProvider;
-        dispatch: radar.reaskAfterSeconds, exclusive.reaskAfterSeconds): v0.18.123 (SF-F1-3 safe config saves; owner 2026-11-17
-        Q-SCS-1 "Keep values, save rest (Rec.)", 2026-11-16 Q-SCS-2 "No, keep current (Rec.)", Rules audits/impact/safe-config-saves.md
-        §3, decisions/session-2026-11-06.md): PUT /admin/config/{doc} replaces the draft, except the kept keys of the document
-        listed here (dotted paths). A kept key that the stored document (the scope''s draft, else the scope''s own live document)
-        has and the sent document leaves out is kept by the server: its stored value is copied into the draft, the rest is
-        saved as sent. The save is never refused for a missing kept key. A key the request names in removeKeys is really removed
-        (left out as sent). A scope with no own document (a zone on the standard, a first save) has no stored document and
-        keeps nothing, so a Standard-only key never gets into a zone document. The answer (ConfigDraft.keptKeys) and the audit
-        line config.draft (details.kept) list the paths the server kept; both are absent when nothing was kept. Publish is
-        unchanged (the draft is already whole). Rule for later: a field that no whole-document admin screen owns goes on this
-        list in the same contract version that adds it. ConfigDraftUpdate.removeKeys (optional, array of dotted paths): each
-        must be a kept key of that document, else 400 invalid_request, reason unknown_kept_key, details ["key:<path>"], nothing
-        saved. A named key that the sent document carries is saved as sent (removeKeys only stops the keep). v0.18.130 (configDocs.keptKeys;
-        driver_app_config: realtime.oneStream): v0.18.130 (SCS guard re-check follow-up, owner Q-SCS-1 "Keep values, save
-        rest (Rec.)"): the driver document keeps realtime.oneStream (driverOneStream, v0.18.122) when a save leaves out realtime,
-        so the one-live-connection switch never falls back to off by a save from another screen. offers.autoOffline is not
-        listed: every admin save of the driver document starts from the server document and writes offers whole from the Dispatch
-        page that owns it. Publish and Restore are unchanged (Restore names a removed kept key in removeKeys, as for the other
-        documents).'
+        country_rules: payoutMode, payoutSchedule, maxRiderDebt, driverOwesLimit, calls.adminCallRoles, calls.phoneProvider,
+        driverPayRequest; dispatch: radar.reaskAfterSeconds, exclusive.reaskAfterSeconds): v0.18.123 (SF-F1-3 safe config
+        saves; owner 2026-11-17 Q-SCS-1 "Keep values, save rest (Rec.)", 2026-11-16 Q-SCS-2 "No, keep current (Rec.)", Rules
+        audits/impact/safe-config-saves.md §3, decisions/session-2026-11-06.md): PUT /admin/config/{doc} replaces the draft,
+        except the kept keys of the document listed here (dotted paths). A kept key that the stored document (the scope''s
+        draft, else the scope''s own live document) has and the sent document leaves out is kept by the server: its stored
+        value is copied into the draft, the rest is saved as sent. The save is never refused for a missing kept key. A key
+        the request names in removeKeys is really removed (left out as sent). A scope with no own document (a zone on the
+        standard, a first save) has no stored document and keeps nothing, so a Standard-only key never gets into a zone document.
+        The answer (ConfigDraft.keptKeys) and the audit line config.draft (details.kept) list the paths the server kept; both
+        are absent when nothing was kept. Publish is unchanged (the draft is already whole). Rule for later: a field that
+        no whole-document admin screen owns goes on this list in the same contract version that adds it. ConfigDraftUpdate.removeKeys
+        (optional, array of dotted paths): each must be a kept key of that document, else 400 invalid_request, reason unknown_kept_key,
+        details ["key:<path>"], nothing saved. A named key that the sent document carries is saved as sent (removeKeys only
+        stops the keep). v0.18.130 (configDocs.keptKeys; driver_app_config: realtime.oneStream): v0.18.130 (SCS guard re-check
+        follow-up, owner Q-SCS-1 "Keep values, save rest (Rec.)"): the driver document keeps realtime.oneStream (driverOneStream,
+        v0.18.122) when a save leaves out realtime, so the one-live-connection switch never falls back to off by a save from
+        another screen. offers.autoOffline is not listed: every admin save of the driver document starts from the server document
+        and writes offers whole from the Dispatch page that owns it. Publish and Restore are unchanged (Restore names a removed
+        kept key in removeKeys, as for the other documents). v0.18.139 (driverPayRequest): CountryRules.driverPayRequest {
+        enabled (default false), dayOfMonth (1-28, default 1), payLink (an https:// link, at most 500 characters, '''' = none),
+        minAmount (Money in the country''s currency, 0 or above, or null) } on the country standard only (Admin > Pricing
+        > Tips & limits; a zone''s own value is ignored). configDefaults.driverPayRequest: off, day 1, no link, no amount,
+        in every country. Saving enabled true needs payLink (else 400 invalid_request, reason pay_request_needs_link) and
+        minAmount in the country''s currency (else 400 invalid_request, reason pay_request_needs_amount); a dayOfMonth outside
+        1-28 or a payLink that is not https or is too long is 400 invalid_request, reason pay_request_invalid. A kept key
+        of country_rules (configDocs.keptKeys.country_rules): a whole-document save that leaves it out keeps the stored value,
+        and a Restore or Undo last publish keeps today''s live value, so no other screen switches it off or changes the link
+        by a save. A change applies at once (the next run of the job and the next read of the screen).'
       tags:
       - Admin · Config
       x-actor:
@@ -12110,7 +12111,9 @@ paths:
         now, and one the live document lacks is left out of the restored document (calls.on and the other calls fields are
         restored as before). The four payout/debt keys are changed in Finance › Payouts settings only. Every other field,
         and every other document, is restored as before. The restored document is saved through the same draft path, so configDocs.keptKeys
-        applies to it too.'
+        applies to it too. v0.18.139 (driverPayRequest.setting): CountryRules.driverPayRequest is kept the same way (the switch,
+        the day, the payment link and the minimum amount stay as they are live now). v0.18.139 (driverPayRequest): Restore
+        keeps driverPayRequest (pricingHistory.restoreKeeps).'
       tags:
       - Admin · Config
       x-actor:
@@ -18642,7 +18645,12 @@ paths:
         already_paid, a click that lost gets 409 owed_changed. Answer: the fresh OwingDriver. v0.18.97 (priceDisplay.payoutSummary.frozenWhenPaid,
         paidToMovera): a payout below 0 whose carried rest this money covers in full is closed as paid (note "Driver paid
         Movera", audit payout.paid) and its Payout.summary is frozen in the same step; the paid_to_movera entry is never in
-        driverGets or moveraGets.'
+        driverGets or moveraGets. v0.18.139 (driverPayRequest): Manual, by the existing admin button ''Driver paid Movera''
+        (POST /admin/drivers/{driverId}/paid-movera, debtModel.driverOwes.paidMovera, v0.18.84 / v0.18.118): the admin sees
+        the payment in the payment company''s own list (the reference names the driver and the month) and records the amount;
+        the entry kind paid_to_movera lowers owed at once, for the wallet, the Pay Movera screen, the owing list and the owes-limit.
+        Nothing is confirmed automatically; no payment company is called by the server. An amount above the owed now is refused
+        as before (400 paid_above_owed).'
       tags:
       - Admin · People
       x-actor:
@@ -19594,6 +19602,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DriverTripHistoryPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /driver/pay-movera:
+    get:
+      operationId: getDriverPayMovera
+      summary: What the driver owes Movera and where to pay (monthly pay request)
+      description: 'v0.18.139 (driverPayRequest): GET /driver/pay-movera (driver) → DriverPayMovera { enabled, owedToMovera
+        (Money: what he owes NOW in his country''s currency, the same sum as EarningsReport.moveraBalance.owedToMovera and
+        debtModel.driverOwes.owed), reference, payLink? (only while enabled and set), minAmount? (while enabled), request?
+        { month, askedAt, askedAmount } (his newest request, if any) }. reference = ''<driverId>-<YYYYMM>'' with the month
+        of his newest request, else the current month in the country''s time zone: the text he writes on the payment so Movera
+        finds him. A driver with no country yet: 404 not_found, reason no_country. Driver app, Pay Movera screen (opened from
+        the bell row, the push, and the wallet''s ''You owe Movera'' line): the amount owedToMovera (the server''s, never
+        worked out on the phone), the reference with a copy button, and — while enabled with a payLink and owedToMovera above
+        0 — a button ''Pay Movera'' that opens payLink in the browser. The link is opened as it is: the app adds no amount
+        to it (a payment link may be generic), so the screen tells him to enter the amount and the reference on the payment
+        page. It also says the amount goes down when Movera has confirmed the payment. With nothing owed it shows ''Settled'';
+        while off it shows the amount and ''Settled in your next payout.'' with no button. sv / fr / en. Manual, by the existing
+        admin button ''Driver paid Movera'' (POST /admin/drivers/{driverId}/paid-movera, debtModel.driverOwes.paidMovera,
+        v0.18.84 / v0.18.118): the admin sees the payment in the payment company''s own list (the reference names the driver
+        and the month) and records the amount; the entry kind paid_to_movera lowers owed at once, for the wallet, the Pay
+        Movera screen, the owing list and the owes-limit. Nothing is confirmed automatically; no payment company is called
+        by the server. An amount above the owed now is refused as before (400 paid_above_owed).'
+      tags:
+      - Driver · Account
+      x-actor:
+      - driver
+      x-read-only: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverPayMovera'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -24617,6 +24678,34 @@ components:
           description: 'v0.18.14: GET /driver/earnings?currency=SEK|EUR: one currency per report (default the currency of
             the driver''s first zone, in that zone''s time zone). EarningsReport gains currency and currencies (every currency
             he earned in during the range, for a kr / € switch). Amounts of another currency are never added in.'
+        moveraBalance:
+          type: object
+          description: 'v0.18.139 (driverWalletBalance): EarningsReport.moveraBalance { owedToMovera: Money, moveraOwesYou:
+            Money } on every GET /driver/earnings, in the report''s currency (EarningsReport.currency; with ?currency=SEK|EUR
+            it is the balance of that currency; kr, EUR and DT are never added). It is the balance NOW: it does not follow
+            ?period, ?from or ?to. Both amounts are 0 or above and at least one of them is 0. One signed sum S per driver
+            and currency, the same expression as debtModel.driverOwes.owed (server src/drivers/owes.ts): his next payout worked
+            out now (payouts.lines of his unpaid entries: every amount, less the cash he already holds for trip and tip entries;
+            a ''Driver paid Movera'' entry adds) plus the rest carried from his open payouts below 0 (status pending or pending_approval;
+            Payout.amount + the paid_to_movera money linked to it after it was made). owedToMovera = max(0, -S), so it is
+            always equal to debtModel.driverOwes.owed of that currency (the number of GET /admin/drivers-owing, of the owes-limit
+            and of the Home line owes_movera_over_limit); moveraOwesYou = max(0, S). When the carry rule of a later version
+            changes debtModel.driverOwes.owed, this field follows it (one expression on the server).'
+          required:
+          - owedToMovera
+          - moveraOwesYou
+          additionalProperties: false
+          properties:
+            owedToMovera:
+              allOf:
+              - $ref: '#/components/schemas/Money'
+              description: 'v0.18.139 (driverWalletBalance): what the driver owes Movera now (= debtModel.driverOwes.owed
+                of the report''s currency); 0 when nothing.'
+            moveraOwesYou:
+              allOf:
+              - $ref: '#/components/schemas/Money'
+              description: 'v0.18.139 (driverWalletBalance): what Movera owes the driver now (his next payout worked out now,
+                less the carried rest); 0 when nothing.'
     AreaZone:
       type: object
       description: 'v0.18.4: one of the driver''s own zones.'
@@ -25140,26 +25229,8 @@ components:
             amount of one bonus campaign (CountryRules.bonusCampaignMax, per country standard or zone, Admin › Pricing › Tips
             & limits, settings.publish). Builder default values (plan §12 D13), admin-changeable. Defaults SE 2 000,00 kr
             (200000 SEK), FR 200,00 € (20000 EUR), TN 200.000 DT (200000 TND). Optional: absent → configDefaults.bonusCampaignMax.'
-        smsSignIn:
-          type: object
-          description: 'v0.18.133 (contract.json#smsSignIn): CountryRules.smsSignIn { enabled (boolean), dailyCap (integer,
-            dailyCapRange) } of the COUNTRY STANDARD only (standard-<CC>), like sosContactsSms: Admin › Pricing › Tips & limits
-            per country, card "Real SMS sign-in codes" (settings.edit, published with the country_rules document by settings.publish).
-            A zone''s own country_rules carrying it is 400 invalid_request, reason sms_sign_in_country_only; enabled not true
-            / false, dailyCap not a whole number inside dailyCapRange, or another key inside it, is 400 invalid_request, reason
-            invalid_document. Never saved, or a part missing = configDefaults.smsSignIn (off, 200).'
-          properties:
-            enabled:
-              type: boolean
-              description: Real SMS sign-in codes for this country's numbers.
-              default: false
-            dailyCap:
-              type: integer
-              minimum: 10
-              maximum: 100000
-              default: 200
-              description: Sign-in SMS per 24 hours for this country before new codes are refused (sms_daily_limit).
-          additionalProperties: false
+        driverPayRequest:
+          $ref: '#/components/schemas/DriverPayRequestSetting'
       x-server-only: true
     FeeRule:
       type: object
@@ -26301,8 +26372,7 @@ components:
           $ref: '#/components/schemas/Language'
     OtpChallenge:
       type: object
-      description: 'The code lives 300 s; at most 5 attempts. v0.18.133 (contract.json#smsSignIn): it is 4 digits for a test
-        number and 6 digits when sent by SMS (codeLength).'
+      description: The code is 4 digits and lives 300 s; at most 5 attempts.
       required:
       - requestId
       - sessionId
@@ -26319,13 +26389,6 @@ components:
           type: integer
           minimum: 0
           default: 30
-        codeLength:
-          type: integer
-          enum:
-          - 4
-          - 6
-          description: 'v0.18.133 (contract.json#smsSignIn): how many digits this code has: 4 for a test number (auth.otp.codeLength),
-            6 for a code sent by SMS (smsSignIn.codeLength). Missing = 4.'
     OtpVerifyRequest:
       type: object
       required:
@@ -26339,7 +26402,7 @@ components:
           $ref: '#/components/schemas/Id'
         code:
           type: string
-          pattern: ^([0-9]{4}|[0-9]{6})$
+          pattern: ^[0-9]{4}$
         linkToken:
           type: string
           minLength: 1
@@ -31411,13 +31474,14 @@ components:
             - calls.adminCallRoles
             - calls.phoneProvider
             - driverOwesLimit
+            - driverPayRequest
             - exclusive.reaskAfterSeconds
             - maxRiderDebt
             - payoutMode
             - payoutSchedule
             - radar.reaskAfterSeconds
             - realtime.oneStream
-          maxItems: 9
+          maxItems: 10
           description: 'v0.18.123 (configDocs.keptKeys.removeKeys): ConfigDraftUpdate.removeKeys (optional, array of dotted
             paths): each must be a kept key of that document, else 400 invalid_request, reason unknown_kept_key, details ["key:<path>"],
             nothing saved. A named key that the sent document carries is saved as sent (removeKeys only stops the keep).'
@@ -36246,7 +36310,7 @@ components:
           $ref: '#/components/schemas/Id'
         code:
           type: string
-          pattern: ^([0-9]{4}|[0-9]{6})$
+          pattern: ^[0-9]{4}$
     AccountEmailChange:
       type: object
       required:
@@ -39132,3 +39196,87 @@ components:
           - string
           - 'null'
           description: Opaque; null on the last page.
+    DriverPayRequestSetting:
+      type: object
+      description: 'v0.18.139 (driverPayRequest): CountryRules.driverPayRequest { enabled (default false), dayOfMonth (1-28,
+        default 1), payLink (an https:// link, at most 500 characters, '''' = none), minAmount (Money in the country''s currency,
+        0 or above, or null) } on the country standard only (Admin > Pricing > Tips & limits; a zone''s own value is ignored).
+        configDefaults.driverPayRequest: off, day 1, no link, no amount, in every country. Saving enabled true needs payLink
+        (else 400 invalid_request, reason pay_request_needs_link) and minAmount in the country''s currency (else 400 invalid_request,
+        reason pay_request_needs_amount); a dayOfMonth outside 1-28 or a payLink that is not https or is too long is 400 invalid_request,
+        reason pay_request_invalid. A kept key of country_rules (configDocs.keptKeys.country_rules): a whole-document save
+        that leaves it out keeps the stored value, and a Restore or Undo last publish keeps today''s live value, so no other
+        screen switches it off or changes the link by a save. A change applies at once (the next run of the job and the next
+        read of the screen).'
+      required:
+      - enabled
+      properties:
+        enabled:
+          type: boolean
+          description: 'Off by default in every country: nothing is asked until the admin switches it on.'
+          default: false
+        dayOfMonth:
+          type: integer
+          minimum: 1
+          maximum: 28
+          description: The day of the month the drivers are asked (from 09:00 in the country's time zone).
+          default: 1
+        payLink:
+          type: string
+          maxLength: 500
+          pattern: ^(https://[^\s]+)?$
+          description: The payment link the Pay Movera button opens (https only; '' = none). Required when enabled.
+          default: ''
+        minAmount:
+          oneOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+          description: Only a driver who owes MORE than this is asked. The country's currency, 0 or above; required when enabled.
+      additionalProperties: false
+    DriverPayMovera:
+      type: object
+      description: 'v0.18.139 (driverPayRequest): GET /driver/pay-movera (driver) → DriverPayMovera { enabled, owedToMovera
+        (Money: what he owes NOW in his country''s currency, the same sum as EarningsReport.moveraBalance.owedToMovera and
+        debtModel.driverOwes.owed), reference, payLink? (only while enabled and set), minAmount? (while enabled), request?
+        { month, askedAt, askedAmount } (his newest request, if any) }. reference = ''<driverId>-<YYYYMM>'' with the month
+        of his newest request, else the current month in the country''s time zone: the text he writes on the payment so Movera
+        finds him. A driver with no country yet: 404 not_found, reason no_country.'
+      required:
+      - enabled
+      - owedToMovera
+      - reference
+      properties:
+        enabled:
+          type: boolean
+          description: The country's monthly pay request is on.
+        owedToMovera:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          description: What the driver owes Movera now (= debtModel.driverOwes.owed); 0 when nothing.
+        reference:
+          type: string
+          maxLength: 80
+          description: '''<driverId>-<YYYYMM>'': the text he writes on the payment.'
+        payLink:
+          type: string
+          maxLength: 500
+          description: 'Only while enabled and set: opened as it is (no amount added).'
+        minAmount:
+          $ref: '#/components/schemas/Money'
+        request:
+          type: object
+          description: His newest monthly request, if any.
+          required:
+          - month
+          - askedAt
+          - askedAmount
+          properties:
+            month:
+              type: string
+              pattern: ^\d{4}-\d{2}$
+            askedAt:
+              $ref: '#/components/schemas/Timestamp'
+            askedAmount:
+              $ref: '#/components/schemas/Money'
+          additionalProperties: false
+      additionalProperties: false

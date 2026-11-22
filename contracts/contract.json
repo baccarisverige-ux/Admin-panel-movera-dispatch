@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.133",
+  "version": "0.18.139",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -1339,7 +1339,8 @@
         "maxRiderDebt",
         "driverOwesLimit",
         "calls.adminCallRoles",
-        "calls.phoneProvider"
+        "calls.phoneProvider",
+        "driverPayRequest"
       ],
       "dispatch": [
         "radar.reaskAfterSeconds",
@@ -4048,10 +4049,11 @@
     "pickupSpotsOn": true,
     "shareTripOn": true,
     "driverOneStream": false,
-    "smsSignIn": {
+    "driverPayRequest": {
       "enabled": false,
-      "dailyCap": 200,
-      "note": "v0.18.133: CountryRules.smsSignIn never saved (every country)."
+      "dayOfMonth": 1,
+      "payLink": "",
+      "minAmount": null
     }
   },
   "realtime": {
@@ -4471,7 +4473,7 @@
     "list": "GET /admin/config/{doc}/history?zoneId&cursor&limit (settings.read): newest first, ConfigHistoryEntry { version, publishedAt, publishedBy, note?, action: publish | restore, restoredFrom?, document } v0.18.118 (Rules audits/impact/country-undo.md; server branch claude/rules-email-key-browserstack-f5y0p3-cfgundo fad59d5 src/config/scope.ts scopeKey, src/pricing/routes.ts HistoryQuery / RestoreBody, src/config/service.ts configHistory): History names exactly one of zoneId or country (ISO alpha-2: the country's standard), as GET, PUT and publish (configDocs.scope: both or neither → 400 invalid_request, reason scope_required; a country the admin has no zone in → 403 zone_out_of_scope; a country with no zone → 404 country_not_found). An entry of a country's standard carries country instead of zoneId.",
     "restore": "POST /admin/config/{doc}/restore { zoneId, version, expectedVersion, note? } (the publish permission): publishes that version's document again as the next version (action restore, restoredFrom), with every effect of a publish (§6.2 app documents for pricing). Undo last publish = restore the version before the live one. A version not in the history: 404; the live version: 409 invalid_transition (already_live). v0.18.118 (Rules audits/impact/country-undo.md; server branch claude/rules-email-key-browserstack-f5y0p3-cfgundo fad59d5 src/config/scope.ts scopeKey, src/pricing/routes.ts HistoryQuery / RestoreBody, src/config/service.ts configHistory): { zoneId | country, version, expectedVersion, note? }: exactly one of zoneId or country (configDocs.scope, the same reasons as History), so a country's standard is restored (Undo last publish) like a zone's own document.",
     "audit": "one audit row per pricing publish or restore: action config.publish, details { doc, zoneId, version, restoredFrom?, appDocuments: [{ doc, version }] } (the app documents the publish rewrote)",
-    "restoreKeeps": "v0.18.123 (SF-F1-3 safe config saves; owner 2026-11-17 Q-SCS-1 \"Keep values, save rest (Rec.)\", 2026-11-16 Q-SCS-2 \"No, keep current (Rec.)\", Rules audits/impact/safe-config-saves.md §3, decisions/session-2026-11-06.md): a Restore or Undo last publish of country_rules does not bring back the old payoutMode, payoutSchedule, maxRiderDebt or driverOwesLimit (MONEY), nor the old calls.adminCallRoles or calls.phoneProvider (owner 2026-11-17: Undo/Restore keeps the current call settings, the same rule as payout/debt): each takes the value the scope's live document has now, and one the live document lacks is left out of the restored document (calls.on and the other calls fields are restored as before). The four payout/debt keys are changed in Finance › Payouts settings only. Every other field, and every other document, is restored as before. The restored document is saved through the same draft path, so configDocs.keptKeys applies to it too."
+    "restoreKeeps": "v0.18.123 (SF-F1-3 safe config saves; owner 2026-11-17 Q-SCS-1 \"Keep values, save rest (Rec.)\", 2026-11-16 Q-SCS-2 \"No, keep current (Rec.)\", Rules audits/impact/safe-config-saves.md §3, decisions/session-2026-11-06.md): a Restore or Undo last publish of country_rules does not bring back the old payoutMode, payoutSchedule, maxRiderDebt or driverOwesLimit (MONEY), nor the old calls.adminCallRoles or calls.phoneProvider (owner 2026-11-17: Undo/Restore keeps the current call settings, the same rule as payout/debt): each takes the value the scope's live document has now, and one the live document lacks is left out of the restored document (calls.on and the other calls fields are restored as before). The four payout/debt keys are changed in Finance › Payouts settings only. Every other field, and every other document, is restored as before. The restored document is saved through the same draft path, so configDocs.keptKeys applies to it too. v0.18.139 (driverPayRequest.setting): CountryRules.driverPayRequest is kept the same way (the switch, the day, the payment link and the minimum amount stay as they are live now)."
   },
   "categoryCatalog": {
     "note": "v0.7.1 (owner 2026-10-27): one catalog of car types for every country and zone (admin Pricing › Manage categories); each zone switches a category on or off in its pricing document.",
@@ -10567,72 +10569,40 @@
     "rider": "Not affected: the rider app has no offer feed; GET /rider/config/stream and the trip stream are unchanged.",
     "admin": "Admin › Dispatch, per zone: the switch 'One live connection per driver phone' (default off), with an 'i' text (what it does, what it saves, who it affects, when to turn it on, the way back, older apps). It is the way back without an app release."
   },
-  "smsSignIn": {
-    "note": "v0.18.133 (owner 2026-11-19 button \"Yes, build it now (Rec.)\", Rules decisions/session-2026-11-06.md; SMS company 46elks: owner 2026-11-02 \"46elks + Twilio backup\", Rules decisions/servers-test-live.md; impact list Rules audits/impact/sms-sign-in.md; Rule 0; launch Sweden first, RULE D): real sign-in codes by SMS for real phone numbers. Additive; X-Api-Version stays 0.5; no new route, the two OTP calls keep their request shapes and the code request's answer gains one optional field (OtpChallenge.codeLength, see codeLength); no migration. Nothing changes until BOTH conditions of active hold: test numbers and the test code (auth.testSignIn) work exactly as before and every other number is still 403 sign_in_restricted.",
-    "active": "A number that is not a test number gets a real code only when ALL hold: (1) the server has the SMS company's two keys (serverKeys; set by the owner on the server, never in a repository, never sent to an app or the admin panel); (2) the number is a mobile number of a country Movera serves (countries, mobileNumbers); (3) CountryRules.smsSignIn.enabled of that country's standard is true. Otherwise the answer is 403 forbidden, reason sign_in_restricted, exactly as before (the apps offer the waiting list). A test number (outside production) never gets an SMS and keeps the fixed test code, whatever the switch says.",
-    "setting": "CountryRules.smsSignIn { enabled (boolean), dailyCap (integer, dailyCapRange) } of the COUNTRY STANDARD only (standard-<CC>), like sosContactsSms: Admin › Pricing › Tips & limits per country, card \"Real SMS sign-in codes\" (settings.edit, published with the country_rules document by settings.publish). A zone's own country_rules carrying it is 400 invalid_request, reason sms_sign_in_country_only; enabled not true / false, dailyCap not a whole number inside dailyCapRange, or another key inside it, is 400 invalid_request, reason invalid_document. Never saved, or a part missing = configDefaults.smsSignIn (off, 200).",
-    "dailyCapRange": [
-      10,
-      100000
-    ],
-    "serverKeys": [
-      "ELKS_API_USERNAME",
-      "ELKS_API_PASSWORD"
-    ],
-    "serverKeysNote": "The names of the server's environment variables for the 46elks API (HTTPS, basic auth). Only one of the two set, or an empty value: the feature stays off and the server writes one warning at start. SMS_SENDER_NAME (optional) replaces sender; a value 46elks would refuse (not 3-11 letters and digits starting with a letter) is ignored with a warning.",
-    "sender": "Movera",
-    "codeLength": 6,
-    "codeLengthNote": "Owner 2026-11-19 button \"6 digits (Rec.)\" (Rules decisions/session-2026-11-06.md; replaces the 2026-11-02 \"Keep 4 digits\" for REAL SMS codes only): a code sent by SMS has codeLength digits. Unchanged: the fixed test code of a test number (auth.testSignIn.code) and auth.otp.codeLength stay 4 digits, and so does the e-mail change code. The answer of POST /auth/otp/request and POST /account/phone/change (OtpChallenge) carries codeLength = how many digits THIS code has: auth.otp.codeLength for a test number, smsSignIn.codeLength for a code sent by SMS; a phone change that answers without sending (the number already has an account) carries the length a real send to that number would have. An answer without the field (a server before v0.18.133) means auth.otp.codeLength. The rider and driver apps show that many boxes, check the code by itself at the last digit and never guess the length from the phone number, so one app build works with a server that has only test numbers and with one that sends SMS. An app from before v0.18.133 has 4 boxes and cannot enter an SMS code: switch a country on only when the app versions with this rule are the ones in use. POST /auth/otp/verify and POST /account/phone/verify take a code of auth.otp.codeLength or smsSignIn.codeLength digits (any other shape: 400 invalid_otp_code, not counted, as before); a code of the other length than the session's is a wrong code and counts as a try. With codeLength 6 and auth.otp.maxAttempts tries a code is guessed with a chance of 5 in 1 000 000 (4 digits: 5 in 10 000). From v0.18.133 this note decides the shape of a code: the older lines auth.signInErrors.invalid_otp_code (\"not 4 digits\"), deepFix1 signIn (\"Codes stay 4 digits\") and otpFormat (\"not 4 digits\") are kept as released (Rule 21) and now mean the test code; read them as \"not auth.otp.codeLength or smsSignIn.codeLength digits\". A server checks the WHOLE code (nothing before or after it, no line break). POST /account/phone/change to a real number sends a real code by SMS under the same conditions as a sign-in (active, limits, dailyCap): it is a sign-in code; otherSms means the fleet invitation SMS and the SOS contacts SMS only.",
-    "countries": {
-      "+46": "SE",
-      "+33": "FR",
-      "+216": "TN"
-    },
-    "mobileNumbers": {
-      "SE": "^\\+467[02369][0-9]{7}$",
-      "FR": "^\\+33[67][0-9]{8}$",
-      "TN": "^\\+216[2459][0-9]{7}$"
-    },
-    "mobileNumbersNote": "Only a mobile number of the country can get an SMS; each pattern is matched against the WHOLE number (nothing before or after it, no line break). SE: 70, 72, 73, 76 or 79 + 7 digits (not 71 machine numbers, 74 pagers, 75 or 77 service numbers, 78); FR: 6 or 7 + 8 digits; TN: 2, 4, 5 or 9 + 7 digits, after the calling code. The rider and driver apps' phone field already takes only mobile-shaped numbers (for Sweden any 7 + 8 digits; the server is stricter). Any other number of the country (a landline, a service or premium number, a wrong length) is 403 sign_in_restricted and nothing is sent.",
-    "code": "A new random code per request from a cryptographic random source (smsSignIn.codeLength digits, owner 2026-11-19 \"6 digits (Rec.)\"; never the test code: the fixed test code (auth.testSignIn.code) is never the code of a number that is not a test number and never signs one in, in any environment), kept only as a keyed hash, valid auth.otp.expiresSeconds, at most auth.otp.maxAttempts tries, one active code per phone and app (a new code replaces the earlier one), used once (a verified or replaced code is 400 invalid_otp_session). The compare takes the same time for a right and a wrong code. The answers never say whether the number already has an account.",
-    "limits": "Every limit of the test sign-in applies unchanged and counts each SMS asked for, sent or not: auth.otp.retryAfterSeconds between codes, countryLimits.codesPerPhonePerHour, countryLimits.codesPerAddressPerHour, the wrong-code locks (countryLimits.wrongCodesPerDay per number and address, 4 × that per number) and, in production, the write limit in front (rateLimit.key, phone + address; staging and development leave the sign-in calls out of it, as before). The staging fast path of test numbers never applies to a real number.",
-    "dailyCap": "Cost guard (SMS pumping): per country, the sign-in SMS handed to the SMS company in the last 24 hours are counted, and the new one is booked, in one step per country (two requests at once can never both pass the limit). Counted: accepted, still being sent, and every hand-over the company did not answer or answered with a server error (a time-out, a broken connection, a 5xx answer: it may still have sent and billed it); only an SMS the company answered with a refusal (a 4xx answer) is not counted. At dailyCap the request is refused: 503 unavailable, reason sms_daily_limit, Retry-After = until the oldest leaves the 24 h window (at most 24 h); no code is made and nothing is sent (fail closed). Test numbers are not counted and not stopped.",
-    "delivery": "The code is stored first, then the SMS is handed to the SMS company (one try, short time limit) before the answer. Accepted: 200 as before (requestId, sessionId, expiresAt, retryAfterSeconds) plus codeLength (codeLengthNote). Refused by the company, answered with an error, or not answered (a time-out or a broken connection): the code is void at once and the answer is 503 unavailable, reason sms_not_sent, Retry-After = auth.otp.retryAfterSeconds; the app may ask again after that wait. The try still counts on the hourly limits.",
-    "errors": {
-      "sign_in_restricted": "403 forbidden: not active for this number (see active); the apps offer the waiting list as before.",
-      "sms_daily_limit": "503 unavailable (retryable): the country's daily SMS limit is reached (dailyCap). The apps show the text and do not ask again by themselves.",
-      "sms_not_sent": "503 unavailable (retryable): the SMS company did not take the SMS (delivery). The apps show the text and do not ask again by themselves (each new request counts on the hourly limits and may cost an SMS); the person taps Send again."
-    },
-    "language": "The SMS is written in the request's locale when it is sv, fr or en; else the country's language (noticeLanguage.countryDefault: SE sv, FR fr, TN fr); else en.",
-    "texts": {
-      "sms": {
-        "sv": "Movera: din inloggningskod är {code}. Dela den inte med någon.",
-        "fr": "Movera : votre code de connexion est {code}. Ne le partagez avec personne.",
-        "en": "Movera: your sign-in code is {code}. Do not share it with anyone."
+  "driverWalletBalance": {
+    "note": "v0.18.139 (driver wallet D5; owner button 2026-11-20 'Yes, server + app (Rec.)', Rules decisions/session-2026-11-06.md and audits/impact/driver-wallet-cash.md; earlier answers kept: decisions/driver-g10.md item 4 'driver app shows the carried amount in earnings', Q-M3 'Next payout', Q-S5-7 'Carry over', 2026-11-13 14:59 'What he owes Movera'): the driver sees in his wallet the cash he collected this week and what he owes Movera now (or what Movera owes him), as the server counts it. Additive: one optional field on GET /driver/earnings; X-Api-Version stays 0.5; no migration, no admin setting; rider app and admin not affected (the admin already shows the same owed, debtModel.driverOwes.adminList).",
+    "field": "EarningsReport.moveraBalance { owedToMovera: Money, moveraOwesYou: Money } on every GET /driver/earnings, in the report's currency (EarningsReport.currency; with ?currency=SEK|EUR it is the balance of that currency; kr, EUR and DT are never added). It is the balance NOW: it does not follow ?period, ?from or ?to. Both amounts are 0 or above and at least one of them is 0.",
+    "sum": "One signed sum S per driver and currency, the same expression as debtModel.driverOwes.owed (server src/drivers/owes.ts): his next payout worked out now (payouts.lines of his unpaid entries: every amount, less the cash he already holds for trip and tip entries; a 'Driver paid Movera' entry adds) plus the rest carried from his open payouts below 0 (status pending or pending_approval; Payout.amount + the paid_to_movera money linked to it after it was made). owedToMovera = max(0, -S), so it is always equal to debtModel.driverOwes.owed of that currency (the number of GET /admin/drivers-owing, of the owes-limit and of the Home line owes_movera_over_limit); moveraOwesYou = max(0, S). When the carry rule of a later version changes debtModel.driverOwes.owed, this field follows it (one expression on the server).",
+    "cash": "The cash he collected is EarningsPeriod.cashCollected of the same report (the cash of the period's trip and tip entries, the rider's old fee he collected with a fare included): the wallet shows the week's.",
+    "driver": "Driver app, Wallet, under the week's earnings: 'Cash collected' = cashCollected of the week's period (0 when the week has no entry); then 'You owe Movera' with owedToMovera when it is above 0, else 'Movera owes you' with moveraOwesYou when it is above 0, else 'Settled'; then 'Settled in your next payout.' All amounts are the server's: the app never adds or subtracts (never net - cashCollected, never a sum of trips). A report without moveraBalance (an older server) shows the cash line only, no owed line. sv / fr / en, existing texts.",
+    "admin": "Not affected: Finance already lists the same owed (GET /admin/drivers-owing). No setting.",
+    "rider": "Not affected: the rider never sees driver money."
+  },
+  "driverPayRequest": {
+    "note": "v0.18.139 (owner 2026-11-20 \"We are making system temporary so ask driver monthly to pay how much due to Movera, so adding notification and push screen with link to pay\" + pay button \"Link sumup for exp\", Rules decisions/session-2026-11-06.md, audits/impact/driver-wallet-cash.md): a TEMPORARY monthly settlement. Once a month the driver is asked to pay what he owes Movera: a bell notice + push and a 'Pay Movera' screen with the amount, a reference and a button that opens the payment link the admin set (a SumUp link for example). Movera takes no payment in the app. Off by default in every country; while off nothing is asked and nothing changes. The weekly payout rules do not change (Q-M3 'Next payout', Q-S5-7 'Carry over', payoutLines): what he owes is still taken from his next payouts; money he pays by the link lowers what he owes only when an admin records it (confirm).",
+    "setting": "CountryRules.driverPayRequest { enabled (default false), dayOfMonth (1-28, default 1), payLink (an https:// link, at most 500 characters, '' = none), minAmount (Money in the country's currency, 0 or above, or null) } on the country standard only (Admin > Pricing > Tips & limits; a zone's own value is ignored). configDefaults.driverPayRequest: off, day 1, no link, no amount, in every country. Saving enabled true needs payLink (else 400 invalid_request, reason pay_request_needs_link) and minAmount in the country's currency (else 400 invalid_request, reason pay_request_needs_amount); a dayOfMonth outside 1-28 or a payLink that is not https or is too long is 400 invalid_request, reason pay_request_invalid. A kept key of country_rules (configDocs.keptKeys.country_rules): a whole-document save that leaves it out keeps the stored value, and a Restore or Undo last publish keeps today's live value, so no other screen switches it off or changes the link by a save. A change applies at once (the next run of the job and the next read of the screen).",
+    "job": "One recurring server job (timer kind pay_request_scan, hourly, in GET /healthz/jobs like the other recurring jobs). For each country whose live standard has it enabled: on the day dayOfMonth of the month, from 09:00, in the time zone of the country's first zone (the same day only: a month the server missed is not asked late), every driver of that country (Driver.country) whose owed (debtModel.driverOwes.owed, the country's currency) is ABOVE minAmount gets one request for that month. Idempotent: one row per driver and month (driver_pay_requests, primary key driver_id + month 'YYYY-MM'; server migration 0122); a second run, a retry or a second server copy asks nobody twice (insert ... on conflict do nothing; the notice is written only with the new row, in the same transaction). Drivers are read in bounded batches (Rule 33). A driver at or below minAmount, a driver of another country and a country that is off are not asked.",
+    "notice": {
+      "kind": "driver_pay_movera",
+      "deepLink": "movera-driver://pay-movera",
+      "title": {
+        "sv": "Betala Movera",
+        "fr": "Payer Movera",
+        "en": "Pay Movera"
       },
-      "smsNote": "{code} = the code (smsSignIn.codeLength digits). The app name and the code, no link, one SMS part (GSM-7 letters only, under 160 characters).",
-      "smsNotSent": {
-        "sv": "Vi kunde inte skicka sms:et. Kontrollera numret och försök igen.",
-        "fr": "Nous n’avons pas pu envoyer le SMS. Vérifiez le numéro et réessayez.",
-        "en": "We could not send the SMS. Check the number and try again."
+      "body": {
+        "sv": "Du är skyldig Movera {amount}. Öppna för att betala.",
+        "fr": "Vous devez {amount} à Movera. Ouvrez pour payer.",
+        "en": "You owe Movera {amount}. Open to pay."
       },
-      "smsDailyLimit": {
-        "sv": "Vi kan inte skicka fler sms-koder just nu. Försök igen senare.",
-        "fr": "Nous ne pouvons plus envoyer de codes par SMS pour le moment. Réessayez plus tard.",
-        "en": "We cannot send more SMS codes right now. Try again later."
-      }
+      "rule": "One bell notice + push per request, in the driver's language ({amount} = the owed at that moment, moneyDisplay with decimals; data { month, amountMinor, currency }). Tapping the bell row or the push opens the Pay Movera screen."
     },
-    "alert": {
-      "rule": "Admin alert kind system_health (no new kind or setting), one per country book, checked on each alert sweep and right after a refusal: from nearPercent % of dailyCap an important alert (cause system_health:sms_cap_near:<country>), at dailyCap a critical one (cause system_health:sms_cap:<country>); each turns solved by itself when the count falls below its limit. Only for a country whose smsSignIn.enabled is true and where the book's system_health is on.",
-      "nearPercent": 80,
-      "titles": {
-        "near": "Sign-in SMS: {0} of {1} sent in the last 24 hours",
-        "reached": "Sign-in SMS limit reached: {0} of {1} in the last 24 hours. New sign-in codes are stopped"
-      },
-      "detail": "Raise the daily limit in Tips & limits per country if these are real people"
-    },
-    "logs": "The server log and the stored SMS row never hold the code; the log never holds the full phone number (calling code and the last two digits at most). The stored SMS row keeps the text with the code replaced by dots.",
-    "otherSms": "Only sign-in codes use the keys in this version. The fleet invitation SMS and the SOS contacts SMS (sosContactsSms) stay not connected until a later version says so.",
-    "apps": "Contract: this block (errors: the reasons beside auth.signInErrors, which is kept as released), configDefaults.smsSignIn, CountryRules.smsSignIn. Server: the sender, the rules above. Admin: the card with the switch and the daily limit per country, the alert texts. Driver and rider apps: the code field has OtpChallenge.codeLength boxes (sign-in and phone change; 4 when the answer has no codeLength); texts.smsNotSent and texts.smsDailyLimit for the two new reasons on the phone-number and code screens (resend with the countdown, wrong code, expired code, too many tries and the waiting list are unchanged)."
+    "read": "GET /driver/pay-movera (driver) → DriverPayMovera { enabled, owedToMovera (Money: what he owes NOW in his country's currency, the same sum as EarningsReport.moveraBalance.owedToMovera and debtModel.driverOwes.owed), reference, payLink? (only while enabled and set), minAmount? (while enabled), request? { month, askedAt, askedAmount } (his newest request, if any) }. reference = '<driverId>-<YYYYMM>' with the month of his newest request, else the current month in the country's time zone: the text he writes on the payment so Movera finds him. A driver with no country yet: 404 not_found, reason no_country.",
+    "driver": "Driver app, Pay Movera screen (opened from the bell row, the push, and the wallet's 'You owe Movera' line): the amount owedToMovera (the server's, never worked out on the phone), the reference with a copy button, and — while enabled with a payLink and owedToMovera above 0 — a button 'Pay Movera' that opens payLink in the browser. The link is opened as it is: the app adds no amount to it (a payment link may be generic), so the screen tells him to enter the amount and the reference on the payment page. It also says the amount goes down when Movera has confirmed the payment. With nothing owed it shows 'Settled'; while off it shows the amount and 'Settled in your next payout.' with no button. sv / fr / en.",
+    "confirm": "Manual, by the existing admin button 'Driver paid Movera' (POST /admin/drivers/{driverId}/paid-movera, debtModel.driverOwes.paidMovera, v0.18.84 / v0.18.118): the admin sees the payment in the payment company's own list (the reference names the driver and the month) and records the amount; the entry kind paid_to_movera lowers owed at once, for the wallet, the Pay Movera screen, the owing list and the owes-limit. Nothing is confirmed automatically; no payment company is called by the server. An amount above the owed now is refused as before (400 paid_above_owed).",
+    "payouts": "No payout rule changes. Until the admin records a payment, the debt is still inside owed, so a payout made in between takes it from his earnings as before (Q-M3) — with pay-in-car only a payout has nothing to take it from, so the monthly payment is how it is settled. If a payout took the debt before the admin recorded the payment, the admin records what is still owed (not more) and gives the rest back outside the app.",
+    "admin": "Admin > Pricing > Tips & limits, the country standard: a card 'Monthly pay request' with the switch, the day of the month, the payment link and the minimum amount, with an 'i' text. Finance > Drivers who owe Movera is unchanged (the confirm button). sv / fr / en.",
+    "rider": "Not affected: the rider never sees driver money.",
+    "oldApps": "The notice is written for every driver; an older driver app shows the bell row and the push with their texts, and a tap opens nothing new (unknown deep link = the inbox). The route is new, so no older app calls it."
   }
 }
