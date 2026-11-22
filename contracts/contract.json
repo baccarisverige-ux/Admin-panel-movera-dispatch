@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.153",
+  "version": "0.18.154",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -1345,11 +1345,18 @@
         "radar.reaskAfterSeconds",
         "exclusive.reaskAfterSeconds"
       ],
+      "rider_app_config": [
+        "appUpdate.minVersion",
+        "appUpdate.storeUrls"
+      ],
       "driver_app_config": [
-        "realtime.oneStream"
+        "realtime.oneStream",
+        "appUpdate.minVersion",
+        "appUpdate.storeUrls"
       ],
       "driverAppConfigNote": "v0.18.130 (SCS guard re-check follow-up, owner Q-SCS-1 \"Keep values, save rest (Rec.)\"): the driver document keeps realtime.oneStream (driverOneStream, v0.18.122) when a save leaves out realtime, so the one-live-connection switch never falls back to off by a save from another screen. offers.autoOffline is not listed: every admin save of the driver document starts from the server document and writes offers whole from the Dispatch page that owns it. Publish and Restore are unchanged (Restore names a removed kept key in removeKeys, as for the other documents).",
-      "removeKeys": "ConfigDraftUpdate.removeKeys (optional, array of dotted paths): each must be a kept key of that document, else 400 invalid_request, reason unknown_kept_key, details [\"key:<path>\"], nothing saved. A named key that the sent document carries is saved as sent (removeKeys only stops the keep)."
+      "removeKeys": "ConfigDraftUpdate.removeKeys (optional, array of dotted paths): each must be a kept key of that document, else 400 invalid_request, reason unknown_kept_key, details [\"key:<path>\"], nothing saved. A named key that the sent document carries is saved as sent (removeKeys only stops the keep).",
+      "appUpdateNote": "v0.18.154 (P16c minimum app version; owner 2026-11-21 20:30 \"Yes, build it now (Recommended)\", Rules plan/NUMBERS.md P16c; Rule 0; X-Api-Version stays 0.5; additive; no migration; follows v0.18.132; 0.18.133–0.18.153 reserved for other drafts): both app documents keep appUpdate.minVersion and appUpdate.storeUrls (contract.json#appUpdate.keptKeys) when a save leaves them out, so a save from another screen never turns the minimum off."
     },
     "standard": "v0.8.0 (owner 2026-10-27): every country has one standard rider_app_config, driver_app_config, pricing and dispatch, set in the admin, in the country's currency. A zone with no own published document of a kind uses its country's standard of that kind: the server serves it (GET /rider/config, /driver/config) and prices and dispatches with it, with zoneId set to the zone's id and usesStandard: true; its version is the standard's version. A zone with its own published document never uses the standard. Publishing a standard sends config_published (app documents) for every zone of the country that uses it. A zone's first own publish gets version max(own live, standard live) + 1. A standard document carries zoneId \"standard-<CC>\" (e.g. standard-SE) and its country's currency, country and timeZone. GET /admin/config/{doc}?zoneId returns usesStandard: true and the standard as the draft's starting point while the zone has nothing of its own.",
     "countryRules": "v0.8.1 (owner 2026-10-28: Tips & limits apply only to the zones chosen at the top; for the whole country the admin chooses all zones): tips, raiseSteps and driverBonus are the country_rules document { version, publishedAt, country, currency, tips: [AmountOption], raiseSteps: [AmountOption], driverBonus: { defaultLimit, hardMax } }, like the other documents published per zone (?zoneId, the zone's own) or per country (?country, the country's standard). A zone's rules are its own once published for it, else its country's standard (usesStandard: true); a zone with its own rules never uses the standard again until 'Go back to Standard' (useStandard, also for country_rules). Publishing a zone's own rules writes, in the same transaction, RiderAppConfig.tips / raiseSteps and DriverAppConfig.driverBonus of that zone's live and draft app documents; a zone that uses the standard app documents gets its own, copied from the standard with the new values (as publishPricing does), each changed one as its next version with config_published. Publishing the standard rules writes them into the standard app documents and into the own app documents of every zone of the country that has no own rules; zones with their own rules keep them. While a zone's rules (own or standard) are live, PUT and publish of that zone's app documents take those three fields from them, whatever the admin sent; the dispatch driver bonus limit of a trip is its zone's rules. The admin panel publishes to exactly the zones chosen at the top ('All zones' = every zone of the country it may work in, each as its own) and to the standard only when it is chosen.",
@@ -4047,7 +4054,18 @@
     },
     "pickupSpotsOn": true,
     "shareTripOn": true,
-    "driverOneStream": false
+    "driverOneStream": false,
+    "appUpdate": {
+      "note": "v0.18.154 (P16c minimum app version; owner 2026-11-21 20:30 \"Yes, build it now (Recommended)\", Rules plan/NUMBERS.md P16c; Rule 0; X-Api-Version stays 0.5; additive; no migration; follows v0.18.132; 0.18.133–0.18.153 reserved for other drafts): off by default; null on both platforms (contract.json#appUpdate).",
+      "minVersion": {
+        "android": null,
+        "ios": null
+      },
+      "storeUrls": {
+        "android": null,
+        "ios": null
+      }
+    }
   },
   "realtime": {
     "envelope": [
@@ -4213,15 +4231,19 @@
       "documents_not_approved",
       "rate_limited",
       "unavailable",
-      "internal"
+      "internal",
+      "upgrade_required"
     ],
-    "reason": "optional machine-readable detail under a code (snake_case), e.g. invalid_request + invalid_phone, invalid_otp_code, invalid_otp_session; never shown to users as is. v0.15.0: the sign-in reasons are listed in auth.signInErrors. v0.18.5 reasons: invalid_file_content, categories_required, note_required, expiry_too_far, driver_photo_unavailable, legal_country_unknown. v0.18.7 reasons: pickup_move_too_far, pickup_fixed_after_arrival, route_change_not_available. v0.18.8 reasons: pin_required, pin_wrong, pin_locked, pin_not_required, pin_not_now, pin_blocked, pin_trip_over, not_a_no_show. v0.18.24 reason: too_many_requests (429 rate_limited, contract.json#rateLimit). v0.18.30 reasons: invalid_ticket_category, invalid_ticket_body (contract.json#smallFixes.ticketReasons). v0.18.44 reason: dropoff_too_close (400 invalid_request, contract.json#sameAddress). v0.18.49 reason: sign_out_on_trip (409 conflict, contract.json#auth.signOutOnTrip). v0.18.56 reasons: message_too_long, unknown_quick_reply, translate_target_not_allowed (400 invalid_request), translation_off (403 forbidden), coming_soon (503 unavailable) (contract.json#chat, §78). v0.18.64 reason: auto_translate_off (403 forbidden, contract.json#chat.autoTranslate, §85). v0.18.76 reasons: email_needs_code (400 invalid_request), email_not_verified (409 invalid_transition) (contract.json#emailVerified). v0.18.82 reason: fare_is_driver_pay (400 invalid_request, admin adjust / complete sent the old fare field; contract.json#moneyBase.adminFare). v0.18.84 reasons (contract.json#debtModel): rider_debt_above_max (409 conflict, POST /trips pay in car), driver_owes_movera (409 conflict, admin assign of a cash trip to a driver at or over the owes-limit), owed_changed (409 conflict, paid-movera), paid_above_owed and owes_limit_needs_amount (400 invalid_request). v0.18.86 reason: commission_steps_invalid (400 invalid_request, PUT /admin/config/pricing and its publish; details [\"step:<index>\", \"problem:<code>\"], contract.json#commissionSteps.validation). v0.18.93 reasons: driver_away_from_pickup (409, the driver's no-show while the waiting clock is stopped), invalid_auto_arrive_distance (400, contract.json#autoArrive.settings.validation). v0.18.108 reason: not_at_stop (409 invalid_transition, the driver's stop tap or back tap farther than allowed from the stop; contract.json#autoArrive.stops.tap / back)."
+    "reason": "optional machine-readable detail under a code (snake_case), e.g. invalid_request + invalid_phone, invalid_otp_code, invalid_otp_session; never shown to users as is. v0.15.0: the sign-in reasons are listed in auth.signInErrors. v0.18.5 reasons: invalid_file_content, categories_required, note_required, expiry_too_far, driver_photo_unavailable, legal_country_unknown. v0.18.7 reasons: pickup_move_too_far, pickup_fixed_after_arrival, route_change_not_available. v0.18.8 reasons: pin_required, pin_wrong, pin_locked, pin_not_required, pin_not_now, pin_blocked, pin_trip_over, not_a_no_show. v0.18.24 reason: too_many_requests (429 rate_limited, contract.json#rateLimit). v0.18.30 reasons: invalid_ticket_category, invalid_ticket_body (contract.json#smallFixes.ticketReasons). v0.18.44 reason: dropoff_too_close (400 invalid_request, contract.json#sameAddress). v0.18.49 reason: sign_out_on_trip (409 conflict, contract.json#auth.signOutOnTrip). v0.18.56 reasons: message_too_long, unknown_quick_reply, translate_target_not_allowed (400 invalid_request), translation_off (403 forbidden), coming_soon (503 unavailable) (contract.json#chat, §78). v0.18.64 reason: auto_translate_off (403 forbidden, contract.json#chat.autoTranslate, §85). v0.18.76 reasons: email_needs_code (400 invalid_request), email_not_verified (409 invalid_transition) (contract.json#emailVerified). v0.18.82 reason: fare_is_driver_pay (400 invalid_request, admin adjust / complete sent the old fare field; contract.json#moneyBase.adminFare). v0.18.84 reasons (contract.json#debtModel): rider_debt_above_max (409 conflict, POST /trips pay in car), driver_owes_movera (409 conflict, admin assign of a cash trip to a driver at or over the owes-limit), owed_changed (409 conflict, paid-movera), paid_above_owed and owes_limit_needs_amount (400 invalid_request). v0.18.86 reason: commission_steps_invalid (400 invalid_request, PUT /admin/config/pricing and its publish; details [\"step:<index>\", \"problem:<code>\"], contract.json#commissionSteps.validation). v0.18.93 reasons: driver_away_from_pickup (409, the driver's no-show while the waiting clock is stopped), invalid_auto_arrive_distance (400, contract.json#autoArrive.settings.validation). v0.18.108 reason: not_at_stop (409 invalid_transition, the driver's stop tap or back tap farther than allowed from the stop; contract.json#autoArrive.stops.tap / back).",
+    "upgradeRequired": "v0.18.154 (P16c minimum app version; owner 2026-11-21 20:30 \"Yes, build it now (Recommended)\", Rules plan/NUMBERS.md P16c; Rule 0; X-Api-Version stays 0.5; additive; no migration; follows v0.18.132; 0.18.133–0.18.153 reserved for other drafts): upgrade_required is HTTP 426, never retryable; reason app_update_required (contract.json#appUpdate.server)."
   },
   "headers": {
     "Idempotency-Key": "required on every mutation, 16–128 chars",
     "X-Request-Id": "sent by clients, echoed by the server",
     "X-Api-Version": "0.5",
-    "Date": "v0.18.50 §72 (L9): every answer carries Date (the server clock); it is listed in Access-Control-Expose-Headers with X-Request-Id, X-Api-Version and Retry-After, so the web apps can read it (the rider's server-clock correction)."
+    "Date": "v0.18.50 §72 (L9): every answer carries Date (the server clock); it is listed in Access-Control-Expose-Headers with X-Request-Id, X-Api-Version and Retry-After, so the web apps can read it (the rider's server-clock correction).",
+    "X-App-Version": "v0.18.154 (P16c minimum app version; owner 2026-11-21 20:30 \"Yes, build it now (Recommended)\", Rules plan/NUMBERS.md P16c; Rule 0; X-Api-Version stays 0.5; additive; no migration; follows v0.18.132; 0.18.133–0.18.153 reserved for other drafts): optional; the Android / iOS app build version x.y.z (contract.json#appUpdate.headers).",
+    "X-App-Platform": "v0.18.154 (P16c minimum app version; owner 2026-11-21 20:30 \"Yes, build it now (Recommended)\", Rules plan/NUMBERS.md P16c; Rule 0; X-Api-Version stays 0.5; additive; no migration; follows v0.18.132; 0.18.133–0.18.153 reserved for other drafts): optional; android | ios (contract.json#appUpdate.headers)."
   },
   "cancelFees": {
     "note": "v0.8.0 (owner 2026-10-27): DriverAppConfig.cancelFees.driverSharePct, set in Admin › Dispatch per zone: the driver's share of a rider's cancel fee, 0–100, default 100. Movera keeps the rest.",
@@ -5115,85 +5137,6 @@
       "fleets": "Fleet views get only the driver earnings; there is no owners' share.",
       "missing": "A value the server does not send reads \"Not connected yet\" (sv \"Inte kopplad än\"), never 0."
     }
-  },
-  "driverIncomeYear": {
-    "note": "v0.18.153 (P29, owner 2026-11-21 \"Don't only save ! Execute ! Add section in admin all what need and in code and everywhere\" + \"Also another one ( yearly but with monthly details ) and can choose with monthly and daily or monthly and dayly and even all trip per day also\"; Rules LAUNCH-RULE.md row P29, plan/NUMBERS.md P29; Rule 0; X-Api-Version stays 0.5; additive: three new read endpoints, no new status, no change to any existing answer; server migration 0132 (one index, CONCURRENTLY, Rule 46); no admin setting (a read-only report: nothing to adjust); rider app not affected; follows v0.18.132; 0.18.133-0.18.152 reserved for other drafts).",
-    "why": "EU DAC7 (Council Directive (EU) 2021/514; Sweden: lag (2022:1681) om plattformsoperatörers rapportering; France: CGI art. 1649 ter A-E): every year the platform reports what each seller (a driver, or the taxi company he drives for) was paid or credited through the app. The owner's accountant files it to the tax office (Skatteverket in Sweden, DGFiP in France) by 31 January of the next year; Movera gives the accountant a file (CSV) and never builds the tax office's XML. The driver is told what was reported: the driver app shows his own year statement (GET /driver/income-statement).",
-    "payee": "One row per payee per currency. The payee is the driver's company when he drives for one (his fleet: kind company, payeeId = the fleetId, name, orgNumber and address of the fleet, every driver of the fleet who earned in the year in driverIds); a driver with no fleet is his own payee (kind driver, payeeId = the driverId, name = his first and last name, orgNumber null, address null: Movera does not store a driver's home address or ID number yet). The fleet is read as it is now (drivers.fleet_id), for the whole year. country = the fleet's country, else the driver's country, else the country of his first zone. bank = { holder, last4 } when Movera stores the payee's bank details as data, else null; never the full account number. Today bank details are an uploaded document (driverOnboarding.adminActions.bankType), so bank is null until a later job stores them as data.",
-    "money": {
-      "note": "Every amount is Money in minor units of the row's currency, read from the earnings entries (the single money base: moneyBase, kpis.money, the same kinds GET /driver/earnings and GET /driver/trips use); no new formula. The paid_to_movera entries (money the driver paid Movera another way, debtModel) are in no field. Never added across currencies: a payee who earned in two currencies has two rows.",
-      "rides": "Number of the payee's trip entries (kind trip: every paid trip end: completed, ended early by the rider, ended by the driver with the rider on board, admin complete), pay in the car (cash) included.",
-      "grossFares": "Σ gross of the trip entries: the fare the rider paid without the outstanding_fee line (moneyBase.kpiMoney gross). VAT included, tips not included.",
-      "tips": "Σ tip entries (cash tips included).",
-      "bonuses": "Σ bonus entries (the trip bonus at the paid end, an admin bonus after it, a lost-driver payment, bonus campaigns).",
-      "adjustments": "Σ adjustment entries (Movera's pay changes, an admin's driverPay change, a refund taken back from the driver; may be negative).",
-      "pickupPay": "Σ pickup_pay entries (Movera-paid pickup km).",
-      "feeShare": "Σ fee_share entries: the driver's share of cancel and no-show fees.",
-      "moveraCommission": "Σ commission of the trip entries: what Movera kept at each trip's paid end (moneyBase.commission, the one formula fare − debtCollected − driverEarnings − pickupPay − driverBonus).",
-      "moveraFees": "Movera's share of the cancel and no-show fees the payee got a fee_share of (the fee trip's commission, as Payout.summary moveraGets reads it).",
-      "netEarnings": "What the payee earned: Σ the entries of the kinds trip, pickup_pay, fee_share, tip, adjustment and bonus. netEarnings = GET /driver/earnings net for the same period (the same entries, by the same entry time). This is the DAC7 consideration.",
-      "cashCollectedByDriver": "Σ cash of the trip and tip entries: money the driver took in the car (pay in the car). Part of netEarnings already in his hand.",
-      "paidOutByMovera": "Σ max(0, payouts.amount_minor) of the payee's drivers' payouts marked paid, counted on the zone-local day of payouts.paid_at (the payout's zone, else the driver's first zone, else his country); never below 0 (a payout where the driver owed Movera pays nothing out). Not derived from the entries. A pending payout never counts."
-    },
-    "periods": "v0.18.153 review SHOULD-1 (coordinator): DAC7 counts what was paid or credited in the period, so each earnings entry is placed on the zone-local day of its OWN time (earnings_entries.at, when it was credited), exactly as GET /driver/earnings: in the time zone of its trip's zone, else the driver's first zone, else his country's (payouts.schedule.countryTimeZones), else Europe/Stockholm. A paid payout is placed on its paid_at. The year, quarter (Q1 = January-March), month (YYYY-MM) and day (YYYY-MM-DD) come from that local day. A tip or a pay change credited in January on a December trip belongs to the new year; the old year's totals do not move.",
-    "addUp": "The totals add up exactly at every level: Σ trip lines = the day, Σ days = the month, Σ months = the quarter, Σ quarters = the year, for every money field and rides, because every level is the sum of the same rows. A day or month with nothing is left out. In the trips detail each line has lineKind: trip (the trip's own entries credited that day: the trip entry and what came with it; tripId and paymentMethod of the trip), credit (money credited that day without the trip entry: a later tip, pay change or bonus of a trip, shown with that trip's tripId, rides 0; or an entry with no trip such as a bonus campaign, tripId null) or payout (one paid payout: paidOutByMovera only, tripId null).",
-    "partial": "v0.18.153 review SHOULD-4: on a zone-limited answer (an admin with some zones, or a zoneId / zoneIds / country filter) a payee row whose payee also has money rows (entries or paid payouts) outside those zones, or with no zone, in the same period carries partial: true; the row holds only the zones in scope. Absent otherwise. Admin shows 'Only your zones' with an (i); the CSV has a partial column (true or empty). The driver's statement is never partial.",
-    "admin": {
-      "endpoint": "GET /admin/finance/driver-income (permission finance.read) → DriverIncomePage { year, detail, month?, items: DriverIncomeRow[], nextCursor, generatedAt }.",
-      "query": "year (required, 4 digits), country, zoneId / zoneIds (adminListFilters.params), detail = quarter | month | day | trips (default quarter), month (YYYY-MM, inside year), payeeId (a fleetId or a driverId), cursor, limit (payees per page, 1-200, default 50).",
-      "scope": "Zone scope exactly as adminListFilters (v0.17.2): an entry is in its trip's zone, else the driver's first zone; only the admin's zones count; a zone named outside them is 403 forbidden, reason zone_out_of_scope; country alone = the zones of that country the admin covers. A payee row holds only the money of the zones in scope.",
-      "detail": "quarter: totals + quarters[]. month: + months[]. day: + months[] each with days[]. trips: + months[] → days[] → trips[] (one line per entry group of a trip). With month, only that month is counted (the year totals are then that month).",
-      "tooBig": "detail=trips needs month or payeeId: else 400 invalid_request, reason income_detail_too_big. Also 400 income_detail_too_big when the query (all its payees, not one page) holds more than maxTripLines (10 000) trip lines: ask with month or payeeId.",
-      "maxTripLines": 10000,
-      "errors": "400 invalid_request: reason income_year_invalid (not 4 digits, before 2020 or after the current year), income_month_invalid (not YYYY-MM or not in year), unknown_country (no zone of that country), income_detail_too_big; unknown query key: unknown_filter (adminListFilters). 403 zone_out_of_scope.",
-      "paging": "Cursor-paged over the payee rows, ordered by payeeId then currency; nextCursor null on the last page. A page never splits one payee row. The CSV holds every row in the same order.",
-      "csv": "GET /admin/finance/driver-income.csv: same query, permission and scope (no cursor or limit: every payee). text/csv; charset=utf-8, UTF-8 with BOM, streamed (every payee, read 200 at a time; the first 200 are read before the headers go out, so a failure there is a clean JSON error), comma separated, CRLF, header line, one line per payee and level: level (year | quarter | month | day | trip), period, payeeKind, payeeId, name, orgNumber, address, country, currency, bankHolder, bankLast4, driverIds (space separated), partial (true or empty), rides, the money fields in major units with a dot (12.50; TND 3 decimals), and for a trip line: localTime, tripId, zoneId, paymentMethod, lineKind. Content-Disposition attachment; filename movera-driver-income-<year>[-<month>]-<detail>.csv. Formula guard: a text cell that starts with = + - @, a tab or a carriage return gets a leading single quote ('). The same tooBig rule applies.",
-      "audit": "Every download (JSON or CSV) writes one admin audit row: action finance.driver_income.read (JSON) or finance.driver_income.csv (CSV), target driver_income / <year>, detail { year, detail, month?, country?, zoneIds?, payeeId?, format, rows? } (rows: the payee rows of a JSON page; the CSV is streamed, so its row is written before it). No personal data in the detail.",
-      "panel": "Admin › Finance › Driver income (year), next to Payouts: year picker (default last year), the country / zone filters of the top bar, Details: Quarters / Months / Months + days / All trips per day; drill-down payee → months → month → days → day → trips; buttons Download CSV for accountant (the chosen level) and Print; help line 'For your accountant: DAC7 platform report to Skatteverket, due 31 January.'; an (i) text on each column. Live data only: in demo mode the page shows the usual not-connected note."
-    },
-    "driver": {
-      "endpoint": "GET /driver/income-statement?year&detail=month|day|trips&month (signed-in driver) → DriverIncomeStatement { year, detail, month?, items: DriverIncomeRow[] }: only the calling driver's own payee rows, one per currency, all zones (no zone filter); detail default month; detail=trips needs month (else 400 income_detail_too_big); bank last4 only. Same 400 reasons as the admin.",
-      "fleetDriver": "A driver with no fleet gets his own row. The OWNER of a fleet (fleets.owner_driver_id) gets the fleet's row, the same row the accountant files (every driver of the fleet in it). Any other driver of a fleet gets a row with the fleet's kind, name and orgNumber but only HIS OWN entries in the money, and ownPartOnly true (another driver's money is never sent to him, as moneyBase.lostDriverPaid.driverView).",
-      "screen": "Driver app › Earnings › Year statement: year → months → days → trips, the same totals as the server sends; share (the system share sheet) as plain text when the app has a share package."
-    },
-    "texts": {
-      "title": {
-        "en": "Year statement",
-        "sv": "Årsbesked",
-        "fr": "Relevé annuel"
-      },
-      "reported": {
-        "en": "What Movera reports to the tax office for {year}",
-        "sv": "Det Movera rapporterar till Skatteverket för {year}",
-        "fr": "Ce que Movera déclare à l'administration fiscale pour {year}"
-      },
-      "tooBig": {
-        "en": "Too many trips to show at once. Pick a month.",
-        "sv": "För många resor att visa på en gång. Välj en månad.",
-        "fr": "Trop de courses à afficher en une fois. Choisissez un mois."
-      },
-      "badYear": {
-        "en": "Pick a year up to this year.",
-        "sv": "Välj ett år till och med i år.",
-        "fr": "Choisissez une année jusqu'à cette année."
-      },
-      "empty": {
-        "en": "No earnings in this year.",
-        "sv": "Inga intäkter detta år.",
-        "fr": "Aucun revenu cette année."
-      },
-      "helpAdmin": {
-        "en": "For your accountant: DAC7 platform report to Skatteverket, due 31 January.",
-        "sv": "Till din redovisningskonsult: DAC7-rapport till Skatteverket, senast 31 januari.",
-        "fr": "Pour votre comptable : déclaration DAC7 de la plateforme à l'administration fiscale, avant le 31 janvier."
-      },
-      "partial": {
-        "en": "Only your zones",
-        "sv": "Bara dina zoner",
-        "fr": "Seulement vos zones"
-      }
-    },
-    "apps": "Rule 0: contract (this) → server (src/finance/driverIncome.ts + routes; migration 0132 index earnings_at) → admin (Finance › Driver income (year), c56-driver-income) → driver app (Earnings › Year statement) → rider app (no effect: riders earn nothing through the app; no change)."
   },
   "content": {
     "note": "v0.10.0 (owner Content answers 2026-10-28): the admin's Content page publishes texts to the apps. One admin is enough (no second admin). A publish goes only to the zones chosen at the top ('All zones' = every zone of the country).",
@@ -10640,5 +10583,48 @@
     "driver": "realtime.oneStream true: open GET /driver/stream (off-trip and on a trip; the trip stream as before) and give its events to the two existing readers (offers by sequence, settings by kind); do not open the two old streams. false or missing, or GET /driver/stream answers 404 (an older server): the two streams as before, and after a 404 the app does not try the one stream again until it restarts. When the switch changes, the app closes what it holds and opens the other within one settings update.",
     "rider": "Not affected: the rider app has no offer feed; GET /rider/config/stream and the trip stream are unchanged.",
     "admin": "Admin › Dispatch, per zone: the switch 'One live connection per driver phone' (default off), with an 'i' text (what it does, what it saves, who it affects, when to turn it on, the way back, older apps). It is the way back without an app release."
+  },
+  "appUpdate": {
+    "note": "v0.18.154 (P16c minimum app version; owner 2026-11-21 20:30 \"Yes, build it now (Recommended)\", Rules plan/NUMBERS.md P16c; Rule 0; X-Api-Version stays 0.5; additive; no migration; follows v0.18.132; 0.18.133–0.18.153 reserved for other drafts): the admin sets a minimum app version per app (rider_app_config, driver_app_config), per platform (android, ios) and per zone or country Standard. Default off (null). A phone below it sees one full screen \"Update Movera to continue\" with a button to its store; the server refuses booking, go-online and offer accept from it with 426. A driver or rider on a trip is never blocked mid-trip. Why: the first store version must already carry the check, else old phones can never be made to update.",
+    "fields": "RiderAppConfig.appUpdate and DriverAppConfig.appUpdate (the existing AppUpdate object) get two optional keys: minVersion { android: \"x.y.z\" | null, ios: \"x.y.z\" | null } (null or missing = no minimum on that platform) and storeUrls { android: https URL | null, ios: https URL | null } (null or missing = the app's own built-in store link). The older keys minimumVersion, latestVersion and storeUrl keep their old meaning and never block; storeUrl stays a string (Rule 21), so the per-platform links are storeUrls.",
+    "scope": "Per zone, as every key of the app documents: the zone's own live document, else its country Standard (configDocs.standard, the same whole-document rule as the other keys). A zone with its own document does not read the Standard's minimum; set it on the zone too (the admin card shows which one applies).",
+    "validation": "PUT /admin/config/rider_app_config and /driver_app_config (and their publish): appUpdate not an object, minVersion or storeUrls not an object, a platform key other than android / ios, a minVersion that is not null or a semver x.y.z (whole numbers 0-99999, no leading zeros, no suffix), or a store link that is not null or an https URL of at most 500 characters is 400 invalid_request, reason invalid_document. Nothing is saved.",
+    "keptKeys": "appUpdate.minVersion and appUpdate.storeUrls are kept keys of both app documents (configDocs.keptKeys): a save that leaves them out keeps the stored values; removeKeys may name them.",
+    "headers": "The Android and iOS builds of both apps send X-App-Version (their own build version x.y.z, no build number) and X-App-Platform (android | ios) on every API call. The web builds and builds with no version (local \"dev\") send neither.",
+    "compare": "Versions compare number by number (1.10.0 > 1.9.3). Below = lower than minVersion of the phone's platform; equal or higher is OK.",
+    "server": "When both headers are present and valid and the version is below the minimum of that platform in the zone's live document, these calls answer 426 code upgrade_required, reason app_update_required, details [\"platform:<android|ios>\", \"minVersion:<x.y.z>\"], nothing changed: POST /trips (book; rider_app_config of the quote's zone); POST /driver/availability with onlineStatus online while the driver is not on a trip and holds no booked ride (driver_app_config of his zones and last position zone, the highest minimum); POST /offers/{offerId}/accept while the driver has no current trip (driver_app_config of the trip's zone).",
+    "neverRefused": "Never refused for the version: every call about a trip that is already running (trip commands, messages, calls, route change, cancel, rate, tip, its stream), an accept while the driver is on a trip (a next or booked ride), go-online while the driver holds a booked ride (an accepted reservation not started yet: the booked rider depends on him and starting it needs him online), go offline, SOS and safety calls, sign-in / refresh / sign-out, account deletion, config, content, legal and every read.",
+    "missingHeader": "A call with no X-App-Version or X-App-Platform, or with a value that is not valid (an older app, a web build, a local build), is served as before: no check. Known limit: the server cannot force those apps; their full screen still comes from the config.",
+    "apps": "At start and on every config_published, each app compares its own build version with appUpdate.minVersion of its platform in the zone's document. Below: one full screen \"Update Movera to continue\" over every screen with an Update button that opens storeUrls.<platform> (else the built-in store link) and the SOS / emergency button; it goes away only when a newer document says the version is OK. A 426 app_update_required answer shows it too until the next config. Driver: never while a trip is active (accepted, to pickup, arrived, on trip) or a held next ride runs; only a small line, the block when the trip ends. A driver who holds a booked ride not started yet (or whose booked rides are not known yet) never gets the full screen, only the small line, as the server never refuses his go-online. Rider: never while a ride is live; the block at Home when it ends. Web builds and \"dev\" builds are never blocked. The content slot app-versions (§19) keeps working as before; either one below its minimum blocks.",
+    "texts": {
+      "title": {
+        "en": "Update Movera to continue",
+        "sv": "Uppdatera Movera för att fortsätta",
+        "fr": "Mettez à jour Movera pour continuer"
+      },
+      "body": {
+        "en": "This version of the app is too old. Install the latest version from the store to keep using Movera.",
+        "sv": "Den här versionen av appen är för gammal. Installera den senaste versionen från butiken för att fortsätta använda Movera.",
+        "fr": "Cette version de l'application est trop ancienne. Installez la dernière version depuis le store pour continuer à utiliser Movera."
+      },
+      "button": {
+        "en": "Update",
+        "sv": "Uppdatera",
+        "fr": "Mettre à jour"
+      }
+    },
+    "admin": "Settings › Minimum app version (admin area c57; settings.read to see, settings.edit + settings.publish to save): pick a country Standard or a zone; for the rider app and the driver app: Android minimum, iOS minimum (text x.y.z, empty = off), Android store link, iOS store link (https, empty = the app's own link), each with an \"i\" text; the warning line \"Phones below this version must update before they can book or go online.\"; Save publishes appUpdate.minVersion and appUpdate.storeUrls of that scope's rider_app_config and driver_app_config, starting from the server's document (nothing else changes).",
+    "adminTexts": {
+      "title": {
+        "en": "Minimum app version",
+        "sv": "Lägsta appversion",
+        "fr": "Version minimale de l'app"
+      },
+      "warning": {
+        "en": "Phones below this version must update before they can book or go online.",
+        "sv": "Telefoner under den här versionen måste uppdatera innan de kan boka eller gå online.",
+        "fr": "Les téléphones en dessous de cette version doivent faire la mise à jour avant de pouvoir réserver ou se connecter."
+      }
+    }
   }
 }

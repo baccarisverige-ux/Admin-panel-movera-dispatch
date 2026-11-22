@@ -29,7 +29,7 @@ export const SETTING_FILES: Readonly<Record<string, readonly string[]>> = {
     "pricing/SurgeQuickPopup.tsx", "pricing/SurgeSlider.tsx", "pricing/TestRide.tsx",
   ],
   "Tips & limits": ["pricing/CountryExtrasPanel.tsx", "pricing/ChatSettingsCard.tsx", "pricing/EmergencyNumbersEditor.tsx", "pricing/SmsSignInCard.tsx"],
-  "Settings": ["pages/ConfigPage.tsx", "config/CountryAppsPanel.tsx", "config/RequestLimitsPanel.tsx", "platform/SettingsParts.tsx"],
+  "Settings": ["pages/ConfigPage.tsx", "config/CountryAppsPanel.tsx", "config/RequestLimitsPanel.tsx", "config/AppUpdatePanel.tsx", "platform/SettingsParts.tsx"],
   "Dispatch": [
     "pages/DispatchPage.tsx", "pages/DispatchSectionPage.tsx", "dispatch/ActivityView.tsx", "dispatch/AllFeaturesView.tsx", "dispatch/AssignPanel.tsx",
     "dispatch/BookingPolicy.tsx", "dispatch/CancelFeeTable.tsx", "dispatch/CancelReasonsView.tsx", "dispatch/DestinationSettings.tsx",

@@ -1,11 +1,11 @@
-# Movera API v0.18.153 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.154 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.153
+  version: 0.18.154
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.153 in this folder; this file must agree with them.
+    v0.18.154 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.153
+  version: 0.18.154
   source: contract.json
 paths:
   /auth/otp/request:
@@ -692,6 +692,8 @@ paths:
       - $ref: '#/components/parameters/IdempotencyKey'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/AppPlatformHeader'
       requestBody:
         required: true
         content:
@@ -737,6 +739,8 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+        '426':
+          $ref: '#/components/responses/UpgradeRequired'
       description: 'v0.18.44 §67: POST /quotes and POST /trips refuse a drop-off closer than minTripMeters to the pickup:
         400 invalid_request, reason dropoff_too_close, details [''meters=<n>'', ''limitMeters=<m>'']. /trips re-checks with
         the zone''s live value (the admin may have raised it since the quote). The older samePointWarnMeters warning (v0.18.30)
@@ -755,7 +759,17 @@ paths:
         invalid_request, reason trip_too_long (live rides are not limited by it). Q4 ''Charge at booking'': a scheduled trip
         paid by card or apple_pay is charged the full price when it is booked (Trip.paymentStatus captured at POST /trips);
         a free cancel refunds it. Card payments are still ''coming soon'' on live (POST /trips answers payment_method_coming_soon),
-        so nothing is charged until the payment company is connected; the rule is in place for then.'
+        so nothing is charged until the payment company is connected; the rule is in place for then. v0.18.154 (contract.json#appUpdate):
+        When both headers are present and valid and the version is below the minimum of that platform in the zone''s live
+        document, these calls answer 426 code upgrade_required, reason app_update_required, details ["platform:<android|ios>",
+        "minVersion:<x.y.z>"], nothing changed: POST /trips (book; rider_app_config of the quote''s zone); POST /driver/availability
+        with onlineStatus online while the driver is not on a trip and holds no booked ride (driver_app_config of his zones
+        and last position zone, the highest minimum); POST /offers/{offerId}/accept while the driver has no current trip (driver_app_config
+        of the trip''s zone). Never refused for the version: every call about a trip that is already running (trip commands,
+        messages, calls, route change, cancel, rate, tip, its stream), an accept while the driver is on a trip (a next or
+        booked ride), go-online while the driver holds a booked ride (an accepted reservation not started yet: the booked
+        rider depends on him and starting it needs him online), go offline, SOS and safety calls, sign-in / refresh / sign-out,
+        account deletion, config, content, legal and every read.'
   /trips/{tripId}:
     get:
       operationId: getTrip
@@ -2621,7 +2635,16 @@ paths:
         unchanged, as before. From the tap: no new offers of any kind, the on-trip Exclusives after minRouteDonePct (contract.json#afterTestRules,
         live and booked) included. His open offers are withdrawn at once (the withdraw_driver_offers job, as when going offline).
         An accept that still reaches the server is refused 409 conflict reason going_offline. Admin sends skip him (he is
-        on a trip).'
+        on a trip). v0.18.154 (contract.json#appUpdate): When both headers are present and valid and the version is below
+        the minimum of that platform in the zone''s live document, these calls answer 426 code upgrade_required, reason app_update_required,
+        details ["platform:<android|ios>", "minVersion:<x.y.z>"], nothing changed: POST /trips (book; rider_app_config of
+        the quote''s zone); POST /driver/availability with onlineStatus online while the driver is not on a trip and holds
+        no booked ride (driver_app_config of his zones and last position zone, the highest minimum); POST /offers/{offerId}/accept
+        while the driver has no current trip (driver_app_config of the trip''s zone). Never refused for the version: every
+        call about a trip that is already running (trip commands, messages, calls, route change, cancel, rate, tip, its stream),
+        an accept while the driver is on a trip (a next or booked ride), go-online while the driver holds a booked ride (an
+        accepted reservation not started yet: the booked rider depends on him and starting it needs him online), go offline,
+        SOS and safety calls, sign-in / refresh / sign-out, account deletion, config, content, legal and every read.'
       tags:
       - Driver · Session
       x-actor:
@@ -2630,6 +2653,8 @@ paths:
       - $ref: '#/components/parameters/IdempotencyKey'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/AppPlatformHeader'
       requestBody:
         required: true
         content:
@@ -2662,6 +2687,8 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+        '426':
+          $ref: '#/components/responses/UpgradeRequired'
   /driver/location:
     post:
       operationId: postDriverLocation
@@ -2875,7 +2902,17 @@ paths:
       operationId: acceptOffer
       summary: Accept / claim an offer (incl. reservation claim)
       description: 'expectedVersion is the OFFER version. Another driver won → 409 conflict with projection = Offer(status=claimed_elsewhere).
-        Scheduled trip claim: requested → accepted.'
+        Scheduled trip claim: requested → accepted. v0.18.154 (contract.json#appUpdate): When both headers are present and
+        valid and the version is below the minimum of that platform in the zone''s live document, these calls answer 426 code
+        upgrade_required, reason app_update_required, details ["platform:<android|ios>", "minVersion:<x.y.z>"], nothing changed:
+        POST /trips (book; rider_app_config of the quote''s zone); POST /driver/availability with onlineStatus online while
+        the driver is not on a trip and holds no booked ride (driver_app_config of his zones and last position zone, the highest
+        minimum); POST /offers/{offerId}/accept while the driver has no current trip (driver_app_config of the trip''s zone).
+        Never refused for the version: every call about a trip that is already running (trip commands, messages, calls, route
+        change, cancel, rate, tip, its stream), an accept while the driver is on a trip (a next or booked ride), go-online
+        while the driver holds a booked ride (an accepted reservation not started yet: the booked rider depends on him and
+        starting it needs him online), go offline, SOS and safety calls, sign-in / refresh / sign-out, account deletion, config,
+        content, legal and every read.'
       tags:
       - Driver · Offers
       x-actor:
@@ -2886,6 +2923,8 @@ paths:
       - $ref: '#/components/parameters/IdempotencyKey'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
+      - $ref: '#/components/parameters/AppVersionHeader'
+      - $ref: '#/components/parameters/AppPlatformHeader'
       requestBody:
         required: true
         content:
@@ -2918,6 +2957,8 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+        '426':
+          $ref: '#/components/responses/UpgradeRequired'
   /offers/{offerId}/decline:
     post:
       operationId: declineOffer
@@ -9416,7 +9457,11 @@ paths:
         so the one-live-connection switch never falls back to off by a save from another screen. offers.autoOffline is not
         listed: every admin save of the driver document starts from the server document and writes offers whole from the Dispatch
         page that owns it. Publish and Restore are unchanged (Restore names a removed kept key in removeKeys, as for the other
-        documents).'
+        documents). v0.18.154 (configDocs.keptKeys; rider_app_config and driver_app_config: appUpdate.minVersion, appUpdate.storeUrls):
+        v0.18.154 (P16c minimum app version; owner 2026-11-21 20:30 "Yes, build it now (Recommended)", Rules plan/NUMBERS.md
+        P16c; Rule 0; X-Api-Version stays 0.5; additive; no migration; follows v0.18.132; 0.18.133–0.18.153 reserved for other
+        drafts): both app documents keep appUpdate.minVersion and appUpdate.storeUrls (contract.json#appUpdate.keptKeys) when
+        a save leaves them out, so a save from another screen never turns the minimum off.'
       tags:
       - Admin · Config
       x-actor:
@@ -19589,240 +19634,6 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
-  /admin/finance/driver-income:
-    get:
-      operationId: adminDriverIncome
-      summary: Yearly income per driver or company (DAC7, for the accountant)
-      description: 'v0.18.153 (contract.json#driverIncomeYear): Zone scope exactly as adminListFilters (v0.17.2): an entry
-        is in its trip''s zone, else the driver''s first zone; only the admin''s zones count; a zone named outside them is
-        403 forbidden, reason zone_out_of_scope; country alone = the zones of that country the admin covers. A payee row holds
-        only the money of the zones in scope. quarter: totals + quarters[]. month: + months[]. day: + months[] each with days[].
-        trips: + months[] → days[] → trips[] (one line per entry group of a trip). With month, only that month is counted
-        (the year totals are then that month). detail=trips needs month or payeeId: else 400 invalid_request, reason income_detail_too_big.
-        Also 400 income_detail_too_big when the query (all its payees, not one page) holds more than maxTripLines (10 000)
-        trip lines: ask with month or payeeId. 400 invalid_request: reason income_year_invalid (not 4 digits, before 2020
-        or after the current year), income_month_invalid (not YYYY-MM or not in year), unknown_country (no zone of that country),
-        income_detail_too_big; unknown query key: unknown_filter (adminListFilters). 403 zone_out_of_scope. Cursor-paged over
-        the payee rows, ordered by payeeId then currency; nextCursor null on the last page. A page never splits one payee
-        row. The CSV holds every row in the same order. Every download (JSON or CSV) writes one admin audit row: action finance.driver_income.read
-        (JSON) or finance.driver_income.csv (CSV), target driver_income / <year>, detail { year, detail, month?, country?,
-        zoneIds?, payeeId?, format, rows? } (rows: the payee rows of a JSON page; the CSV is streamed, so its row is written
-        before it). No personal data in the detail.'
-      tags:
-      - Admin · Money
-      x-actor:
-      - admin
-      x-permission: finance.read
-      parameters:
-      - name: year
-        in: query
-        required: true
-        schema:
-          type: integer
-          minimum: 2020
-      - $ref: '#/components/parameters/ListZoneId'
-      - $ref: '#/components/parameters/ListZoneIds'
-      - $ref: '#/components/parameters/ListCountry'
-      - name: detail
-        in: query
-        required: false
-        schema:
-          type: string
-          enum:
-          - quarter
-          - month
-          - day
-          - trips
-          default: quarter
-      - name: month
-        in: query
-        required: false
-        schema:
-          type: string
-          pattern: ^\d{4}-\d{2}$
-      - name: payeeId
-        in: query
-        required: false
-        schema:
-          $ref: '#/components/schemas/Id'
-      - $ref: '#/components/parameters/Cursor'
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: integer
-          minimum: 1
-          maximum: 200
-          default: 50
-      - $ref: '#/components/parameters/RequestId'
-      - $ref: '#/components/parameters/ApiVersion'
-      responses:
-        '200':
-          description: OK
-          headers:
-            X-Request-Id:
-              description: Echo of the request id (server-generated if absent).
-              schema:
-                type: string
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DriverIncomePage'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
-  /admin/finance/driver-income.csv:
-    get:
-      operationId: adminDriverIncomeCsv
-      summary: The same as a CSV file for the accountant
-      description: 'v0.18.153 GET /admin/finance/driver-income.csv: same query, permission and scope (no cursor or limit:
-        every payee). text/csv; charset=utf-8, UTF-8 with BOM, streamed (every payee, read 200 at a time; the first 200 are
-        read before the headers go out, so a failure there is a clean JSON error), comma separated, CRLF, header line, one
-        line per payee and level: level (year | quarter | month | day | trip), period, payeeKind, payeeId, name, orgNumber,
-        address, country, currency, bankHolder, bankLast4, driverIds (space separated), partial (true or empty), rides, the
-        money fields in major units with a dot (12.50; TND 3 decimals), and for a trip line: localTime, tripId, zoneId, paymentMethod,
-        lineKind. Content-Disposition attachment; filename movera-driver-income-<year>[-<month>]-<detail>.csv. Formula guard:
-        a text cell that starts with = + - @, a tab or a carriage return gets a leading single quote (''). The same tooBig
-        rule applies. Every download (JSON or CSV) writes one admin audit row: action finance.driver_income.read (JSON) or
-        finance.driver_income.csv (CSV), target driver_income / <year>, detail { year, detail, month?, country?, zoneIds?,
-        payeeId?, format, rows? } (rows: the payee rows of a JSON page; the CSV is streamed, so its row is written before
-        it). No personal data in the detail.'
-      tags:
-      - Admin · Money
-      x-actor:
-      - admin
-      x-permission: finance.read
-      parameters:
-      - name: year
-        in: query
-        required: true
-        schema:
-          type: integer
-          minimum: 2020
-      - $ref: '#/components/parameters/ListZoneId'
-      - $ref: '#/components/parameters/ListZoneIds'
-      - $ref: '#/components/parameters/ListCountry'
-      - name: detail
-        in: query
-        required: false
-        schema:
-          type: string
-          enum:
-          - quarter
-          - month
-          - day
-          - trips
-          default: quarter
-      - name: month
-        in: query
-        required: false
-        schema:
-          type: string
-          pattern: ^\d{4}-\d{2}$
-      - name: payeeId
-        in: query
-        required: false
-        schema:
-          $ref: '#/components/schemas/Id'
-      - $ref: '#/components/parameters/RequestId'
-      - $ref: '#/components/parameters/ApiVersion'
-      responses:
-        '200':
-          description: CSV file
-          headers:
-            X-Request-Id:
-              description: Echo of the request id (server-generated if absent).
-              schema:
-                type: string
-          content:
-            text/csv:
-              schema:
-                type: string
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
-  /driver/income-statement:
-    get:
-      operationId: driverIncomeStatement
-      summary: The driver's own year statement
-      description: 'v0.18.153 GET /driver/income-statement?year&detail=month|day|trips&month (signed-in driver) → DriverIncomeStatement
-        { year, detail, month?, items: DriverIncomeRow[] }: only the calling driver''s own payee rows, one per currency, all
-        zones (no zone filter); detail default month; detail=trips needs month (else 400 income_detail_too_big); bank last4
-        only. Same 400 reasons as the admin. A driver with no fleet gets his own row. The OWNER of a fleet (fleets.owner_driver_id)
-        gets the fleet''s row, the same row the accountant files (every driver of the fleet in it). Any other driver of a
-        fleet gets a row with the fleet''s kind, name and orgNumber but only HIS OWN entries in the money, and ownPartOnly
-        true (another driver''s money is never sent to him, as moneyBase.lostDriverPaid.driverView).'
-      tags:
-      - Driver · Money
-      x-actor:
-      - driver
-      parameters:
-      - name: year
-        in: query
-        required: true
-        schema:
-          type: integer
-          minimum: 2020
-      - name: detail
-        in: query
-        required: false
-        schema:
-          type: string
-          enum:
-          - month
-          - day
-          - trips
-          default: month
-      - name: month
-        in: query
-        required: false
-        schema:
-          type: string
-          pattern: ^\d{4}-\d{2}$
-      - $ref: '#/components/parameters/RequestId'
-      - $ref: '#/components/parameters/ApiVersion'
-      responses:
-        '200':
-          description: OK
-          headers:
-            X-Request-Id:
-              description: Echo of the request id (server-generated if absent).
-              schema:
-                type: string
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DriverIncomeStatement'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-        '503':
-          $ref: '#/components/responses/Unavailable'
 components:
   securitySchemes:
     bearerAuth:
@@ -20185,6 +19996,30 @@ components:
       required: true
       schema:
         $ref: '#/components/schemas/Id'
+    AppVersionHeader:
+      name: X-App-Version
+      in: header
+      required: false
+      description: 'v0.18.154 (contract.json#appUpdate): The Android and iOS builds of both apps send X-App-Version (their
+        own build version x.y.z, no build number) and X-App-Platform (android | ios) on every API call. The web builds and
+        builds with no version (local "dev") send neither. A call with no X-App-Version or X-App-Platform, or with a value
+        that is not valid (an older app, a web build, a local build), is served as before: no check. Known limit: the server
+        cannot force those apps; their full screen still comes from the config.'
+      schema:
+        type: string
+        pattern: ^(0|[1-9]\d{0,4})\.(0|[1-9]\d{0,4})\.(0|[1-9]\d{0,4})$
+    AppPlatformHeader:
+      name: X-App-Platform
+      in: header
+      required: false
+      description: 'v0.18.154 (contract.json#appUpdate): The Android and iOS builds of both apps send X-App-Version (their
+        own build version x.y.z, no build number) and X-App-Platform (android | ios) on every API call. The web builds and
+        builds with no version (local "dev") send neither.'
+      schema:
+        type: string
+        enum:
+        - android
+        - ios
   responses:
     BadRequest:
       description: 'invalid_request: malformed body, unknown enum, wrong reasonCode group, bad PIN.'
@@ -20282,6 +20117,23 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/PendingApproval'
+    UpgradeRequired:
+      description: 'upgrade_required (HTTP 426), reason app_update_required: this app version is below the zone''s minimum.
+        When both headers are present and valid and the version is below the minimum of that platform in the zone''s live
+        document, these calls answer 426 code upgrade_required, reason app_update_required, details ["platform:<android|ios>",
+        "minVersion:<x.y.z>"], nothing changed: POST /trips (book; rider_app_config of the quote''s zone); POST /driver/availability
+        with onlineStatus online while the driver is not on a trip and holds no booked ride (driver_app_config of his zones
+        and last position zone, the highest minimum); POST /offers/{offerId}/accept while the driver has no current trip (driver_app_config
+        of the trip''s zone).'
+      headers:
+        X-Request-Id:
+          description: Echo of the request id (server-generated if absent).
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
   schemas:
     Id:
       type: string
@@ -20788,6 +20640,7 @@ components:
       - rate_limited
       - unavailable
       - internal
+      - upgrade_required
     RealtimeKind:
       type: string
       enum:
@@ -25483,7 +25336,22 @@ components:
                   the rider app shows it.'
     AppUpdate:
       type: object
-      description: Below minimumVersion = forced update; below latestVersion = soft update.
+      description: 'Below minimumVersion = forced update; below latestVersion = soft update. v0.18.154 (contract.json#appUpdate):
+        v0.18.154 (P16c minimum app version; owner 2026-11-21 20:30 "Yes, build it now (Recommended)", Rules plan/NUMBERS.md
+        P16c; Rule 0; X-Api-Version stays 0.5; additive; no migration; follows v0.18.132; 0.18.133–0.18.153 reserved for other
+        drafts): the admin sets a minimum app version per app (rider_app_config, driver_app_config), per platform (android,
+        ios) and per zone or country Standard. Default off (null). A phone below it sees one full screen "Update Movera to
+        continue" with a button to its store; the server refuses booking, go-online and offer accept from it with 426. A driver
+        or rider on a trip is never blocked mid-trip. Why: the first store version must already carry the check, else old
+        phones can never be made to update. At start and on every config_published, each app compares its own build version
+        with appUpdate.minVersion of its platform in the zone''s document. Below: one full screen "Update Movera to continue"
+        over every screen with an Update button that opens storeUrls.<platform> (else the built-in store link) and the SOS
+        / emergency button; it goes away only when a newer document says the version is OK. A 426 app_update_required answer
+        shows it too until the next config. Driver: never while a trip is active (accepted, to pickup, arrived, on trip) or
+        a held next ride runs; only a small line, the block when the trip ends. A driver who holds a booked ride not started
+        yet (or whose booked rides are not known yet) never gets the full screen, only the small line, as the server never
+        refuses his go-online. Rider: never while a ride is live; the block at Home when it ends. Web builds and "dev" builds
+        are never blocked. The content slot app-versions (§19) keeps working as before; either one below its minimum blocks.'
       properties:
         minimumVersion:
           type: string
@@ -25494,6 +25362,55 @@ components:
         storeUrl:
           type: string
           format: uri
+        minVersion:
+          type: object
+          description: 'v0.18.154 (contract.json#appUpdate): RiderAppConfig.appUpdate and DriverAppConfig.appUpdate (the existing
+            AppUpdate object) get two optional keys: minVersion { android: "x.y.z" | null, ios: "x.y.z" | null } (null or
+            missing = no minimum on that platform) and storeUrls { android: https URL | null, ios: https URL | null } (null
+            or missing = the app''s own built-in store link). The older keys minimumVersion, latestVersion and storeUrl keep
+            their old meaning and never block; storeUrl stays a string (Rule 21), so the per-platform links are storeUrls.
+            Per zone, as every key of the app documents: the zone''s own live document, else its country Standard (configDocs.standard,
+            the same whole-document rule as the other keys). A zone with its own document does not read the Standard''s minimum;
+            set it on the zone too (the admin card shows which one applies). PUT /admin/config/rider_app_config and /driver_app_config
+            (and their publish): appUpdate not an object, minVersion or storeUrls not an object, a platform key other than
+            android / ios, a minVersion that is not null or a semver x.y.z (whole numbers 0-99999, no leading zeros, no suffix),
+            or a store link that is not null or an https URL of at most 500 characters is 400 invalid_request, reason invalid_document.
+            Nothing is saved.'
+          properties:
+            android:
+              oneOf:
+              - type: string
+                pattern: ^(0|[1-9]\d{0,4})\.(0|[1-9]\d{0,4})\.(0|[1-9]\d{0,4})$
+              - type: 'null'
+            ios:
+              oneOf:
+              - type: string
+                pattern: ^(0|[1-9]\d{0,4})\.(0|[1-9]\d{0,4})\.(0|[1-9]\d{0,4})$
+              - type: 'null'
+          additionalProperties: false
+        storeUrls:
+          type: object
+          description: 'v0.18.154 (contract.json#appUpdate): RiderAppConfig.appUpdate and DriverAppConfig.appUpdate (the existing
+            AppUpdate object) get two optional keys: minVersion { android: "x.y.z" | null, ios: "x.y.z" | null } (null or
+            missing = no minimum on that platform) and storeUrls { android: https URL | null, ios: https URL | null } (null
+            or missing = the app''s own built-in store link). The older keys minimumVersion, latestVersion and storeUrl keep
+            their old meaning and never block; storeUrl stays a string (Rule 21), so the per-platform links are storeUrls.'
+          properties:
+            android:
+              oneOf:
+              - type: string
+                format: uri
+                pattern: ^https://
+                maxLength: 500
+              - type: 'null'
+            ios:
+              oneOf:
+              - type: string
+                format: uri
+                pattern: ^https://
+                maxLength: 500
+              - type: 'null'
+          additionalProperties: false
     RideCheck:
       type: object
       description: 'Ride check settings (Safety). v0.18.9: DriverAppConfig.rideCheck (Admin › Safety › Ride check, per zone,
@@ -31597,6 +31514,8 @@ components:
           items:
             type: string
             enum:
+            - appUpdate.minVersion
+            - appUpdate.storeUrls
             - calls.adminCallRoles
             - calls.phoneProvider
             - driverOwesLimit
@@ -31606,7 +31525,7 @@ components:
             - payoutSchedule
             - radar.reaskAfterSeconds
             - realtime.oneStream
-          maxItems: 9
+          maxItems: 11
           description: 'v0.18.123 (configDocs.keptKeys.removeKeys): ConfigDraftUpdate.removeKeys (optional, array of dotted
             paths): each must be a kept key of that document, else 400 invalid_request, reason unknown_kept_key, details ["key:<path>"],
             nothing saved. A named key that the sent document carries is saved as sent (removeKeys only stops the keep).'
@@ -39321,324 +39240,3 @@ components:
           - string
           - 'null'
           description: Opaque; null on the last page.
-    DriverIncomeTotals:
-      type: object
-      description: 'v0.18.153 Every amount is Money in minor units of the row''s currency, read from the earnings entries
-        (the single money base: moneyBase, kpis.money, the same kinds GET /driver/earnings and GET /driver/trips use); no
-        new formula. The paid_to_movera entries (money the driver paid Movera another way, debtModel) are in no field. Never
-        added across currencies: a payee who earned in two currencies has two rows.'
-      required:
-      - rides
-      - grossFares
-      - tips
-      - bonuses
-      - adjustments
-      - pickupPay
-      - feeShare
-      - moveraCommission
-      - moveraFees
-      - netEarnings
-      - cashCollectedByDriver
-      - paidOutByMovera
-      properties:
-        rides:
-          type: integer
-          minimum: 0
-          description: 'v0.18.153 Number of the payee''s trip entries (kind trip: every paid trip end: completed, ended early
-            by the rider, ended by the driver with the rider on board, admin complete), pay in the car (cash) included.'
-        grossFares:
-          allOf:
-          - $ref: '#/components/schemas/Money'
-          description: 'v0.18.153 Σ gross of the trip entries: the fare the rider paid without the outstanding_fee line (moneyBase.kpiMoney
-            gross). VAT included, tips not included.'
-        tips:
-          allOf:
-          - $ref: '#/components/schemas/Money'
-          description: v0.18.153 Σ tip entries (cash tips included).
-        bonuses:
-          allOf:
-          - $ref: '#/components/schemas/Money'
-          description: v0.18.153 Σ bonus entries (the trip bonus at the paid end, an admin bonus after it, a lost-driver payment,
-            bonus campaigns).
-        adjustments:
-          allOf:
-          - $ref: '#/components/schemas/Money'
-          description: v0.18.153 Σ adjustment entries (Movera's pay changes, an admin's driverPay change, a refund taken back
-            from the driver; may be negative).
-        pickupPay:
-          allOf:
-          - $ref: '#/components/schemas/Money'
-          description: v0.18.153 Σ pickup_pay entries (Movera-paid pickup km).
-        feeShare:
-          allOf:
-          - $ref: '#/components/schemas/Money'
-          description: 'v0.18.153 Σ fee_share entries: the driver''s share of cancel and no-show fees.'
-        moveraCommission:
-          allOf:
-          - $ref: '#/components/schemas/Money'
-          description: 'v0.18.153 Σ commission of the trip entries: what Movera kept at each trip''s paid end (moneyBase.commission,
-            the one formula fare − debtCollected − driverEarnings − pickupPay − driverBonus).'
-        moveraFees:
-          allOf:
-          - $ref: '#/components/schemas/Money'
-          description: v0.18.153 Movera's share of the cancel and no-show fees the payee got a fee_share of (the fee trip's
-            commission, as Payout.summary moveraGets reads it).
-        netEarnings:
-          allOf:
-          - $ref: '#/components/schemas/Money'
-          description: 'v0.18.153 What the payee earned: Σ the entries of the kinds trip, pickup_pay, fee_share, tip, adjustment
-            and bonus. netEarnings = GET /driver/earnings net for the same period (the same entries, by the same entry time).
-            This is the DAC7 consideration.'
-        cashCollectedByDriver:
-          allOf:
-          - $ref: '#/components/schemas/Money'
-          description: 'v0.18.153 Σ cash of the trip and tip entries: money the driver took in the car (pay in the car). Part
-            of netEarnings already in his hand.'
-        paidOutByMovera:
-          allOf:
-          - $ref: '#/components/schemas/Money'
-          description: v0.18.153 Σ max(0, payouts.amount_minor) of the payee's drivers' payouts marked paid, counted on the
-            zone-local day of payouts.paid_at (the payout's zone, else the driver's first zone, else his country); never below
-            0 (a payout where the driver owed Movera pays nothing out). Not derived from the entries. A pending payout never
-            counts.
-    DriverIncomeTripLine:
-      allOf:
-      - $ref: '#/components/schemas/DriverIncomeTotals'
-      - type: object
-        required:
-        - localTime
-        - lineKind
-        - tripId
-        - zoneId
-        - paymentMethod
-        properties:
-          localTime:
-            type: string
-            pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$
-            description: 'Zone-local time ''YYYY-MM-DDTHH:MM'' the line''s money was credited (a payout: paid).'
-          lineKind:
-            type: string
-            enum:
-            - trip
-            - credit
-            - payout
-          tripId:
-            type:
-            - string
-            - 'null'
-            description: The trip; null for an entry with no trip (a bonus campaign).
-          zoneId:
-            type:
-            - string
-            - 'null'
-          paymentMethod:
-            type:
-            - string
-            - 'null'
-            description: The trip's payment method (cash = pay in the car); null with no trip.
-      description: 'v0.18.153 One trip line (detail trips): The totals add up exactly at every level: Σ trip lines = the day,
-        Σ days = the month, Σ months = the quarter, Σ quarters = the year, for every money field and rides, because every
-        level is the sum of the same rows. A day or month with nothing is left out. In the trips detail each line has lineKind:
-        trip (the trip''s own entries credited that day: the trip entry and what came with it; tripId and paymentMethod of
-        the trip), credit (money credited that day without the trip entry: a later tip, pay change or bonus of a trip, shown
-        with that trip''s tripId, rides 0; or an entry with no trip such as a bonus campaign, tripId null) or payout (one
-        paid payout: paidOutByMovera only, tripId null).'
-    DriverIncomeDay:
-      allOf:
-      - $ref: '#/components/schemas/DriverIncomeTotals'
-      - type: object
-        required:
-        - day
-        properties:
-          day:
-            type: string
-            pattern: ^\d{4}-\d{2}-\d{2}$
-          trips:
-            type: array
-            items:
-              $ref: '#/components/schemas/DriverIncomeTripLine'
-            description: detail trips only.
-      description: v0.18.153 One zone-local day.
-    DriverIncomeMonth:
-      allOf:
-      - $ref: '#/components/schemas/DriverIncomeTotals'
-      - type: object
-        required:
-        - month
-        properties:
-          month:
-            type: string
-            pattern: ^\d{4}-\d{2}$
-          days:
-            type: array
-            items:
-              $ref: '#/components/schemas/DriverIncomeDay'
-            description: detail day and trips only.
-      description: v0.18.153 One month.
-    DriverIncomeQuarter:
-      allOf:
-      - $ref: '#/components/schemas/DriverIncomeTotals'
-      - type: object
-        required:
-        - quarter
-        properties:
-          quarter:
-            type: integer
-            minimum: 1
-            maximum: 4
-      description: v0.18.153 One quarter (Q1 = January-March).
-    DriverIncomeRow:
-      allOf:
-      - $ref: '#/components/schemas/DriverIncomeTotals'
-      - type: object
-        required:
-        - kind
-        - payeeId
-        - name
-        - orgNumber
-        - address
-        - country
-        - currency
-        - bank
-        - driverIds
-        - quarters
-        properties:
-          kind:
-            type: string
-            enum:
-            - company
-            - driver
-          payeeId:
-            type: string
-            description: The fleetId (company) or the driverId (driver).
-          name:
-            type: string
-          orgNumber:
-            type:
-            - string
-            - 'null'
-          address:
-            type:
-            - string
-            - 'null'
-          country:
-            type:
-            - string
-            - 'null'
-            pattern: ^[A-Z]{2}$
-          currency:
-            $ref: '#/components/schemas/CurrencyCode'
-          bank:
-            oneOf:
-            - type: object
-              required:
-              - holder
-              - last4
-              properties:
-                holder:
-                  type: string
-                last4:
-                  type: string
-                  pattern: ^[0-9A-Z]{1,4}$
-            - type: 'null'
-            description: Holder and last 4 only, never the full account; null when not stored as data.
-          driverIds:
-            type: array
-            items:
-              $ref: '#/components/schemas/Id'
-          ownPartOnly:
-            type: boolean
-            description: A driver with no fleet gets his own row. The OWNER of a fleet (fleets.owner_driver_id) gets the fleet's
-              row, the same row the accountant files (every driver of the fleet in it). Any other driver of a fleet gets a
-              row with the fleet's kind, name and orgNumber but only HIS OWN entries in the money, and ownPartOnly true (another
-              driver's money is never sent to him, as moneyBase.lostDriverPaid.driverView).
-          partial:
-            type: boolean
-            description: 'v0.18.153 review SHOULD-4: on a zone-limited answer (an admin with some zones, or a zoneId / zoneIds
-              / country filter) a payee row whose payee also has money rows (entries or paid payouts) outside those zones,
-              or with no zone, in the same period carries partial: true; the row holds only the zones in scope. Absent otherwise.
-              Admin shows ''Only your zones'' with an (i); the CSV has a partial column (true or empty). The driver''s statement
-              is never partial.'
-          quarters:
-            type: array
-            items:
-              $ref: '#/components/schemas/DriverIncomeQuarter'
-          months:
-            type: array
-            items:
-              $ref: '#/components/schemas/DriverIncomeMonth'
-            description: detail month, day and trips.
-      description: 'v0.18.153 One row per payee per currency. The payee is the driver''s company when he drives for one (his
-        fleet: kind company, payeeId = the fleetId, name, orgNumber and address of the fleet, every driver of the fleet who
-        earned in the year in driverIds); a driver with no fleet is his own payee (kind driver, payeeId = the driverId, name
-        = his first and last name, orgNumber null, address null: Movera does not store a driver''s home address or ID number
-        yet). The fleet is read as it is now (drivers.fleet_id), for the whole year. country = the fleet''s country, else
-        the driver''s country, else the country of his first zone. bank = { holder, last4 } when Movera stores the payee''s
-        bank details as data, else null; never the full account number. Today bank details are an uploaded document (driverOnboarding.adminActions.bankType),
-        so bank is null until a later job stores them as data. v0.18.153 review SHOULD-1 (coordinator): DAC7 counts what was
-        paid or credited in the period, so each earnings entry is placed on the zone-local day of its OWN time (earnings_entries.at,
-        when it was credited), exactly as GET /driver/earnings: in the time zone of its trip''s zone, else the driver''s first
-        zone, else his country''s (payouts.schedule.countryTimeZones), else Europe/Stockholm. A paid payout is placed on its
-        paid_at. The year, quarter (Q1 = January-March), month (YYYY-MM) and day (YYYY-MM-DD) come from that local day. A
-        tip or a pay change credited in January on a December trip belongs to the new year; the old year''s totals do not
-        move.'
-    DriverIncomePage:
-      type: object
-      description: v0.18.153 Page of GET /admin/finance/driver-income.
-      required:
-      - year
-      - detail
-      - items
-      - nextCursor
-      - generatedAt
-      properties:
-        year:
-          type: integer
-          minimum: 2020
-        detail:
-          type: string
-          enum:
-          - quarter
-          - month
-          - day
-          - trips
-        month:
-          type: string
-          pattern: ^\d{4}-\d{2}$
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/DriverIncomeRow'
-        nextCursor:
-          type:
-          - string
-          - 'null'
-        generatedAt:
-          $ref: '#/components/schemas/Timestamp'
-    DriverIncomeStatement:
-      type: object
-      description: 'v0.18.153 GET /driver/income-statement?year&detail=month|day|trips&month (signed-in driver) → DriverIncomeStatement
-        { year, detail, month?, items: DriverIncomeRow[] }: only the calling driver''s own payee rows, one per currency, all
-        zones (no zone filter); detail default month; detail=trips needs month (else 400 income_detail_too_big); bank last4
-        only. Same 400 reasons as the admin.'
-      required:
-      - year
-      - detail
-      - items
-      properties:
-        year:
-          type: integer
-          minimum: 2020
-        detail:
-          type: string
-          enum:
-          - month
-          - day
-          - trips
-        month:
-          type: string
-          pattern: ^\d{4}-\d{2}$
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/DriverIncomeRow'

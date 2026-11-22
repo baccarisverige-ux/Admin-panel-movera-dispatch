@@ -160,6 +160,8 @@ const ENTRIES: Entry[] = [
       "waiting.rideTypes", "waiting.stopFreeWaitMin", "waiting.perMinShown", "rideCheck", "rideCheck.stopMinutes", "rideCheck.offRouteKm",
       "rideCheck.endFarMeters", "rideCheck.noAnswerSeconds", "rideCheck.repeatMinutes", "rideCheck.noAnswerAlarm", "rideCheck.scanEverySeconds",
       "appUpdate.storeUrl", "raisePrice", "raisePrice.maxFactor", "dontMatchAgain", "routeChange", "paymentOptions", "emergencyNumbers",
+      // v0.18.154 P16c: written by Settings › Minimum app version (config/AppUpdatePanel.tsx) only; kept by every other save.
+      "appUpdate.minVersion", "appUpdate.storeUrls",
     ],
     save: merge,
   },
@@ -172,6 +174,8 @@ const ENTRIES: Entry[] = [
       "pickupPay.byCategory", "pickupPay.perKm", "pickupPay.perMin", "pickupPay.freeKm", "pickupPay.freeMin", "pickupPay.ranges", "pickupPay.maxPerRide",
       "driverBonus", "driverBonus.defaultLimit", "driverBonus.hardMax", "appUpdate.storeUrl", "dontMatchAgain", "paymentOptions",
       "emergencyNumbers", "sosContactsSms", "sosContactsSms.connected",
+      // v0.18.154 P16c: written by Settings › Minimum app version (config/AppUpdatePanel.tsx) only; kept by every other save.
+      "appUpdate.minVersion", "appUpdate.storeUrls",
     ],
     save: merge,
   },
