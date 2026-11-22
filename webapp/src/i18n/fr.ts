@@ -76,6 +76,7 @@ import { frC49SmsSignIn } from "./fr/c49-sms-sign-in.ts";
 import { frC48AccountDeletion } from "./fr/c48-account-deletion.ts";
 import { frC50StripeFees } from "./fr/c50-stripe-fees.ts";
 import { frC47PayRequest } from "./fr/c47-pay-request.ts";
+import { frC51LiveLocation } from "./fr/c51-live-location.ts";
 
 /** French. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./fr/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -157,4 +158,5 @@ export const fr: Record<MessageKey, string> = {
   ...frC48AccountDeletion,
   ...frC50StripeFees,
   ...frC47PayRequest,
+  ...frC51LiveLocation,
 };

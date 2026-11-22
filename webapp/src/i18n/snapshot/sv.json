@@ -9453,4 +9453,11 @@
 ["On or off; day 1 to 28; the smallest amount is money, 0 or above.","På eller av; dag 1 till 28; det minsta beloppet är pengar, 0 eller mer."],
 ["Off everywhere, day 1.","Av överallt, dag 1."],
 ["On, day 1, 100 kr: on the 1st from 09:00 a driver who owes 250 kr is asked to pay 250 kr; one who owes 80 kr is not asked.","På, dag 1, 100 kr: den 1:a från 09:00 ombeds en förare som är skyldig 250 kr att betala 250 kr; en som är skyldig 80 kr får ingen förfrågan."],
-["A small amount asks many drivers; a large one asks few. The amount to pay is always the server's.","Ett litet belopp ber många förare; ett stort ber få. Beloppet att betala är alltid serverns."]]
+["A small amount asks many drivers; a large one asks few. The amount to pay is always the server's.","Ett litet belopp ber många förare; ett stort ber få. Beloppet att betala är alltid serverns."],
+["Live location","Liveposition"],
+["During a ride the rider and the driver can each turn on Share my location, so they see each other on the map until pickup. Positions are passed on live and never saved. Off by default until the load test passes.","Under en resa kan resenären och föraren var för sig slå på Dela min plats, så att de ser varandra på kartan fram till upphämtningen. Positioner skickas vidare direkt och sparas aldrig. Av som standard tills belastningstestet är godkänt."],
+["Riders and drivers can share their live location","Resenärer och förare kan dela sin liveposition"],
+["Off: the apps hide Share my location in this zone. Usual value: off until the load test passes.","Av: apparna döljer Dela min plats i zonen. Vanligt värde: av tills belastningstestet är godkänt."],
+["Adjust-pickup banner from","Banner för att justera upphämtning från"],
+["0 = off, or 10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.","0 = av, eller 10 till 500 m. Resenärsappen erbjuder att flytta upphämtningen till resenärens GPS när resenären är längre bort än så från upphämtningen."],
+["Live location could not be read from the server for this zone. Reload the page and try again.","Liveposition kunde inte läsas från servern för den här zonen. Ladda om sidan och försök igen."]]

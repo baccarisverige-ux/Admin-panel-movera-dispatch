@@ -9453,4 +9453,11 @@
 ["On or off; day 1 to 28; the smallest amount is money, 0 or above.","On or off; day 1 to 28; the smallest amount is money, 0 or above."],
 ["Off everywhere, day 1.","Off everywhere, day 1."],
 ["On, day 1, 100 kr: on the 1st from 09:00 a driver who owes 250 kr is asked to pay 250 kr; one who owes 80 kr is not asked.","On, day 1, 100 kr: on the 1st from 09:00 a driver who owes 250 kr is asked to pay 250 kr; one who owes 80 kr is not asked."],
-["A small amount asks many drivers; a large one asks few. The amount to pay is always the server's.","A small amount asks many drivers; a large one asks few. The amount to pay is always the server's."]]
+["A small amount asks many drivers; a large one asks few. The amount to pay is always the server's.","A small amount asks many drivers; a large one asks few. The amount to pay is always the server's."],
+["Live location","Live location"],
+["During a ride the rider and the driver can each turn on Share my location, so they see each other on the map until pickup. Positions are passed on live and never saved. Off by default until the load test passes.","During a ride the rider and the driver can each turn on Share my location, so they see each other on the map until pickup. Positions are passed on live and never saved. Off by default until the load test passes."],
+["Riders and drivers can share their live location","Riders and drivers can share their live location"],
+["Off: the apps hide Share my location in this zone. Usual value: off until the load test passes.","Off: the apps hide Share my location in this zone. Usual value: off until the load test passes."],
+["Adjust-pickup banner from","Adjust-pickup banner from"],
+["0 = off, or 10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.","0 = off, or 10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup."],
+["Live location could not be read from the server for this zone. Reload the page and try again.","Live location could not be read from the server for this zone. Reload the page and try again."]]

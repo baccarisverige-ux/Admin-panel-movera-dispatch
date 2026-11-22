@@ -505,6 +505,12 @@ export type ZoneDispatch = {
    */
   shareTrip?: { on: boolean };
   /**
+   * v0.18.144 (owner 2026-11-20; contract.json#liveLocation.setting): two-way live location (default off) and the rider
+   * app's adjust-pickup banner distance. Dispatch › Safety. Sent as the rider document's liveLocation. Optional so rules
+   * saved before it still load (off, 30 m then).
+   */
+  liveLocation?: { share: boolean; adjustPickupMeters: number };
+  /**
    * L20 stream (owner 2026-11-17 "Yes, with switch (Rec.)"; contract v0.18.122 contract.json#driverOneStream): the driver
    * app opens one live connection (GET /driver/stream) instead of two. Dispatch › Drivers. Sent as the driver document's
    * realtime.oneStream. Optional so rules saved before it still load (off then).

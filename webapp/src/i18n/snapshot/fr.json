@@ -9453,4 +9453,11 @@
 ["On or off; day 1 to 28; the smallest amount is money, 0 or above.","Activée ou non ; jour 1 à 28 ; le montant minimum est une somme, 0 ou plus."],
 ["Off everywhere, day 1.","Désactivée partout, jour 1."],
 ["On, day 1, 100 kr: on the 1st from 09:00 a driver who owes 250 kr is asked to pay 250 kr; one who owes 80 kr is not asked.","Activée, jour 1, 100 kr : le 1er à partir de 09:00, un chauffeur qui doit 250 kr est invité à payer 250 kr ; celui qui doit 80 kr ne reçoit rien."],
-["A small amount asks many drivers; a large one asks few. The amount to pay is always the server's.","Un petit montant sollicite beaucoup de chauffeurs ; un grand, peu. Le montant à payer est toujours celui du serveur."]]
+["A small amount asks many drivers; a large one asks few. The amount to pay is always the server's.","Un petit montant sollicite beaucoup de chauffeurs ; un grand, peu. Le montant à payer est toujours celui du serveur."],
+["Live location","Position en direct"],
+["During a ride the rider and the driver can each turn on Share my location, so they see each other on the map until pickup. Positions are passed on live and never saved. Off by default until the load test passes.","Pendant une course, le passager et le chauffeur peuvent chacun activer Partager ma position pour se voir sur la carte jusqu'à la prise en charge. Les positions sont transmises en direct et jamais enregistrées. Désactivé par défaut jusqu'à la réussite du test de charge."],
+["Riders and drivers can share their live location","Les passagers et les chauffeurs peuvent partager leur position en direct"],
+["Off: the apps hide Share my location in this zone. Usual value: off until the load test passes.","Désactivé : les applis masquent Partager ma position dans cette zone. Valeur habituelle : désactivé jusqu'à la réussite du test de charge."],
+["Adjust-pickup banner from","Bandeau d'ajustement de la prise en charge à partir de"],
+["0 = off, or 10 to 500 m. The rider app offers to move the pickup to the rider's GPS when the rider is farther than this from the pickup.","0 = désactivé, ou 10 à 500 m. L'appli passager propose de déplacer la prise en charge à la position GPS du passager quand il est plus loin que cela."],
+["Live location could not be read from the server for this zone. Reload the page and try again.","La position en direct n'a pas pu être lue depuis le serveur pour cette zone. Rechargez la page et réessayez."]]
