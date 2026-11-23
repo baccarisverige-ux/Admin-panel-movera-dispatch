@@ -104,13 +104,13 @@ test("DispatchDocument from the zone's rules, the same keys as the contract samp
   assert.deepEqual(back.radar, zone.radar);
   // v0.18.7 (G5): the cancel-after-arrived switch and the pickup move limit come back from the driver document.
   assert.equal(back.pickupWait.cancelAfterArrivedIsNoShow, true, "default on");
-  assert.equal(back.pickupMove.maxMeters, 200, "contract default 200 m");
+  assert.equal(back.pickupMove.maxMeters, 300, "contract default 300 m (v0.18.156)");
   const g5 = rulesOfDispatch(doc, { waiting: { cancelAfterArrivedIsNoShow: false }, booking: { maxStops: 3, maxPickupMoveMeters: 350 } }, zoneDefault("Z001"));
   assert.equal(g5.pickupWait.cancelAfterArrivedIsNoShow, false);
   assert.equal(g5.pickupMove.maxMeters, 350);
   const bad = rulesOfDispatch(doc, { waiting: { cancelAfterArrivedIsNoShow: "yes" }, booking: { maxPickupMoveMeters: 5000 } }, zoneDefault("Z001"));
   assert.equal(bad.pickupWait.cancelAfterArrivedIsNoShow, true, "a bad value keeps the default");
-  assert.equal(bad.pickupMove.maxMeters, 200, "outside 0–2000 keeps the default");
+  assert.equal(bad.pickupMove.maxMeters, 300, "outside 0–2000 keeps the default (300, v0.18.156)");
 });
 
 test("a page writes only its own parts of an app document; the waiting money stays the server's", () => {

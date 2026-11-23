@@ -231,7 +231,7 @@
   },
   "booking": {
     "maxStops": 3,
-    "maxPickupMoveMeters": 200,
+    "maxPickupMoveMeters": 300,
     "samePointWarnMeters": 100,
     "pickupSpots": {
       "on": true

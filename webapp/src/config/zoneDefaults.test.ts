@@ -30,7 +30,7 @@ const NOW = "2026-10-19T08:00:00Z";
 const state = () => appConfigState({ now: NOW });
 
 test("contract v0.7.2: version, X-Api-Version, payment methods, languages and ratings", () => {
-  assert.equal(contract.version, "0.18.154");
+  assert.equal(contract.version, "0.18.156");
   assert.equal(contract.headers["X-Api-Version"], "0.5");
   assert.deepEqual([...PAYMENT_METHODS], contract.paymentMethods);
   assert.ok(!contract.paymentMethods.includes("swish") && !contract.paymentMethods.includes("d17"));
@@ -78,7 +78,7 @@ for (const [zoneId, country, timeZone, lang] of [["Z001", "SE", "Europe/Stockhol
       assert.deepEqual(doc.languages, { available: ["en", "fr", "sv"], default: { rider: lang, driver: lang, admin: lang } });
       assert.deepEqual(doc.paymentMethods, ["cash", "card", "apple_pay"], "Q7 + G8: cash, card, Apple Pay; no Google Pay, no swish, no wallet");
       assert.equal(doc.booking.maxStops, 3);
-      assert.equal(doc.booking.maxPickupMoveMeters, 200, "v0.18.7: 200 m (was 500)");
+      assert.equal(doc.booking.maxPickupMoveMeters, 300, "v0.18.156: 300 m (owner 2026-11-23; was 200, before that 500)");
       for (const [id, wait] of Object.entries(doc.waiting.byCategory)) {
         assert.equal(wait.noShowAfterMin, wait.freeWaitMin, `${id}: no-show at the end of the free wait (Q41)`);
       }
