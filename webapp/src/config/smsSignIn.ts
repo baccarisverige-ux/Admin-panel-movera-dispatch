@@ -32,3 +32,28 @@ export function smsSignInLines(before: SmsSignIn, after: SmsSignIn): string[] {
   if (before.dailyCap !== after.dailyCap) lines.push(tr("Sign-in SMS per day: {0} → {1}", [before.dailyCap, after.dailyCap]));
   return lines;
 }
+
+/**
+ * Contract v0.18.157 (contract.json#smsSignIn.otherCountries; owner 2026-11-24 "ALL numbers must be able to log in in
+ * the RIDER app"): CountryRules.smsSignInOtherCountries { enabled, dailyCap } — one server-wide switch and daily limit
+ * for numbers of every country not served here, on the Sweden standard only, super admins only. Never saved = ON, 50.
+ */
+export const SMS_OTHER_HOME = "SE";
+export const SMS_OTHER_DEFAULT: SmsSignIn = { enabled: true, dailyCap: 50 };
+
+/** Stored block; only an exact boolean counts (missing = on, the default); a wrong cap = 50. */
+export function smsOtherOf(raw: unknown): SmsSignIn {
+  const value = (raw && typeof raw === "object" ? raw : {}) as { enabled?: unknown; dailyCap?: unknown };
+  return { enabled: typeof value.enabled === "boolean" ? value.enabled : SMS_OTHER_DEFAULT.enabled, dailyCap: capOk(value.dailyCap) ? value.dailyCap : SMS_OTHER_DEFAULT.dailyCap };
+}
+
+export function smsOtherIssues(value: SmsSignIn): string[] {
+  return capOk(value.dailyCap) ? [] : [tr("Other countries sign-in SMS per day: a whole number from {0} to {1}.", [SMS_DAILY_CAP.min, "100 000"])];
+}
+
+export function smsOtherLines(before: SmsSignIn, after: SmsSignIn): string[] {
+  const lines: string[] = [];
+  if (before.enabled !== after.enabled) lines.push(tr("SMS sign-in for other countries: {0} → {1}", [tr(before.enabled ? "on" : "off"), tr(after.enabled ? "on" : "off")]));
+  if (before.dailyCap !== after.dailyCap) lines.push(tr("Other countries sign-in SMS per day: {0} → {1}", [before.dailyCap, after.dailyCap]));
+  return lines;
+}

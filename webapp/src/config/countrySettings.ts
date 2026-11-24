@@ -3,7 +3,7 @@ import { tr } from "../i18n/core.ts";
 import { CALL_DEFAULTS, callSettingsIssues, callSettingsLines, callSettingsOf, type CallSettings } from "./callSettings.ts";
 import { emergencyDefaults, emergencyNumbersIssues, emergencyNumbersLines, emergencyNumbersOf, type EmergencyNumber } from "./emergencyNumbers.ts";
 import { SOS_CONTACTS_SMS_DEFAULT, sosContactsSmsLines, sosContactsSmsOf } from "./sosContactsSms.ts";
-import { SMS_SIGN_IN_DEFAULT, smsSignInIssues, smsSignInLines, smsSignInOf, type SmsSignIn } from "./smsSignIn.ts";
+import { SMS_OTHER_DEFAULT, SMS_SIGN_IN_DEFAULT, smsOtherIssues, smsOtherLines, smsOtherOf, smsSignInIssues, smsSignInLines, smsSignInOf, type SmsSignIn } from "./smsSignIn.ts";
 import { chatSettingsIssues, chatSettingsLines, chatSettingsOf, defaultChatSettings, type ChatSettings } from "./chatSettings.ts";
 import { DONT_MATCH_DEFAULTS, dontMatchIssues, dontMatchLines, dontMatchOf, type DontMatchSettings } from "./dontMatchSettings.ts";
 import { fromSek, isLargePriceChange, roundTo, tipMax } from "../pricing/zonePricing.ts";
@@ -87,6 +87,8 @@ export type CountrySettings = {
   sosContactsSms: boolean;
   /** v0.18.133 (contract.json#smsSignIn): CountryRules.smsSignIn (country standard only) — real sign-in codes by SMS, and the daily SMS limit. */
   smsSignIn: SmsSignIn;
+  /** v0.18.157 (contract.json#smsSignIn.otherCountries): CountryRules.smsSignInOtherCountries, Sweden standard only, super admins only (default on, 50). */
+  smsSignInOther: SmsSignIn;
   /**
    * S5 J9 (v0.18.84 debtModel.maxRiderDebt; owner Q-M1, Q-S5-3/4/5, 2026-11-13 15:00 "Any amount"): CountryRules.maxRiderDebt,
    * country standard only, local money, any amount above 0 (no upper bound; the server's DB floor follows it). At or
@@ -168,7 +170,7 @@ export const ON_TRIP_MIN_DONE_PCT_DEFAULT = 70;
 /** v0.18.33 (owner Q5): CountryRules.onTripOffers.lateFreeCancelMin default. */
 export const CHAIN_LATE_FREE_CANCEL_MIN_DEFAULT = 10;
 
-export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "mixedCashInCar", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms", "smsSignIn", "maxRiderDebt", "driverOwesLimit", "riderFeeStripe", "driverPayRequest"] as const satisfies readonly (keyof CountrySettings)[];
+export const PRICING_FIELDS = ["tips", "raiseSteps", "promoCap", "driverBonusLimit", "tipRules", "mixedTipRules", "mixedCashInCar", "driverPayChangeMax", "personLimits", "onTripMinDonePct", "chainLateFreeCancelMin", "walletCreditMax", "bonusCampaignMax", "calls", "chat", "dontMatchAgain", "emergencyNumbers", "sosContactsSms", "smsSignIn", "smsSignInOther", "maxRiderDebt", "driverOwesLimit", "riderFeeStripe", "driverPayRequest"] as const satisfies readonly (keyof CountrySettings)[];
 export const SETTINGS_FIELDS = ["paymentMethods", "walletFirst", "languages", "mixedMethods"] as const satisfies readonly (keyof CountrySettings)[];
 
 export const PAYMENT_METHOD_LABEL: Record<ZonePaymentMethod, string> = { cash: "Pay in car", card: "Card", apple_pay: "Apple Pay" };
@@ -224,6 +226,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     emergencyNumbers: emergencyDefaults(country),
     sosContactsSms: SOS_CONTACTS_SMS_DEFAULT,
     smsSignIn: { ...SMS_SIGN_IN_DEFAULT },
+    smsSignInOther: { ...SMS_OTHER_DEFAULT },
     maxRiderDebt: MAX_RIDER_DEBT[country],
     driverOwesLimit: { ...DRIVER_OWES_LIMIT[country] },
     riderFeeStripe: false,
@@ -281,6 +284,7 @@ export function completeCountrySettings(country: MarketId, stored: unknown): Cou
     emergencyNumbers: emergencyNumbersOf(raw.emergencyNumbers, country),
     sosContactsSms: sosContactsSmsOf(raw.sosContactsSms),
     smsSignIn: smsSignInOf(raw.smsSignIn),
+    smsSignInOther: smsOtherOf(raw.smsSignInOther),
     // S5 J9: no upper bound (owner "Any amount"); a stored value is kept as it is, for the checks to see.
     maxRiderDebt: finite(raw.maxRiderDebt) ? raw.maxRiderDebt : base.maxRiderDebt,
     driverOwesLimit: owesLimitOf(raw.driverOwesLimit, base.driverOwesLimit),
@@ -388,8 +392,8 @@ export function zoneValuesForSave(shown: CountrySettings, targets: readonly stri
 }
 
 /** The values that belong to the country Standard alone (the server refuses them on a zone's own rules). */
-export const COUNTRY_WIDE_FIELDS = ["smsSignIn", "emergencyNumbers", "sosContactsSms"] as const satisfies readonly (keyof CountrySettings)[];
-const countryWideOf = (settings: CountrySettings): Pick<CountrySettings, (typeof COUNTRY_WIDE_FIELDS)[number]> => ({ smsSignIn: settings.smsSignIn, emergencyNumbers: settings.emergencyNumbers, sosContactsSms: settings.sosContactsSms });
+export const COUNTRY_WIDE_FIELDS = ["smsSignIn", "smsSignInOther", "emergencyNumbers", "sosContactsSms"] as const satisfies readonly (keyof CountrySettings)[];
+const countryWideOf = (settings: CountrySettings): Pick<CountrySettings, (typeof COUNTRY_WIDE_FIELDS)[number]> => ({ smsSignIn: settings.smsSignIn, smsSignInOther: settings.smsSignInOther, emergencyNumbers: settings.emergencyNumbers, sosContactsSms: settings.sosContactsSms });
 
 /**
  * Security review of the SMS switch (2026-11-19, should-fix): an unsaved draft started while ANOTHER scope was shown
@@ -541,6 +545,7 @@ export function countrySettingsIssues(country: MarketId, settings: CountrySettin
   issues.push(...emergencyNumbersIssues(name, settings.emergencyNumbers));
   // v0.18.133 (contract.json#smsSignIn.dailyCapRange).
   issues.push(...smsSignInIssues(name, settings.smsSignIn));
+  issues.push(...smsOtherIssues(settings.smsSignInOther));
   // S5 J9 (v0.18.84): Max rider debt is any amount above 0; the owes-limit ON needs an amount above 0.
   if (!finite(settings.maxRiderDebt) || settings.maxRiderDebt <= 0) issues.push(tr("{0}: Max rider debt must be above 0.", [name]));
   else if (hasMoreDecimals(settings.maxRiderDebt, country)) issues.push(tr("{0}: Max rider debt has too many decimals.", [name]));
@@ -592,6 +597,7 @@ export function countrySettingsLines(country: MarketId, before: CountrySettings,
   lines.push(...emergencyNumbersLines(before.emergencyNumbers, after.emergencyNumbers));
   lines.push(...sosContactsSmsLines(before.sosContactsSms, after.sosContactsSms));
   lines.push(...smsSignInLines(before.smsSignIn, after.smsSignIn));
+  lines.push(...smsOtherLines(before.smsSignInOther, after.smsSignInOther));
   if (before.maxRiderDebt !== after.maxRiderDebt) lines.push(tr("Max rider debt: {0} → {1}", [`${short(before.maxRiderDebt)} ${symbol}`, `${short(after.maxRiderDebt)} ${symbol}`]));
   if (before.riderFeeStripe !== after.riderFeeStripe) lines.push(tr("Card payment of fees: {0} → {1}", [tr(before.riderFeeStripe ? "on" : "off"), tr(after.riderFeeStripe ? "on" : "off")]));
   if (JSON.stringify(before.driverOwesLimit) !== JSON.stringify(after.driverOwesLimit)) {

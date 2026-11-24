@@ -381,4 +381,20 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "200: the 201st SMS in 24 hours is not sent; that person must wait until the oldest SMS is a day old, or until an admin raises the limit. A code asked for twice counts twice.",
     "10: only ten SMS per day, so about ten people can sign in; 100 000: almost no protection against SMS cost.",
   ),
+  "tips.smsOther.enabled": t(
+    "Rider sign-in codes by SMS for numbers of every country Movera does not serve here, for example a tourist with a Tunisian, German or US number. Off: those numbers are told sign-in is not open yet.",
+    `Sweden Standard only, super admins only. Rider app only; Sweden keeps its own switch. Each code is an international SMS and costs more than a Swedish one.`,
+    "On or off.",
+    "On.",
+    "On: a German visitor types +49 151 12345678 and gets the code by SMS in English.",
+    "Off: no foreign number can sign in; On: every valid foreign number can ask for a code, up to the daily limit.",
+  ),
+  "tips.smsOther.dailyCap": t(
+    "The most sign-in SMS to all other-country numbers together in 24 hours. Foreign numbers are the usual target of SMS fraud; at the limit new codes for them stop and an alert opens, from 80 % an earlier alert warns.",
+    `Sweden Standard only, super admins only. Sweden's own limit is separate.`,
+    "10 to 100 000 SMS per 24 hours, whole numbers.",
+    "50.",
+    "50: the 51st foreign code in 24 hours is not sent until the oldest is a day old or a super admin raises the limit.",
+    "10: very few visitors can sign in; 100 000: almost no protection against SMS cost.",
+  ),
 };
