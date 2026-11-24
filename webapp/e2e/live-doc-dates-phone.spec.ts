@@ -80,3 +80,37 @@ test("iPhone: tapping the calendar icon lands on the real date input (the phone 
   await page.getByRole("button", { name: "Approve", exact: true }).last().tap();
   await expect.poll(() => sent.at(-1)).toEqual({ decision: "approved", expiresAt: "2030-02-01T00:00:00.000Z" });
 });
+
+test("review: a bad issue date blocks Approve even with a good end date; the last good date is never sent instead", async ({ page }) => {
+  const sent = await licenceInReview(page);
+  await signIn(page);
+  await page.goto("/drivers/D1001?tab=documents");
+  await page.locator('tr[data-document-type="driving_license"]').getByRole("button", { name: "Approve" }).tap();
+  const approve = page.getByRole("button", { name: "Approve", exact: true }).last();
+  const issued = page.getByTestId("issued-at");
+  const expires = page.getByTestId("expires-at");
+  await expires.tap();
+  await page.keyboard.type("01022030");
+  await issued.tap();
+  await page.keyboard.type("01022024");
+  await expect(approve).toBeEnabled();
+  // The admin corrects the issue date and leaves it half typed: the box no longer matches 2024-02-01.
+  await page.keyboard.press("Backspace");
+  await page.keyboard.press("Backspace");
+  await expect(page.getByTestId("date-input-bad")).toHaveCount(0); // not said on every key
+  await expect(approve).toBeDisabled();
+  await expires.tap(); // leaving the box says it
+  await expect(page.getByTestId("date-input-bad")).toHaveCount(1);
+  await approve.click({ force: true });
+  // A bad end date after a good one blocks too.
+  await issued.fill("01/02/2024");
+  await expect(approve).toBeEnabled();
+  await expires.fill("31/02/2030");
+  await expect(approve).toBeDisabled();
+  await approve.click({ force: true });
+  expect(sent).toEqual([]);
+  await expires.fill("");
+  await expires.fill("01/03/2030");
+  await approve.tap();
+  await expect.poll(() => sent.at(-1)).toEqual({ decision: "approved", issuedAt: "2024-02-01T00:00:00.000Z", expiresAt: "2030-03-01T00:00:00.000Z" });
+});

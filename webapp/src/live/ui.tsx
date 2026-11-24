@@ -162,6 +162,9 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
   const [expiresAt, setExpiresAt] = useState("");
   const [issuedAt, setIssuedAt] = useState("");
   const [typedEnd, setTypedEnd] = useState(false);
+  // Doc dates review: a box whose text is not a real day blocks Confirm (its last good value is never sent instead).
+  const [issuedBad, setIssuedBad] = useState(false);
+  const [expiresBad, setExpiresBad] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   useEffect(() => {
@@ -170,6 +173,8 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
       setExpiresAt("");
       setIssuedAt("");
       setTypedEnd(false);
+      setIssuedBad(false);
+      setExpiresBad(false);
       setError(null);
       setBusy(false);
     }
@@ -185,7 +190,8 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
   // v0.18.5 (owner G2-D5.8): at most 15 years from today; later is "Check the end date" and is not sent.
   const latestEnd = maxEndDate();
   const expiryTooFar = expiry && Boolean(expiresAt) && endDateTooFar(expiresAt);
-  const blocked = noteMissing || tooLong || expiryMissing || expiryTooFar || issuedInFuture || busy;
+  const datesBad = expiry && (issuedBad || expiresBad);
+  const blocked = noteMissing || tooLong || expiryMissing || expiryTooFar || issuedInFuture || datesBad || busy;
   return (
     <Modal open={open} title={title} onClose={onClose}>
       <form
@@ -216,7 +222,7 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
         {expiry ? (
           <label>
             {tr("Issue date (on the document)")}
-            <DateInput data-testid="issued-at" value={issuedAt} max={today} aria-invalid={issuedInFuture} onChange={(event) => {
+            <DateInput data-testid="issued-at" value={issuedAt} max={today} aria-invalid={issuedInFuture || issuedBad} onValidity={(valid) => setIssuedBad(!valid)} onChange={(event) => {
               const next = event.target.value;
               setIssuedAt(next);
               // The end date follows the issue date until the admin types one (owner G2 R9: "Auto 6 months, editable").
@@ -229,7 +235,7 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
         {expiry ? (
           <label>
             {expiryRequired ? tr("Valid until (required)") : tr("Valid until (optional)")}
-            <DateInput data-testid="expires-at" value={expiresAt} min={expiryRequired ? tomorrow : undefined} max={latestEnd} required={expiryRequired} aria-invalid={expiryMissing || expiryTooFar} onChange={(event) => { setTypedEnd(true); setExpiresAt(event.target.value); }} />
+            <DateInput data-testid="expires-at" value={expiresAt} min={expiryRequired ? tomorrow : undefined} max={latestEnd} required={expiryRequired} aria-invalid={expiryMissing || expiryTooFar || expiresBad} onValidity={(valid) => { setExpiresBad(!valid); if (!valid) setTypedEnd(true); }} onChange={(event) => { setTypedEnd(true); setExpiresAt(event.target.value); }} />
           </label>
         ) : null}
         {expiryTooFar ? <p className="vh-help live-error" role="alert" data-testid="expiry-too-far">{tr("Check the end date")} · {tr("At most {0} years from today.", [EXPIRY_YEARS])}</p> : null}
