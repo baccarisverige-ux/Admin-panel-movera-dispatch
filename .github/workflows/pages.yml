@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -119,6 +120,18 @@ jobs:
         with:
           path: "_site"
 
+      - # 2026-11-24: deploy-pages sometimes asks for the artifact before GitHub lists it ("Found 0 artifact(s)" right after
+        # a successful upload). Wait until this run lists it (max 3 min), then deploy.
+        name: Wait until the uploaded site is listed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 36); do
+            n=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?name=github-pages" | jq '.total_count')
+            [ "${n:-0}" -ge 1 ] && { echo "artifact listed after $((i*5)) s"; exit 0; }
+            sleep 5
+          done
+          echo "::warning::artifact still not listed after 3 min; deploying anyway"
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
