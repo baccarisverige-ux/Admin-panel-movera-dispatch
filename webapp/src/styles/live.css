@@ -105,3 +105,6 @@ tr.live-open td { background: #f6f7fb; }
 .di-total th, .di-total td { font-weight: 700; }
 .di-info { cursor: help; color: var(--muted); font-size: 11px; }
 @media print { .no-print, .sidebar, .topbar, .dx-back { display: none !important; } .di-table { font-size: 10px; } }
+/* v0.18.159 fleet needs a car: the fleet review sheet Cars line. */
+.fleet-cars-line.bad { color: #9b2020; }
+.fleet-cars-line.ok { color: #075f07; }

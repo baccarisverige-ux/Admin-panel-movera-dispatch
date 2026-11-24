@@ -919,7 +919,11 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       const fleets = await readFleets();
       const fleet = fleets.find((item) => item.ownerDriverId === input.targetId || item.fleetId === input.targetId);
       if (!fleet) throw new ApiError(404, "No such fleet.", { code: "not_found" });
-      await client.post<Fleet>(`/admin/fleets/${encodeURIComponent(fleet.fleetId)}/review`, { expectedVersion: fleet.version, decision: fleetDecision, ...(input.reason ? { note: input.reason.slice(0, 1000) } : {}) });
+      await client.post<Fleet>(`/admin/fleets/${encodeURIComponent(fleet.fleetId)}/review`, { expectedVersion: fleet.version, decision: fleetDecision, ...(input.reason ? { note: input.reason.slice(0, 1000) } : {}) }).catch((error: unknown) => {
+        // v0.18.159 (contract.json#fleetNeedsCar.refusal): no approval while the fleet has no car; the line says why.
+        if (error instanceof ApiError && error.reason === "fleet_has_no_car") explained(error);
+        throw error;
+      });
       return done("Saved.");
     }
     // Contract v0.18.0 (owner 2026-10-29, live audit): car details, the car's driver, the driver's categories and the

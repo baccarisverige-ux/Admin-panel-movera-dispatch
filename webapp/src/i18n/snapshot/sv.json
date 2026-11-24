@@ -9530,4 +9530,11 @@
 ["The app's own link","Appens egen länk"],
 ["Write the version as x.y.z, for example 1.4.0.","Skriv versionen som x.y.z, till exempel 1.4.0."],
 ["Write a full https:// link.","Skriv en hel https://-länk."],
-["Save minimum app version","Spara lägsta appversion"]]
+["Save minimum app version","Spara lägsta appversion"],
+["✕ Car missing: no car added","✕ Bil saknas: ingen bil tillagd"],
+["Approve is locked until the owner adds at least 1 car.","Godkänn är låst tills ägaren lagt till minst 1 bil."],
+["✓ {0} car","✓ {0} bil"],
+["✓ {0} cars","✓ {0} bilar"],
+["Fleet approval","Godkännande av åkeri"],
+["Fleet needs at least 1 car before approval","Åkeriet behöver minst 1 bil före godkännande"],
+["On: Movera cannot approve a fleet until its owner has added at least one car.","På: Movera kan inte godkänna ett åkeri förrän ägaren har lagt till minst en bil."]]

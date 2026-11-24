@@ -9530,4 +9530,11 @@
 ["The app's own link","Le lien propre de l'app"],
 ["Write the version as x.y.z, for example 1.4.0.","Écrivez la version sous la forme x.y.z, par exemple 1.4.0."],
 ["Write a full https:// link.","Écrivez un lien https:// complet."],
-["Save minimum app version","Enregistrer la version minimale"]]
+["Save minimum app version","Enregistrer la version minimale"],
+["✕ Car missing: no car added","✕ Voiture manquante : aucune voiture ajoutée"],
+["Approve is locked until the owner adds at least 1 car.","L’approbation est bloquée tant que le propriétaire n’a pas ajouté au moins 1 voiture."],
+["✓ {0} car","✓ {0} voiture"],
+["✓ {0} cars","✓ {0} voitures"],
+["Fleet approval","Approbation de la flotte"],
+["Fleet needs at least 1 car before approval","La flotte doit avoir au moins 1 voiture avant l’approbation"],
+["On: Movera cannot approve a fleet until its owner has added at least one car.","Activé : Movera ne peut pas approuver une flotte tant que son propriétaire n’a pas ajouté au moins une voiture."]]

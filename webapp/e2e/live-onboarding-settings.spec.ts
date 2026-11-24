@@ -82,7 +82,8 @@ async function fakeOnboarding(page: Page) {
       owner.documents = [...owner.documents.filter((doc) => doc.type !== check[2]), { documentId: "DCHK", type: check[2]!, status: "approved" }];
       return json(route, 200, { documentId: "DCHK", ownerId: owner.driverId, type: check[2], status: "approved", version: 1 });
     }
-    if (p === "/admin/fleets/F9" && request.method() === "GET") return json(route, 200, { fleet: state.fleets[1], drivers: [], vehicles: [], invitations: [] });
+    // v0.18.159 (fleetNeedsCar): Sara's fleet has her car (state.vehicles, driverId D2001); a test can empty it.
+    if (p === "/admin/fleets/F9" && request.method() === "GET") return json(route, 200, { fleet: state.fleets[1], drivers: [], vehicles: state.vehicles.filter((v) => v.driverId === "D2001"), invitations: [] });
     if (p === "/admin/fleets/F9/review") {
       keep();
       if (body?.["expectedVersion"] !== state.fleets[1]!.version) return json(route, 409, { code: "version_mismatch", message: "x", requestId: "r", retryable: false });
@@ -192,6 +193,32 @@ test("items 1, 7, 8 (SE): expiry date required to approve, info session marked h
   await session.getByRole("button", { name: "Mark held" }).click();
   await modal(page).getByRole("button", { name: "Mark held" }).click();
   await expect.poll(() => fake.sent.find((call) => call.path === "/admin/drivers/D2001/documents/info_session/check")?.body).toEqual({ decision: "approved" });
+});
+
+test("v0.18.159 (SE): the fleet review sheet says the car is missing and Approve is locked until the owner adds one", async ({ page }) => {
+  const fake = await fakeOnboarding(page);
+  fake.state.vehicles = fake.state.vehicles.filter((v) => v.driverId !== "D2001");
+  await signIn(page);
+  await page.goto("/onboarding");
+  await page.getByRole("button", { name: "Sara Lind" }).click();
+  const company = page.getByTestId("onboarding-selected").getByTestId("company-review");
+  await expect(company.getByTestId("fleet-cars-line")).toContainText("✕ Car missing: no car added");
+  await expect(company.getByTestId("fleet-approve-locked")).toHaveText("Approve is locked until the owner adds at least 1 car.");
+  await expect(company.getByRole("button", { name: "Approve the company" })).toBeDisabled();
+  await expect(company.getByRole("button", { name: "Reject the company" })).toBeEnabled();
+  if (process.env.FLEETCAR_SHOT) await company.screenshot({ path: process.env.FLEETCAR_SHOT });
+  expect(fake.sent.some((call) => call.path === "/admin/fleets/F9/review")).toBe(false);
+});
+
+test("v0.18.159 (SE): with a car the sheet shows ✓ 1 car and Approve works", async ({ page }) => {
+  await fakeOnboarding(page);
+  await signIn(page);
+  await page.goto("/onboarding");
+  await page.getByRole("button", { name: "Sara Lind" }).click();
+  const company = page.getByTestId("onboarding-selected").getByTestId("company-review");
+  await expect(company.getByTestId("fleet-cars-line")).toContainText("✓ 1 car");
+  await expect(company.getByTestId("fleet-approve-locked")).toHaveCount(0);
+  await expect(company.getByRole("button", { name: "Approve the company" })).toBeEnabled();
 });
 
 test("item 1 (FR): the VTC card needs its expiry date; the server's expiry_required is explained", async ({ page }) => {
