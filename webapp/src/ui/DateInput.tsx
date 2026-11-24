@@ -45,11 +45,13 @@ export function DateInput({ value, onChange, min, max, disabled, required, class
           rest.onBlur?.(event);
         }}
       />
-      <button data-command="admin.ui.period" type="button" className="date-input-pick" aria-hidden="true" title={tr("Pick a date")} disabled={disabled} tabIndex={-1} onClick={() => { try { picker.current?.showPicker(); } catch { picker.current?.focus(); } }}>
-        <CalendarDays size={14} aria-hidden="true" />
-      </button>
       {bad ? <small className="vh-help live-error" role="alert" data-testid="date-input-bad">{tr("Not a date. Type it as {0}.", [datePattern(language)])}</small> : null}
-      <input ref={picker} className="date-input-native" type="date" tabIndex={-1} aria-hidden="true" value={value} min={min} max={max} disabled={disabled} onChange={(event) => send(event.target.value)} />
+      {/* Doc dates (iOS): the real date input lies over the calendar button, so the tap itself opens the phone's own
+          picker (iOS Safari does not open a hidden input through showPicker); on a computer the click asks for it. */}
+      <span className="date-input-pick">
+        <CalendarDays size={14} aria-hidden="true" />
+        <input ref={picker} data-command="admin.ui.period" className="date-input-native" type="date" tabIndex={-1} aria-hidden="true" title={tr("Pick a date")} value={value} min={min} max={max} disabled={disabled} onClick={() => { try { picker.current?.showPicker(); } catch { /* the browser opens its picker itself */ } }} onChange={(event) => send(event.target.value)} />
+      </span>
     </span>
   );
 }

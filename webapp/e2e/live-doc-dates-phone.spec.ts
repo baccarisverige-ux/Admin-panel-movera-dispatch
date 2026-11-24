@@ -61,3 +61,22 @@ test("iPhone: a date that is not a day stays in the box, is said, and Approve wa
   await expect(page.getByRole("button", { name: "Approve", exact: true }).last()).toBeDisabled();
   expect(sent).toEqual([]);
 });
+
+test("iPhone: tapping the calendar icon lands on the real date input (the phone opens its own picker); the picked day is used", async ({ page }) => {
+  const sent = await licenceInReview(page);
+  await signIn(page);
+  await page.goto("/drivers/D1001?tab=documents");
+  await page.locator('tr[data-document-type="driving_license"]').getByRole("button", { name: "Approve" }).tap();
+  const box = page.getByTestId("expires-at").locator("xpath=..");
+  const icon = box.locator(".date-input-pick");
+  const rect = (await icon.boundingBox())!;
+  expect(rect.width).toBeGreaterThanOrEqual(24);
+  const hit = await page.evaluate(([x, y]) => { const el = document.elementFromPoint(x!, y!) as HTMLInputElement | null; return el ? `${el.tagName}:${el.type}` : ""; }, [rect.x + rect.width / 2, rect.y + rect.height / 2]);
+  expect(hit).toBe("INPUT:date");
+  await icon.tap();
+  // The phone's picker itself is outside the page; picking a day there is a change on that input.
+  await box.locator('input[type="date"]').fill("2030-02-01");
+  await expect(page.getByTestId("expires-at")).toHaveValue("01/02/2030");
+  await page.getByRole("button", { name: "Approve", exact: true }).last().tap();
+  await expect.poll(() => sent.at(-1)).toEqual({ decision: "approved", expiresAt: "2030-02-01T00:00:00.000Z" });
+});

@@ -51,3 +51,21 @@ test("doc dates: the box keeps what the admin typed and says when it is not a da
   assert.doesNotMatch(source, /onBlur=\{[^}]*setText\(formatIsoDate/, "leaving the box must not erase the typed text");
   assert.match(source, /data-testid="date-input-bad"/, "a wrong date is said under the box");
 });
+
+test("doc dates: 'today' is the country's own day (Stockholm 00:30 is still yesterday in UTC)", async () => {
+  const { dayIn } = await import("./dateText.ts");
+  const at = Date.parse("2026-11-23T23:30:00Z");
+  assert.equal(dayIn(at, "Europe/Stockholm"), "2026-11-24");
+  assert.equal(dayIn(at, "Africa/Tunis"), "2026-11-24");
+  assert.equal(dayIn(Date.parse("2026-11-24T22:59:00Z"), "Europe/Stockholm"), "2026-11-24");
+  const { readFile } = await import("node:fs/promises");
+  const dialog = await readFile(new URL("../live/ui.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(dialog, /const today = new Date\(\)\.toISOString\(\)/, "the dialog's today is not the UTC day");
+});
+
+test("doc dates (iOS): the calendar is a real date input under the finger, not a hidden 1px one opened by showPicker", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const css = await readFile(new URL("../styles/tokens.css", import.meta.url), "utf8");
+  assert.doesNotMatch(css, /\.date-input-native \{[^}]*pointer-events: none/);
+  assert.match(css, /input\.date-input-native \{[^}]*inset: 0;[^}]*pointer-events: auto/);
+});

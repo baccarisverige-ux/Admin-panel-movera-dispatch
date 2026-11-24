@@ -54,3 +54,8 @@ export function parseDateText(text: string, language: AppLanguage): string | nul
   const dmy = /^(\d{1,2})[/. -](\d{1,2})[/. -](\d{4})$/.exec(value);
   return dmy ? validDay(Number(dmy[3]), Number(dmy[2]), Number(dmy[1])) : null;
 }
+
+/** Doc dates (2026-11-24): the calendar day of a moment in a time zone (the country's own today), YYYY-MM-DD. */
+export function dayIn(ms: number, timeZone: string): string {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
+}
