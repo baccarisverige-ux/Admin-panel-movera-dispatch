@@ -8,3 +8,4 @@ _op = PATHS["/admin/fleets/{fleetId}/review"]["post"]
 _op["description"] = (_op.get("description", "") + " v0.18.159 (fleetNeedsCar): " + _FNC["refusal"]).strip()
 _op = PATHS["/driver/reminders"]["get"]
 _op["description"] += " v0.18.159 (fleetNeedsCar): fleet_no_car: " + C["driverOnboarding"]["reminders"]["kinds"]["fleet_no_car"]
+S["Fleet"]["properties"]["approvalBlockedReason"] = s("v0.18.159 (fleetNeedsCar.adminView): " + _FNC["adminView"], enum=["fleet_has_no_car"])

@@ -10,12 +10,12 @@ export type FleetCarLine = { tone: "ok" | "bad"; text: string; locked: boolean; 
 
 export const FLEET_LOCK_TEXT = "Approve is locked until the owner adds at least 1 car.";
 
-export function fleetCarLine(vehicleCount: number, settingOn: boolean): FleetCarLine {
-  if (vehicleCount > 0) return { tone: "ok", text: tr(vehicleCount === 1 ? "✓ {0} car" : "✓ {0} cars", [vehicleCount]), locked: false };
-  return settingOn ? { tone: "bad", text: tr("✕ Car missing: no car added"), locked: true, lockText: tr(FLEET_LOCK_TEXT) } : { tone: "bad", text: tr("✕ Car missing: no car added"), locked: false };
-}
-
-/** The country's setting from its onboarding document: missing or unreadable = on (the contract default), only false = off. */
-export function fleetNeedsCarOn(document: { fleetNeedsCarForApproval?: unknown } | undefined | null): boolean {
-  return document?.fleetNeedsCarForApproval !== false;
+/**
+ * The line from the server's own answer: Fleet.approvalBlockedReason (contract.json#fleetNeedsCar.adminView, computed from
+ * the PUBLISHED setting and the car count), so no settings.read is needed and a draft never decides.
+ */
+export function fleetCarLine(vehicleCount: number, approvalBlockedReason: string | undefined): FleetCarLine {
+  const locked = approvalBlockedReason === "fleet_has_no_car";
+  if (vehicleCount > 0 && !locked) return { tone: "ok", text: tr(vehicleCount === 1 ? "✓ {0} car" : "✓ {0} cars", [vehicleCount]), locked: false };
+  return locked ? { tone: "bad", text: tr("✕ Car missing: no car added"), locked: true, lockText: tr(FLEET_LOCK_TEXT) } : { tone: "bad", text: tr("✕ Car missing: no car added"), locked: false };
 }

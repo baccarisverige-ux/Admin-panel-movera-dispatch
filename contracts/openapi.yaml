@@ -11779,12 +11779,13 @@ paths:
         (owner 2026-11-24, Rules decisions/driver-g2.md "Fleet owner must add a car": "Why fleet owner after sign in don''t
         know that he need to add car ?"; mockup PROPOSAL-fleet-add-car-2026-11-24.html approved "Fleet partner add card reminder
         add"): blocks_online: the FLEET OWNER (fleet.ownerDriverId = the driver) of a fleet with ZERO cars (no vehicle with
-        this fleetId, whatever its status), whatever the fleet''s status (pending, approved, rejected, blocked), from the
-        first sign-in; text texts.fleet_no_car + texts.fleet_no_car_body, button texts.fleet_add_car; fix fleet_vehicles (My
-        fleet › Add car). Never sent to a member. Sent only to apps that send X-Contract-Version 0.18.159 or later (contract.json#fleetNeedsCar.since);
-        an older app keeps the lines it had. While it is sent, fleet_no_approved_car is not sent (one car line), and account_not_active
-        is not sent (the owner still has to act; "Everything is sent" would be false). The line goes once the fleet has a
-        car (then the car''s own document / photo lines, and fleet_no_approved_car once the fleet is approved, as before).'
+        this fleetId, whatever its status), while the fleet is NOT approved (pending, rejected, blocked), from the first sign-in
+        (an approved fleet with no car keeps fleet_no_approved_car: "before Movera can approve it" would be false); text texts.fleet_no_car
+        + texts.fleet_no_car_body, button texts.fleet_add_car; fix fleet_vehicles (My fleet › Add car). Never sent to a member.
+        Sent only to apps that send X-Contract-Version 0.18.159 or later (contract.json#fleetNeedsCar.since); an older app
+        keeps the lines it had. While it is sent, account_not_active is not sent (the owner still has to act; "Everything
+        is sent" would be false). The line goes once the fleet has a car (then the car''s own document / photo lines, and
+        fleet_no_approved_car once the fleet is approved, as before).'
       tags:
       - Driver · Account
       x-actor:
@@ -23651,6 +23652,14 @@ components:
           type: boolean
           description: 'v0.18.54 §76: true on an admin answer when ownerEmail was masked (the admin lacks drivers.viewSensitive);
             absent when the value is full. The admin shows Reveal (POST /admin/fleets/{fleetId}/reveal).'
+        approvalBlockedReason:
+          type: string
+          enum:
+          - fleet_has_no_car
+          description: 'v0.18.159 (fleetNeedsCar.adminView): Fleet.approvalBlockedReason (admin views only: GET /admin/fleets,
+            GET /admin/fleets/{fleetId}, the review answer): ''fleet_has_no_car'' while the fleet is not approved, has zero
+            cars and its country''s PUBLISHED fleetNeedsCarForApproval is on; absent otherwise. The server computes it from
+            the same rule as the refusal, so the admin panel needs no settings.read and never reads a draft.'
     FleetDriver:
       type: object
       required:
@@ -34248,13 +34257,13 @@ components:
         is 0.18.84 or higher.. fleet_no_car: v0.18.159 (owner 2026-11-24, Rules decisions/driver-g2.md "Fleet owner must add
         a car": "Why fleet owner after sign in don''t know that he need to add car ?"; mockup PROPOSAL-fleet-add-car-2026-11-24.html
         approved "Fleet partner add card reminder add"): blocks_online: the FLEET OWNER (fleet.ownerDriverId = the driver)
-        of a fleet with ZERO cars (no vehicle with this fleetId, whatever its status), whatever the fleet''s status (pending,
-        approved, rejected, blocked), from the first sign-in; text texts.fleet_no_car + texts.fleet_no_car_body, button texts.fleet_add_car;
-        fix fleet_vehicles (My fleet › Add car). Never sent to a member. Sent only to apps that send X-Contract-Version 0.18.159
-        or later (contract.json#fleetNeedsCar.since); an older app keeps the lines it had. While it is sent, fleet_no_approved_car
-        is not sent (one car line), and account_not_active is not sent (the owner still has to act; "Everything is sent" would
-        be false). The line goes once the fleet has a car (then the car''s own document / photo lines, and fleet_no_approved_car
-        once the fleet is approved, as before)..'
+        of a fleet with ZERO cars (no vehicle with this fleetId, whatever its status), while the fleet is NOT approved (pending,
+        rejected, blocked), from the first sign-in (an approved fleet with no car keeps fleet_no_approved_car: "before Movera
+        can approve it" would be false); text texts.fleet_no_car + texts.fleet_no_car_body, button texts.fleet_add_car; fix
+        fleet_vehicles (My fleet › Add car). Never sent to a member. Sent only to apps that send X-Contract-Version 0.18.159
+        or later (contract.json#fleetNeedsCar.since); an older app keeps the lines it had. While it is sent, account_not_active
+        is not sent (the owner still has to act; "Everything is sent" would be false). The line goes once the fleet has a
+        car (then the car''s own document / photo lines, and fleet_no_approved_car once the fleet is approved, as before)..'
       required:
       - kind
       - level

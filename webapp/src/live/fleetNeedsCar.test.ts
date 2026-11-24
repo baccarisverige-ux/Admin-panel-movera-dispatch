@@ -12,25 +12,24 @@ import { defaultDoc, normalizeSettingsBook, wireDocument, emptySettingsBook, typ
 import { en } from "../i18n/en.ts";
 import { fr } from "../i18n/fr.ts";
 import { sv } from "../i18n/sv.ts";
-import { fleetCarLine, fleetNeedsCarOn } from "./fleetNeedsCar.ts";
+import { fleetCarLine } from "./fleetNeedsCar.ts";
 import { errorText } from "./format.ts";
 
-test("v0.18.159: no car and the setting on → '✕ Car missing: no car added', Approve locked with the reason", () => {
-  assert.deepEqual(fleetCarLine(0, true), { tone: "bad", text: "✕ Car missing: no car added", locked: true, lockText: "Approve is locked until the owner adds at least 1 car." });
+test("v0.18.159: the server's approvalBlockedReason fleet_has_no_car → '✕ Car missing: no car added', Approve locked with the reason", () => {
+  assert.deepEqual(fleetCarLine(0, "fleet_has_no_car"), { tone: "bad", text: "✕ Car missing: no car added", locked: true, lockText: "Approve is locked until the owner adds at least 1 car." });
 });
 
-test("v0.18.159: cars → '✓ N cars', never locked; the setting off → never locked", () => {
-  assert.deepEqual(fleetCarLine(1, true), { tone: "ok", text: "✓ 1 car", locked: false });
-  assert.deepEqual(fleetCarLine(3, true), { tone: "ok", text: "✓ 3 cars", locked: false });
-  assert.equal(fleetCarLine(0, false).locked, false);
-  assert.equal(fleetCarLine(0, false).text, "✕ Car missing: no car added", "still shown as missing");
+test("v0.18.159: cars → '✓ N cars', never locked; setting off (no reason from the server) → still shown missing, never locked", () => {
+  assert.deepEqual(fleetCarLine(1, undefined), { tone: "ok", text: "✓ 1 car", locked: false });
+  assert.deepEqual(fleetCarLine(3, undefined), { tone: "ok", text: "✓ 3 cars", locked: false });
+  assert.deepEqual(fleetCarLine(0, undefined), { tone: "bad", text: "✕ Car missing: no car added", locked: false });
 });
 
-test("v0.18.159: the setting reads missing / unreadable as on, only false as off", () => {
-  assert.equal(fleetNeedsCarOn(undefined), true);
-  assert.equal(fleetNeedsCarOn({}), true);
-  assert.equal(fleetNeedsCarOn({ fleetNeedsCarForApproval: true }), true);
-  assert.equal(fleetNeedsCarOn({ fleetNeedsCarForApproval: false }), false);
+test("v0.18.159: the sheet never reads the onboarding draft (no settings.read needed; a draft never decides)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("./LiveCompanyReview.tsx", import.meta.url), "utf8");
+  assert.ok(!src.includes("/admin/config/onboarding"), "no read of the onboarding document");
+  assert.ok(src.includes("fleet.approvalBlockedReason"), "the server's reason decides");
 });
 
 test("v0.18.159: a 409 fleet_has_no_car says why", () => {

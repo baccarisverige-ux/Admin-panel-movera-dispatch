@@ -4,7 +4,7 @@ import { Building2 } from "lucide-react";
 import { tr, trn } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
 import { DecisionDialog, ErrorLine, Status } from "./ui";
-import { fleetCarLine, fleetNeedsCarOn } from "./fleetNeedsCar";
+import { fleetCarLine } from "./fleetNeedsCar";
 import type { Fleet, FleetView } from "./types";
 
 /**
@@ -18,15 +18,12 @@ export function LiveCompanyReview({ fleetId }: { fleetId: string }) {
   const key = ["live", "fleet", fleetId];
   const query = useQuery({ queryKey: key, queryFn: () => client.json<FleetView>(`/admin/fleets/${encodeURIComponent(fleetId)}`), enabled: Boolean(fleetId) });
   const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
-  // v0.18.159 (contract.json#fleetNeedsCar): the country's "Fleet needs at least 1 car before approval" (unreadable = on).
-  const country = query.data?.fleet.country;
-  const setting = useQuery({ queryKey: ["live", "onboarding-setting", country], queryFn: () => client.json<{ document?: { fleetNeedsCarForApproval?: unknown } }>(`/admin/config/onboarding?country=${encodeURIComponent(country ?? "")}`), enabled: Boolean(country), retry: false });
   if (query.isLoading) return <p className="state-line">{tr("Loading the company.")}</p>;
   if (query.error || !query.data) return <ErrorLine error={query.error ?? new Error(tr("Something failed."))} onRetry={() => void query.refetch()} />;
   const fleet = query.data.fleet;
   const pending = fleet.status === "pending";
   const mayDecide = can("drivers.activate") && fleet.status !== "approved";
-  const cars = fleetCarLine(query.data.vehicles?.length ?? fleet.vehicleCount ?? 0, fleetNeedsCarOn(setting.data?.document));
+  const cars = fleetCarLine(query.data.vehicles?.length ?? fleet.vehicleCount ?? 0, fleet.approvalBlockedReason) // v0.18.159: the server decides (published setting);
   return (
     <section className="panel live-company" data-testid="company-review" data-fleet-status={fleet.status} aria-label={tr("New company")}>
       <div className="panel-title-row">
