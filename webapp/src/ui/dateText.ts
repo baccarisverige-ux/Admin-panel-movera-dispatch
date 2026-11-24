@@ -39,7 +39,23 @@ export function parseDateText(text: string, language: AppLanguage): string | nul
   if (value === "") return "";
   const iso = ISO.exec(value);
   if (iso) return validDay(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+  // Doc-dates bug (2026-11-24): the phone's number pad has no separator key, so 8 digits are a whole day; year
+  // first (20261105) in every language, else the language's order (sv year first, fr / en day first).
+  const digits = /^(\d{8})$/.exec(value)?.[1];
+  if (digits) {
+    const yearFirst = validDay(Number(digits.slice(0, 4)), Number(digits.slice(4, 6)), Number(digits.slice(6)));
+    if (language === "sv" || (yearFirst && Number(digits.slice(0, 2)) >= 19)) return yearFirst;
+    return validDay(Number(digits.slice(4)), Number(digits.slice(2, 4)), Number(digits.slice(0, 2)));
+  }
+  // Year first with any separator (2026.11.05, 2026 11 05, 2026/11/5), in every language.
+  const ymd = /^(\d{4})[/. -](\d{1,2})[/. -](\d{1,2})$/.exec(value);
+  if (ymd) return validDay(Number(ymd[1]), Number(ymd[2]), Number(ymd[3]));
   if (language === "sv") return null;
-  const dmy = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(value);
+  const dmy = /^(\d{1,2})[/. -](\d{1,2})[/. -](\d{4})$/.exec(value);
   return dmy ? validDay(Number(dmy[3]), Number(dmy[2]), Number(dmy[1])) : null;
+}
+
+/** Doc dates (2026-11-24): the calendar day of a moment in a time zone (the country's own today), YYYY-MM-DD. */
+export function dayIn(ms: number, timeZone: string): string {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
 }

@@ -336,6 +336,7 @@ export const frC1ContractV072Part3: Record<keyof typeof enC1ContractV072Part3, s
   "Your session has ended. Sign in again.": "Votre session est terminée. Reconnectez-vous.",
   "Write why: the driver sees the reason.": "Indiquez pourquoi : le chauffeur voit la raison.",
   "Check the end date": "Vérifiez la date de fin",
+  "Not a date. Type it as {0}.": "Ce n'est pas une date. Écrivez-la comme {0}.",
   "At most {0} years from today.": "Au plus {0} ans à partir d’aujourd’hui.",
   "Give the car at least one ride category.": "Donnez à la voiture au moins une catégorie de course.",
   "Compare and review": "Comparer et vérifier",

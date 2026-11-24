@@ -4,7 +4,7 @@ import { tr, trn } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
 import { useSlice } from "../api/hooks";
 import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
-import type { MarketId } from "../markets/markets";
+import { DEFAULT_MARKET, isMarketId, market, type MarketId } from "../markets/markets";
 import { documentHasFile, documentRows, documentTypeName, isAdminCheck, viewableMediaType, type DocumentRow } from "./format";
 import { DateText, DecisionDialog, ErrorLine, Status } from "./ui";
 import type { DocumentRecord, DocumentSummary } from "./types";
@@ -205,6 +205,7 @@ export function DocumentsTable({ required, documents, onChanged, title, driverId
         expiry={decision?.kind === "approved"}
         expiryRequired={Boolean(decision && expiring.has(decision.row.type))}
         {...(decision && countryDoc?.validMonths?.[decision.row.type] ? { validMonths: countryDoc.validMonths[decision.row.type] } : {})}
+        timeZone={isMarketId(country) ? market(country).timeZone : market(DEFAULT_MARKET).timeZone}
         danger={decision?.kind === "rejected"}
         onClose={() => setDecision(null)}
         onConfirm={async ({ note, expiresAt, issuedAt }) => {
