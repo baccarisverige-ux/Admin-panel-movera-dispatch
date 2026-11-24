@@ -334,6 +334,7 @@ export const enC1ContractV072Part3 = {
   "Your session has ended. Sign in again.": "Your session has ended. Sign in again.",
   "Write why: the driver sees the reason.": "Write why: the driver sees the reason.",
   "Check the end date": "Check the end date",
+  "Not a date. Type it as {0}.": "Not a date. Type it as {0}.",
   "At most {0} years from today.": "At most {0} years from today.",
   "Give the car at least one ride category.": "Give the car at least one ride category.",
   "Compare and review": "Compare and review",

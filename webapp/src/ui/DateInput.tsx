@@ -40,13 +40,15 @@ export function DateInput({ value, onChange, min, max, disabled, required, class
           if (iso !== null) send(iso);
         }}
         onBlur={(event) => {
-          if (parseDateText(text, language) === null) setText(formatIsoDate(value, language));
+          // Doc-dates bug (2026-11-24): a date that is not one real day stays in the box and is said below; it is
+          // never emptied silently (the admin thought it was saved and the approval went without his dates).
           rest.onBlur?.(event);
         }}
       />
       <button data-command="admin.ui.period" type="button" className="date-input-pick" aria-hidden="true" title={tr("Pick a date")} disabled={disabled} tabIndex={-1} onClick={() => { try { picker.current?.showPicker(); } catch { picker.current?.focus(); } }}>
         <CalendarDays size={14} aria-hidden="true" />
       </button>
+      {bad ? <small className="vh-help live-error" role="alert" data-testid="date-input-bad">{tr("Not a date. Type it as {0}.", [datePattern(language)])}</small> : null}
       <input ref={picker} className="date-input-native" type="date" tabIndex={-1} aria-hidden="true" value={value} min={min} max={max} disabled={disabled} onChange={(event) => send(event.target.value)} />
     </span>
   );
