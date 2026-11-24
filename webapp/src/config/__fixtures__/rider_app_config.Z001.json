@@ -122,6 +122,10 @@
     "share": false,
     "adjustPickupMeters": 30
   },
+  "driverProfile": {
+    "on": true,
+    "reviews": false
+  },
   "paymentMethods": [
     "cash",
     "card",

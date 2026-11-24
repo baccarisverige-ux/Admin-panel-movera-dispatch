@@ -120,6 +120,9 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     zone.shareTrip = { on: typeof on === "boolean" ? on : typeof older === "boolean" ? older : true };
     // v0.18.144 (contract.json#liveLocation.setting): never saved or a bad value = the default (off, 30 m), as the server.
     zone.liveLocation = liveLocationOf({ liveLocation: rider["liveLocation"] as ZoneDispatch["liveLocation"] });
+    // v0.18.155 (contract.json#driverProfile.setting): never saved = the contract defaults (profile on, reviews off).
+    const dp = rider["driverProfile"] as { on?: unknown; reviews?: unknown } | undefined;
+    zone.driverProfile = { on: typeof dp?.on === "boolean" ? dp.on : true, reviews: typeof dp?.reviews === "boolean" ? dp.reviews : false };
   }
   // v0.18.8 (G6): the free wait at each stop the server charges by (waiting.stopFreeWaitMin, 0–20; 0 while stops are off).
   const stopFree = (driver?.["waiting"] as { stopFreeWaitMin?: unknown } | undefined)?.stopFreeWaitMin;
