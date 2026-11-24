@@ -397,4 +397,28 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "50: the 51st foreign code in 24 hours is not sent until the oldest is a day old or a super admin raises the limit.",
     "10: very few visitors can sign in; 100 000: almost no protection against SMS cost.",
   ),
+  "tips.smsOther.perCodeDailyCap": t(
+    "The most sign-in SMS to one calling code (one country, for example +216) in 24 hours, inside the limit for all other countries. One expensive premium-rate country cannot use up the whole budget; at the limit an alert opens.",
+    `Sweden Standard only, super admins only. Advice from the SMS company 46elks against SMS pumping.`,
+    "1 to 100 000 SMS per 24 hours, whole numbers.",
+    "10.",
+    "10: the 11th code to +216 numbers in 24 hours is not sent; +49 numbers still get theirs.",
+    "1: one visitor per country and day; 100 000: no per-country protection.",
+  ),
+  "tips.smsOther.perMinuteCap": t(
+    "The most sign-in SMS the whole server sends in one minute, every country together. It stops a sudden burst of fake sign-ins; an alert opens when it is reached.",
+    `Sweden Standard only, super admins only. Counts Swedish numbers too.`,
+    "1 to 10 000 SMS per minute, whole numbers.",
+    "30.",
+    "30: the 31st code in the same minute waits until the minute has passed.",
+    "1: one sign-in per minute for everybody; 10 000: no burst protection.",
+  ),
+  "tips.smsOther.blockedCallingCodes": t(
+    "Calling codes that never get a sign-in SMS, for example a country that sends fake sign-ins. Sweden and the other served countries are never blocked here.",
+    `Sweden Standard only, super admins only. Write the codes with +, separated by commas.`,
+    "Up to 50 calling codes like +882.",
+    "Empty.",
+    "+882, +883: satellite and international network numbers get no code.",
+    "Empty: every country can get codes; a long list: visitors from those countries cannot sign in.",
+  ),
 };

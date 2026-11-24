@@ -9540,4 +9540,16 @@
 ["Other countries sign-in SMS per day: {0} → {1}","Other countries sign-in SMS per day: {0} → {1}"],
 ["Sign-in SMS to other countries: {0} of {1} sent in the last 24 hours","Sign-in SMS to other countries: {0} of {1} sent in the last 24 hours"],
 ["Sign-in SMS limit for other countries reached: {0} of {1} in the last 24 hours. New sign-in codes for these numbers are stopped","Sign-in SMS limit for other countries reached: {0} of {1} in the last 24 hours. New sign-in codes for these numbers are stopped"],
-["Raise the daily limit for other countries in Tips & limits (Sweden) if these are real people","Raise the daily limit for other countries in Tips & limits (Sweden) if these are real people"]]
+["Raise the daily limit for other countries in Tips & limits (Sweden) if these are real people","Raise the daily limit for other countries in Tips & limits (Sweden) if these are real people"],
+["Per calling code (SMS per 24 hours)","Per calling code (SMS per 24 hours)"],
+["All sign-in SMS per minute, at most","All sign-in SMS per minute, at most"],
+["Blocked calling codes (for example +882)","Blocked calling codes (for example +882)"],
+["SMS per calling code per day: a whole number from {0} to {1}.","SMS per calling code per day: a whole number from {0} to {1}."],
+["Sign-in SMS per minute: a whole number from {0} to {1}.","Sign-in SMS per minute: a whole number from {0} to {1}."],
+["Blocked calling codes: up to 50 codes like +882, each once.","Blocked calling codes: up to 50 codes like +882, each once."],
+["SMS per calling code per day: {0} → {1}","SMS per calling code per day: {0} → {1}"],
+["Sign-in SMS per minute: {0} → {1}","Sign-in SMS per minute: {0} → {1}"],
+["Blocked calling codes: {0} → {1}","Blocked calling codes: {0} → {1}"],
+["Sign-in SMS spike to {0}: {1} of {2} in the last 24 hours. New codes for this calling code are stopped","Sign-in SMS spike to {0}: {1} of {2} in the last 24 hours. New codes for this calling code are stopped"],
+["Sign-in SMS burst: the limit of {0} per minute was reached. New codes wait","Sign-in SMS burst: the limit of {0} per minute was reached. New codes wait"],
+["Check for SMS pumping; block the calling code in Tips & limits (Sweden) if these are not real people","Check for SMS pumping; block the calling code in Tips & limits (Sweden) if these are not real people"]]

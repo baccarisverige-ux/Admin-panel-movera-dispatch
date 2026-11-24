@@ -3,7 +3,7 @@ import { tr } from "../i18n/core.ts";
 import { CALL_DEFAULTS, callSettingsIssues, callSettingsLines, callSettingsOf, type CallSettings } from "./callSettings.ts";
 import { emergencyDefaults, emergencyNumbersIssues, emergencyNumbersLines, emergencyNumbersOf, type EmergencyNumber } from "./emergencyNumbers.ts";
 import { SOS_CONTACTS_SMS_DEFAULT, sosContactsSmsLines, sosContactsSmsOf } from "./sosContactsSms.ts";
-import { SMS_OTHER_DEFAULT, SMS_SIGN_IN_DEFAULT, smsOtherIssues, smsOtherLines, smsOtherOf, smsSignInIssues, smsSignInLines, smsSignInOf, type SmsSignIn } from "./smsSignIn.ts";
+import { SMS_OTHER_DEFAULT, SMS_SIGN_IN_DEFAULT, smsOtherIssues, smsOtherLines, smsOtherOf, smsSignInIssues, smsSignInLines, smsSignInOf, type SmsOther, type SmsSignIn } from "./smsSignIn.ts";
 import { chatSettingsIssues, chatSettingsLines, chatSettingsOf, defaultChatSettings, type ChatSettings } from "./chatSettings.ts";
 import { DONT_MATCH_DEFAULTS, dontMatchIssues, dontMatchLines, dontMatchOf, type DontMatchSettings } from "./dontMatchSettings.ts";
 import { fromSek, isLargePriceChange, roundTo, tipMax } from "../pricing/zonePricing.ts";
@@ -88,7 +88,7 @@ export type CountrySettings = {
   /** v0.18.133 (contract.json#smsSignIn): CountryRules.smsSignIn (country standard only) — real sign-in codes by SMS, and the daily SMS limit. */
   smsSignIn: SmsSignIn;
   /** v0.18.157 (contract.json#smsSignIn.otherCountries): CountryRules.smsSignInOtherCountries, Sweden standard only, super admins only (default on, 50). */
-  smsSignInOther: SmsSignIn;
+  smsSignInOther: SmsOther;
   /**
    * S5 J9 (v0.18.84 debtModel.maxRiderDebt; owner Q-M1, Q-S5-3/4/5, 2026-11-13 15:00 "Any amount"): CountryRules.maxRiderDebt,
    * country standard only, local money, any amount above 0 (no upper bound; the server's DB floor follows it). At or
@@ -226,7 +226,7 @@ export function defaultCountrySettings(country: MarketId): CountrySettings {
     emergencyNumbers: emergencyDefaults(country),
     sosContactsSms: SOS_CONTACTS_SMS_DEFAULT,
     smsSignIn: { ...SMS_SIGN_IN_DEFAULT },
-    smsSignInOther: { ...SMS_OTHER_DEFAULT },
+    smsSignInOther: { ...SMS_OTHER_DEFAULT, blockedCallingCodes: [] },
     maxRiderDebt: MAX_RIDER_DEBT[country],
     driverOwesLimit: { ...DRIVER_OWES_LIMIT[country] },
     riderFeeStripe: false,
