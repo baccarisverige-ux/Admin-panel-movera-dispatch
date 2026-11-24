@@ -304,6 +304,22 @@ export const DISPATCH_ZONE_INFO: Readonly<Record<string, SettingInfoText>> = {
     "On: a rider on a trip sends the link to a friend, who sees the car, the plate and the arrival time until the drop-off.",
     "Off: the rider app hides Share trip and every live link of this zone stops; On: riders can share a live trip link.",
   ),
+  "dispatch.zone.riderAppSendsCrashReports": t(
+    "The rider app sends every crash to Crashes & errors: app errors at once, native crashes and freezes at the next start or when the screen moves again, with the last screens before it. No phone number, e-mail, name or address is sent.",
+    ZONE_RIDER,
+    "On or off.",
+    "On.",
+    "On: a rider's app that closes by itself shows up in Crashes & errors a few seconds after the rider opens it again.",
+    "Off: the rider app sends no crash report in this zone; On: every crash is sent.",
+  ),
+  "dispatch.zone.driverAppSendsCrashReports": t(
+    "The driver app sends every crash to Crashes & errors: app errors at once, native crashes and freezes at the next start or when the screen moves again, with the last screens before it. No phone number, e-mail, name or address is sent.",
+    ZONE_DRIVER,
+    "On or off.",
+    "On.",
+    "On: a driver's app that froze for 7 s shows up in Crashes & errors as a freeze.",
+    "Off: the driver app sends no crash report in this zone; On: every crash is sent.",
+  ),
   "dispatch.zone.ridersAndDriversCanShareLiveLocation": t(
     "From accept until pickup the rider and the driver can each turn on (opt in) Share my location in their app; the other side then sees their live dot on the map, sent every 8 s while the ride screen is open. Positions are passed on live and never saved; sharing stops at pickup, ride end or cancel.",
     ZONE_RIDER,

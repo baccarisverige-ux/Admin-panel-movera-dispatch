@@ -122,6 +122,9 @@
     "share": false,
     "adjustPickupMeters": 30
   },
+  "crashReports": {
+    "on": true
+  },
   "paymentMethods": [
     "cash",
     "card",

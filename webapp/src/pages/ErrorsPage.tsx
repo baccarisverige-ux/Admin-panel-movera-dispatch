@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tr, trn } from "../i18n";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
@@ -6,6 +6,8 @@ import { DataTable } from "../ui/DataTable";
 import {
   createDemoErrors,
   ERROR_APPS,
+  ERROR_KINDS,
+  kindLabelKey,
   ERROR_PLATFORMS,
   ERROR_STATUSES,
   ERRORS_REFRESH_MS,
@@ -16,9 +18,13 @@ import {
   type ErrorFilters,
   type ErrorGroup,
   type ErrorGroupPage,
+  type ErrorKind,
   type ErrorPlatform,
   type ErrorStatus,
 } from "../errors/errors";
+
+/** v0.18.157: a group's reports load only when its detail is opened (own chunk). */
+const ErrorReports = lazy(() => import("../errors/ErrorReports").then((module) => ({ default: module.ErrorReports })));
 
 /** The demo build's groups: one store per tab, so "Mark fixed" stays until a reload, like the live list would. */
 const demoErrors = createDemoErrors();
@@ -38,6 +44,7 @@ export function ErrorsPage() {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<ErrorFilters>({});
   const [failed, setFailed] = useState(false);
+  const [open, setOpen] = useState<string | null>(null);
   const list = useQuery({
     queryKey: ["errors", live ? "live" : "demo", filters],
     queryFn: async (): Promise<ErrorGroupPage> => (live ? live.client.json<ErrorGroupPage>(errorsPath(filters)) : demoErrors.list(filters)),
@@ -82,6 +89,10 @@ export function ErrorsPage() {
             <option value="">{tr("Every version")}</option>
             {seen.map((version) => <option key={version} value={version}>{version}</option>)}
           </select>
+          <select aria-label={tr("Kind")} data-command="admin.errors.view" value={filters.kind ?? ""} onChange={(e) => set({ kind: (e.target.value || undefined) as ErrorKind | undefined })}>
+            <option value="">{tr("Every kind")}</option>
+            {ERROR_KINDS.map((kind) => <option key={kind} value={kind}>{tr(kindLabelKey(kind))}</option>)}
+          </select>
           <select aria-label={tr("Status")} data-command="admin.errors.view" value={filters.status ?? ""} onChange={(e) => set({ status: (e.target.value || undefined) as ErrorStatus | undefined })}>
             <option value="">{tr("Any status")}</option>
             {ERROR_STATUSES.map((status) => <option key={status} value={status}>{statusLabel(status)}</option>)}
@@ -104,7 +115,7 @@ export function ErrorsPage() {
                 text: item.message,
                 node: (
                   <span className="errors-message">
-                    <span className={`errors-kind ${item.kind}`}>{item.kind === "crash" ? tr("Crash") : tr("Error")}</span> <strong>{item.message}</strong>
+                    <span className={`errors-kind ${item.kind}`}>{tr(kindLabelKey(item.kind))}</span> <strong>{item.message}</strong>
                     {item.topFrame ? <code>{item.topFrame}</code> : null}
                   </span>
                 ),
@@ -117,6 +128,16 @@ export function ErrorsPage() {
               {
                 text: "",
                 node: (
+                  <span className="errors-actions">
+                  <button
+                    type="button"
+                    data-command="admin.errors.view"
+                    className="dash-btn small ghost"
+                    aria-expanded={open === item.id}
+                    onClick={() => setOpen(open === item.id ? null : item.id)}
+                  >
+                    {open === item.id ? tr("Hide details") : tr("Details")}
+                  </button>
                   <button
                     type="button"
                     data-command="admin.errors.status"
@@ -126,10 +147,16 @@ export function ErrorsPage() {
                   >
                     {item.status === "open" ? tr("Mark fixed") : tr("Reopen")}
                   </button>
+                  </span>
                 ),
               },
             ])}
           />
+        ) : null}
+        {open && items.some((item) => item.id === open) ? (
+          <Suspense fallback={<p className="state-line">{tr("Loading.")}</p>}>
+            <ErrorReports group={items.find((item) => item.id === open)!} />
+          </Suspense>
         ) : null}
         <p className="dx-calm errors-note">{tr("A group marked fixed opens again by itself if it happens again. Personal data (e-mails, phone numbers, places) is removed before a report is saved; reports are kept 30 days.")}</p>
       </section>

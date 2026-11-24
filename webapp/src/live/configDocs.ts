@@ -250,7 +250,7 @@ export { SECONDS_DEFAULT, rulesOfDispatch, reservationOfDriverDoc } from "./disp
 
 /** The parts of the rider and driver documents each admin page owns; publishing a page writes only its parts. */
 export const OWNED: Record<"dispatch" | "settings" | "content", { rider: string[]; driver: string[] }> = {
-  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons", "shareTrip", "liveLocation"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange", "headingCheck", "realtime"] },
+  dispatch: { rider: ["booking", "cancelFees", "cancelCheck", "cancelReasons", "shareTrip", "liveLocation", "crashReports"], driver: ["booking", "offers", "cancelFees", "waiting", "pickupPin", "destinationMode", "nextTrips", "reservations", "cancelReasons", "drivingLimits", "rideCheck", "routeChange", "headingCheck", "realtime", "crashReports"] },
   settings: { rider: ["features", "appUpdate"], driver: ["features", "appUpdate"] },
   content: { rider: [], driver: ["texts", "notices"] },
 };
@@ -266,7 +266,7 @@ export type OwnedParts = { rider: string[]; driver: string[]; riderServerKeeps?:
  * back on. (S10 admin rebase over V21: before, pickupSpots was still published after a failed read.)
  */
 export function dispatchOwnedFor(riderRead: boolean): OwnedParts {
-  return riderRead ? OWNED.dispatch : { ...OWNED.dispatch, rider: OWNED.dispatch.rider.filter((key) => key !== "shareTrip" && key !== "liveLocation"), riderServerKeeps: ["booking.pickupSpots"] };
+  return riderRead ? OWNED.dispatch : { ...OWNED.dispatch, rider: OWNED.dispatch.rider.filter((key) => key !== "shareTrip" && key !== "liveLocation" && key !== "crashReports"), riderServerKeeps: ["booking.pickupSpots"] };
 }
 
 /**

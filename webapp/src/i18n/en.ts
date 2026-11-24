@@ -81,6 +81,7 @@ import { enC54Sessions } from "./en/c54-sessions.ts";
 import { enC55OfferBackup } from "./en/c55-offer-backup.ts";
 import { enC56DriverIncome } from "./en/c56-driver-income.ts";
 import { enC57AppUpdate } from "./en/c57-app-update.ts";
+import { enC60CrashCatcher } from "./en/c60-crash-catcher.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -168,6 +169,7 @@ export const en = {
   ...enC55OfferBackup,
   ...enC56DriverIncome,
   ...enC57AppUpdate,
+  ...enC60CrashCatcher,
 } as const;
 
 export type MessageKey = keyof typeof en;

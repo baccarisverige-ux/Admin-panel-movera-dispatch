@@ -106,6 +106,13 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
       retryOneAfterMinutes: whole(fallback?.retryOneAfterMinutes, 60, CONFIG_DEFAULTS.driverOneStreamFallback.retryOneAfterMinutes),
     };
   }
+  // v0.18.157 (contract.json#crashCatcher.setting): each app's crash reports switch as the server serves it (missing = on);
+  // a document not read keeps the rules' own value.
+  if (rider || driver) {
+    const read = (d: Doc | null, own: boolean) => (d ? ((d["crashReports"] as { on?: unknown } | undefined)?.on ?? true) === true : own);
+    const before = zone.crashReports ?? { rider: true, driver: true };
+    zone.crashReports = { rider: read(rider, before.rider), driver: read(driver, before.driver) };
+  }
   // One rider document read serves both rider switches below; no rider document (not read, or the read failed) keeps the
   // rules' own values.
   if (rider) {
