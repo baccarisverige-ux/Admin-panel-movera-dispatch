@@ -1,11 +1,11 @@
-# Movera API v0.18.164 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.165 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.164
+  version: 0.18.165
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.164 in this folder; this file must agree with them.
+    v0.18.165 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.164
+  version: 0.18.165
   source: contract.json
 paths:
   /auth/otp/request:
@@ -10901,10 +10901,11 @@ paths:
       summary: Turn-by-turn route for driver navigation (OSRM v5 pass-through)
       description: 'Same path syntax and query as OSRM /route/v1/driving. No route → 200 {code: "NoRoute", routes: []}. About
         30 per minute per driver (429). Auth and rate errors use Error. v0.18.163 (contract.json#liveTraffic): GET /routes/driving
-        (the driver app''s route line on its map) is answered from Google (the same computeRoutes call, live traffic) in the
-        same OSRM-shaped JSON the driver app reads (code Ok, routes[0].distance / duration / geometry.coordinates; legs empty,
-        so no turn-by-turn steps); Google not answering = 503 routing_unavailable (never a straight line). These calls come
-        on top of the ~2 per trip: one per route line the driver app asks (its own rate limit applies).'
+        (the driver app''s route line on its map) never calls Google: on the driver''s active trip it answers the stored Google
+        route of the current leg (trips.eta_route, else the booked quote route to the drop-off), in the same OSRM-shaped JSON
+        the driver app reads (code Ok, routes[0].distance / duration / geometry.coordinates; legs empty, so no turn-by-turn
+        steps); with no trip or no stored route, the straight line through the asked points. Only the ETA tick asks Google
+        again, under the off-route / late rule (recall), so a trip stays at about 2 calls.'
       tags:
       - Maps
       x-actor:
@@ -16095,13 +16096,21 @@ paths:
         POST /admin/auth/sign-in-locks/unlock { phone } lifts both locks for all addresses at once. Phones already signed
         in keep working (refresh does not read it). So a stranger guessing from 4 or more networks can lock a number for up
         to 24 h (codesPerPhonePerHour already let one block new codes for one hour). The write limit in front of these calls
-        is keyed by phone + address (contract.json#rateLimit.key). v0.18.62 §84: An admin caller needs settings.edit (x-permission);
-        otherwise 403 forbidden, reason missing_permission. 200 { phone, lifted }: phone = the number sent (E.164, not masked);
-        lifted = integer >= 0, how many of the number''s wrong-code sessions of the last 24 h were unlocked (0 when nothing
-        was locked; still 200). Audited auth.sign_in_unlock { lifted } with the number''s last 4 digits hidden. 400 invalid_request
-        reason invalid_body when phone is missing or not a string; 400 invalid_request reason invalid_phone when phone is
-        not international form (^\+[1-9][0-9]{6,14}$); 401 unauthenticated; 403 forbidden missing_permission. The server never
-        answers 404 here.'
+        is keyed by phone + address (contract.json#rateLimit.key). v0.18.165 (owner 2026-11-25 "Apres 30 peut demander nouveau
+        code mais aussi faut que le code marche plus apres 30 s", "Je voit les autre app mais 60 s", "Nn on laisse 60 seconde
+        demander nv aussi", "Pas qd on demande un nouveau code ancien bloquer ! Mm si on demande pas nv code apres 60 s doit
+        être bloquer"; Rules decisions/session-2026-11-06.md): a code expires on its own 60 s after it was sent (expiresSeconds
+        60, was 300), whether or not a new one is asked; verify after that is 410 otp_expired. A new code may be asked only
+        60 s after the last one (retryAfterSeconds 60, was 30; earlier is 429 rate_limited reason otp_resend_too_soon with
+        Retry-After). So the resend button unlocks exactly when the old code dies. Fixed in the contract, not an admin setting.
+        The apps keep reading retryAfterSeconds and expiresAt from the challenge (no number in the app). The same two values
+        apply to the account phone and e-mail change codes (POST /me/phone|email/start), which use auth.otp. A test number
+        (staging) keeps retryAfterSeconds 0. v0.18.62 §84: An admin caller needs settings.edit (x-permission); otherwise 403
+        forbidden, reason missing_permission. 200 { phone, lifted }: phone = the number sent (E.164, not masked); lifted =
+        integer >= 0, how many of the number''s wrong-code sessions of the last 24 h were unlocked (0 when nothing was locked;
+        still 200). Audited auth.sign_in_unlock { lifted } with the number''s last 4 digits hidden. 400 invalid_request reason
+        invalid_body when phone is missing or not a string; 400 invalid_request reason invalid_phone when phone is not international
+        form (^\+[1-9][0-9]{6,14}$); 401 unauthenticated; 403 forbidden missing_permission. The server never answers 404 here.'
       tags:
       - Admin · Auth
       x-actor:
@@ -28670,7 +28679,7 @@ components:
           $ref: '#/components/schemas/Language'
     OtpChallenge:
       type: object
-      description: 'The code lives 300 s; at most 5 attempts. v0.18.133 (contract.json#smsSignIn): it is 4 digits for a test
+      description: 'The code lives 60 s; at most 5 attempts. v0.18.133 (contract.json#smsSignIn): it is 4 digits for a test
         number and 6 digits when sent by SMS (codeLength).'
       required:
       - requestId
@@ -28687,7 +28696,7 @@ components:
         retryAfterSeconds:
           type: integer
           minimum: 0
-          default: 30
+          default: 60
         codeLength:
           type: integer
           enum:
