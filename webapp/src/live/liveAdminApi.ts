@@ -25,6 +25,7 @@ import { radarRepeatOf, toolRefusal, type RadarZoneSend } from "./dispatchTools.
 import { rememberSendTarget, sendTarget, setActiveRadarSend } from "../dispatch/radarSends.ts";
 import type { ApprovalRow, AuditRow, DemoRecord, LiveTripFacts, ZoneScope } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
+import { ZONED_LISTS, createCarZoneReads } from "./carZones.ts";
 import { LIST_PAGE, PAGE_LIMIT, all, paged, readUncounted, type ListCounting } from "./listPages.ts";
 export { LIST_PAGE };
 import { DUE_PAYOUTS_LIST, LIVE_PAGE, createListReaders } from "./listReaders.ts";
@@ -150,13 +151,20 @@ const OPEN_CHECK_WINDOW_MS = 6 * 3_600_000;
 const RIDE_CATEGORIES: string[] = ["economy", "comfort", "premium", "priority", "xl", "electric", "pet"];
 const VEHICLE_STATUS: Record<string, string> = { approved: "eligible", pending: "pending", rejected: "ineligible", blocked: "on_hold" };
 
+/**
+ * v0.18.161 (contract.json#adminListFilters.carZones; owner 2026-11-25 "Yes, fix it"): the car's zone and country are
+ * the server's (Vehicle.zoneId / Vehicle.country; null = none / unknown, never guessed, never SE). Only an older server
+ * that sends neither field keeps the old reading (the driver's first zone and country).
+ */
 export function vehicleRecord(vehicle: Vehicle, drivers: ReadonlyMap<string, Driver>): DemoRecord {
   const driver = vehicle.driverId ? drivers.get(vehicle.driverId) : undefined;
+  const zoneId = vehicle.zoneId !== undefined ? vehicle.zoneId ?? "" : driver?.zoneIds[0] ?? "";
+  const country = vehicle.country !== undefined ? vehicle.country ?? undefined : driver?.country;
   return {
     id: vehicle.vehicleId,
     name: driver ? fullName(driver.firstName, driver.lastName) : "",
     phone: "",
-    zoneId: driver?.zoneIds[0] ?? "",
+    zoneId,
     status: VEHICLE_STATUS[vehicle.status] ?? vehicle.status,
     plate: vehicle.plate,
     driverId: vehicle.driverId ?? null,
@@ -165,14 +173,15 @@ export function vehicleRecord(vehicle: Vehicle, drivers: ReadonlyMap<string, Dri
     seats: vehicle.seats,
     make: vehicle.make,
     model: vehicle.model,
-    liveVehicleMissing: vehicleMissing(vehicle, driver?.country),
+    liveVehicleMissing: vehicleMissing(vehicle, country),
     ...(vehicle.fuel ? { fuel: vehicle.fuel } : {}),
     ...(RIDE_CATEGORIES.includes(vehicle.categoryIds?.[0] ?? "") ? { category: vehicle.categoryIds[0] as NonNullable<DemoRecord["category"]> } : {}),
     liveRuleProblems: [...(vehicle.ruleProblems ?? [])],
     liveCategoryIds: [...(vehicle.categoryIds ?? [])],
     liveVehicleStatus: vehicle.status,
+    ...(vehicle.country === null ? { liveNoCountry: true as const } : {}),
     ...(vehicle.fitCategories ? { liveFitCategories: [...vehicle.fitCategories] } : {}),
-    liveVehicleDocs: { documents: [...(vehicle.documents ?? [])], required: requiredForVehicle(vehicle, driver?.country), ...(driver?.country ? { country: driver.country } : {}) },
+    liveVehicleDocs: { documents: [...(vehicle.documents ?? [])], required: requiredForVehicle(vehicle, country), ...(country ? { country } : {}) },
   };
 }
 
@@ -515,19 +524,17 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
 
   const { readDrivers, readRiders, readPresence, readLivePages, readPayouts } = createListReaders(client, drivers, riders, presence);
 
-  async function readFleets(counting: ListCounting = "keep"): Promise<Fleet[]> {
-    return paged<Fleet>(client, "fleets", "/admin/fleets", NO_FILTER, undefined, counting);
+  // v0.18.161 (adminListFilters.carZones): the vehicles / fleets reads with the zone pick, and the older-server rule (carZones.ts).
+  const { scoped, oldCarRows } = createCarZoneReads(client);
+
+  async function readFleets(counting: ListCounting = "keep", filter: ZoneFilter = NO_FILTER): Promise<Fleet[]> {
+    return scoped<Fleet>("fleets", "/admin/fleets", filter, counting);
   }
 
-  /**
-   * L78-A: the fleets / vehicles count is kept only for All zones, until the server's fleets / vehicles accept
-   * zoneIds / country (REMINDERS 60): it counts the admin's whole scope while the page shows the picked zones.
-   */
-  const scopeCount = (filter: ZoneFilter): ListCounting => (filter.zones === null ? "page" : "none");
-
+  /** v0.18.161: the fleet's zone is the server's Fleet.zoneId; only an older server's rows fall back to the owner's first zone. */
   async function fleetZones(fleets: Fleet[]): Promise<Map<string, string>> {
-    if (!drivers.size) await readDrivers().catch(() => []);
-    return new Map(fleets.map((fleet) => [fleet.fleetId, drivers.get(fleet.ownerDriverId)?.zoneIds[0] ?? ""]));
+    if (fleets.some((fleet) => fleet.zoneId === undefined) && !drivers.size) await readDrivers().catch(() => []);
+    return new Map(fleets.map((fleet) => [fleet.fleetId, fleet.zoneId ?? drivers.get(fleet.ownerDriverId)?.zoneIds[0] ?? ""]));
   }
 
   /** C8 (A15 N10): riders the full riders read did not find (beyond its pages); not read again for them. */
@@ -625,8 +632,10 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     if (filter.denied) return [];
     const read = await listRaw(name, filter, signal);
     const zones = filter.zones;
-    // A row without a zone (a rider, a refund without its trip) is the server's answer for those zones.
-    const rows = zones ? read.filter((row) => !row.zoneId || zones.has(row.zoneId)) : read;
+    // A row without a zone (a rider, a refund without its trip) is the server's answer for those zones. v0.18.161
+    // (adminListFilters.carZones): not a car or a fleet: one with no zone is in no zone, left out once a filter is given.
+    const zoneless = !ZONED_LISTS.has(name) || oldCarRows(name);
+    const rows = zones ? read.filter((row) => (zoneless && !row.zoneId) || (row.zoneId !== "" && zones.has(row.zoneId))) : read;
     remember(rows);
     return rows;
   }
@@ -677,13 +686,13 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       return answer.items.map(refundPayoutRecord);
     }
     if (name === "vehicles") {
-      const rows = await paged<Vehicle>(client, "vehicles", "/admin/vehicles", NO_FILTER, undefined, scopeCount(filter));
+      const rows = await scoped<Vehicle>("vehicles", "/admin/vehicles", filter, "page");
       rows.forEach((row) => vehicles.set(row.vehicleId, row));
       if (!drivers.size) await readDrivers().catch(() => []);
       return rows.map((row) => vehicleRecord(row, drivers));
     }
     if (name === "fleets" || name === "fleetOwners") {
-      const fleets = await readFleets(scopeCount(filter));
+      const fleets = await readFleets("page", filter);
       const zones = await fleetZones(fleets);
       return fleets.map((fleet) => (name === "fleets" ? fleetRecord : ownerRecord)(fleet, zones.get(fleet.fleetId) ?? ""));
     }

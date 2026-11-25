@@ -105,6 +105,8 @@ export type DemoRecord = {
   liveRuleProblems?: string[];
   /** Live cars (v0.18.5 G2-D5.4): the server's review status (pending, approved, rejected, blocked). */
   liveVehicleStatus?: string;
+  /** v0.18.161 (carZones.noCountry): the server sent Vehicle.country null: a data error shown in red. */
+  liveNoCountry?: true;
   /** Live cars (v0.18.5 G2-D5.3): Vehicle.fitCategories, the categories the admin may give on approval. */
   liveFitCategories?: string[];
   /** Live riders: the server's rating, wallet and unpaid fees (AdminRider). */

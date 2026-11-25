@@ -1,11 +1,11 @@
-# Movera API v0.18.160 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.161 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.160
+  version: 0.18.161
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.160 in this folder; this file must agree with them.
+    v0.18.161 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.160
+  version: 0.18.161
   source: contract.json
 paths:
   /auth/otp/request:
@@ -4894,7 +4894,15 @@ paths:
       description: 'Results are limited to the zones in the admin''s token scope. v0.18.54 §76: GET /admin/fleets rows, GET
         /admin/fleets/{fleetId} (FleetView.fleet) and the fleet commands (POST /admin/fleets/{fleetId}/review, /code, the
         invitations): ownerEmail (drivers.viewSensitive). v0.18.78: the page carries total (v0.18.78 (owner 2026-11-12 ~17:30
-        item 5 "Yes, build"): admin lists show "50 of N". contract.json#adminListFilters.total).'
+        item 5 "Yes, build"): admin lists show "50 of N". contract.json#adminListFilters.total). v0.18.161 (adminListFilters.carZones):
+        v0.18.161 (owner 2026-11-25 "Yes, fix it": the admin mixed French and Swedish cars; Rule 0; X-Api-Version stays `0.5`;
+        additive; no migration; follows v0.18.160): GET /admin/vehicles and GET /admin/fleets take zoneId, zoneIds and country
+        like the other lists (rules above), and their total counts under the same filter. v0.17.2 (contract.json#adminListFilters):
+        zoneId, zoneIds and country narrow the list inside those zones; an unknown query key → 400 invalid_request (reason
+        unknown_filter). zoneId on these two lists (already taken since v0.5.3) is the same one-zone filter as on the other
+        lists: only that zone, inside the admin''s zones; a zone outside them is now 403 forbidden (reason zone_out_of_scope),
+        where an older server gave an empty page. The zone of a fleet is Fleet.zoneId (the zone of its city, set when the
+        fleet is made; never null on a fleet). country also keeps only fleets whose Fleet.country is that country.'
       tags:
       - Admin · Lists
       x-actor:
@@ -4912,12 +4920,9 @@ paths:
             $ref: '#/components/schemas/FleetStatus'
         style: form
         explode: true
-      - name: country
-        in: query
-        required: false
-        schema:
-          $ref: '#/components/schemas/DriverCountry'
-      - $ref: '#/components/parameters/ZoneIdQuery'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
       - $ref: '#/components/parameters/Q'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
@@ -4965,7 +4970,18 @@ paths:
       operationId: adminListVehicles
       summary: List vehicles (cursor paging)
       description: 'Results are limited to the zones in the admin''s token scope. v0.18.78: the page carries total (v0.18.78
-        (owner 2026-11-12 ~17:30 item 5 "Yes, build"): admin lists show "50 of N". contract.json#adminListFilters.total).'
+        (owner 2026-11-12 ~17:30 item 5 "Yes, build"): admin lists show "50 of N". contract.json#adminListFilters.total).
+        v0.18.161 (adminListFilters.carZones): v0.18.161 (owner 2026-11-25 "Yes, fix it": the admin mixed French and Swedish
+        cars; Rule 0; X-Api-Version stays `0.5`; additive; no migration; follows v0.18.160): GET /admin/vehicles and GET /admin/fleets
+        take zoneId, zoneIds and country like the other lists (rules above), and their total counts under the same filter.
+        v0.17.2 (contract.json#adminListFilters): zoneId, zoneIds and country narrow the list inside those zones; an unknown
+        query key → 400 invalid_request (reason unknown_filter). zoneId on these two lists (already taken since v0.5.3) is
+        the same one-zone filter as on the other lists: only that zone, inside the admin''s zones; a zone outside them is
+        now 403 forbidden (reason zone_out_of_scope), where an older server gave an empty page. The zone of a car (Vehicle.zoneId):
+        its fleet''s zone; else (a car with no fleet) its driver''s first zone (drivers.zoneIds[0]); else none (null). The
+        same rule judges the admin''s own zones, zoneId / zoneIds / country, the page and its total, and POST /admin/vehicles/{vehicleId}/review.
+        A car with no zone is in no zone: it is left out as soon as zoneId, zoneIds or country is given, and is seen only
+        by an all-zones admin with no filter (as before).'
       tags:
       - Admin · Lists
       x-actor:
@@ -4999,6 +5015,9 @@ paths:
         required: false
         schema:
           $ref: '#/components/schemas/CategoryId'
+      - $ref: '#/components/parameters/ListZoneId'
+      - $ref: '#/components/parameters/ListZoneIds'
+      - $ref: '#/components/parameters/ListCountry'
       - $ref: '#/components/parameters/Q'
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
@@ -23926,6 +23945,20 @@ components:
             Komfort trip needs a Komfort car); re-approving a car without a ride type removes it from the chosen types of
             its drivers. An approved car with no categories stored does not narrow the driver''s chosen types (older rows;
             the admin should re-approve it with its categories).'
+        zoneId:
+          oneOf:
+          - $ref: '#/components/schemas/Id'
+          - type: 'null'
+          description: 'v0.18.161 (adminListFilters.carZones): the car''s zone: The zone of a car (Vehicle.zoneId): its fleet''s
+            zone; else (a car with no fleet) its driver''s first zone (drivers.zoneIds[0]); else none (null). The same rule
+            judges the admin''s own zones, zoneId / zoneIds / country, the page and its total, and POST /admin/vehicles/{vehicleId}/review.
+            Admin views only; absent from an older server.'
+        country:
+          oneOf:
+          - $ref: '#/components/schemas/CountryCode'
+          - type: 'null'
+          description: 'v0.18.161 (adminListFilters.carZones): the car''s country: its fleet''s country, else its driver''s
+            country, else null (shown as unknown, never guessed). Admin views only; absent from an older server.'
     DriverAccountType:
       type: string
       enum:
@@ -24041,6 +24074,12 @@ components:
             GET /admin/fleets/{fleetId}, the review answer): ''fleet_has_no_car'' while the fleet is not approved, has zero
             cars and its country''s PUBLISHED fleetNeedsCarForApproval is on; absent otherwise. The server computes it from
             the same rule as the refusal, so the admin panel needs no settings.read and never reads a draft.'
+        zoneId:
+          allOf:
+          - $ref: '#/components/schemas/Id'
+          description: 'v0.18.161 (adminListFilters.carZones): The zone of a fleet is Fleet.zoneId (the zone of its city,
+            set when the fleet is made; never null on a fleet). country also keeps only fleets whose Fleet.country is that
+            country. Absent from an older server.'
     FleetDriver:
       type: object
       required:

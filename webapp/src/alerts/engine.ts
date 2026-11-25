@@ -19,6 +19,7 @@ export type KindId =
   | "rider_fraud" | "rider_cancels" | "ticket_open"
   | "system_health"
   | "app_crash"
+  | "car_no_country"
   | "rule";
 
 export const LEVELS: { id: Level; label: string }[] = [
@@ -88,6 +89,8 @@ export const KINDS: KindDef[] = [
   { id: "system_health", group: "system", label: "App, map or payments down or slow", help: "Down is Critical, slow is Important.", mode: "fixed", level: "critical", path: "/system" },
   // v0.18.158 (owner 2026-11-24 "Add to admin all kind of crash"; contract.json#crashCatcher.alert): found by the server.
   { id: "app_crash", group: "system", label: "New crash in the rider or driver app", help: "Reports of a new crash type in the last 24 h (app errors, native crashes, freezes). Important from 1 means a new crash type alerts at once. Solved when it is marked fixed in Crashes & errors.", mode: "limits", direction: "up", unit: "reports", limits: { info: null, important: 1, critical: 20 }, path: "/errors" },
+  // v0.18.161 (owner 2026-11-25 "Show as errors and must check what happen"; contract alertDesk kind car_no_country): found by the server.
+  { id: "car_no_country", group: "system", label: "Car with no country", help: "A car whose country is unknown (no fleet, no driver or a driver with no country). Someone must check what happened. Solved when the car has a country.", mode: "fixed", level: "important", path: "/vehicles" },
 ];
 
 export function kindDef(id: KindId): KindDef | undefined {
@@ -194,7 +197,7 @@ export type FoundAlert = {
   /** v0.18.31 (contract.json#alertsOldList, owner Q-Bj): an SOS / safety case whose trip ended 24 h ago; still open. */
   old?: boolean;
   oldSince?: string;
-  ref?: { tripId?: string; driverId?: string; riderId?: string; incidentId?: string; ticketId?: string; payoutId?: string; refundId?: string; ruleId?: string };
+  ref?: { tripId?: string; driverId?: string; riderId?: string; incidentId?: string; ticketId?: string; payoutId?: string; refundId?: string; ruleId?: string; vehicleId?: string };
 };
 
 export type AlertBook = {
@@ -325,6 +328,8 @@ function foundPath(alert: FoundAlert): string | undefined {
   if (ref.incidentId) return `/incidents?case=${ref.incidentId}`;
   if (ref.tripId && (alert.kind.startsWith("booked_") || alert.kind === "late_reservation")) return `/reservations/${ref.tripId}`;
   if (ref.payoutId) return `/payouts/${ref.payoutId}`;
+  // v0.18.161: a car with no country opens its car page.
+  if (ref.vehicleId && alert.kind === "car_no_country") return `/vehicles/${ref.vehicleId}`;
   if (ref.driverId && kindDef(alert.kind)?.group === "drivers") return `/drivers/${ref.driverId}`;
   if (ref.riderId && alert.kind === "rider_cancels") return `/riders/${ref.riderId}`;
   return undefined;
