@@ -82,6 +82,9 @@ import { svC54Sessions } from "./sv/c54-sessions.ts";
 import { svC55OfferBackup } from "./sv/c55-offer-backup.ts";
 import { svC56DriverIncome } from "./sv/c56-driver-income.ts";
 import { svC57AppUpdate } from "./sv/c57-app-update.ts";
+import { svC58DriverProfile } from "./sv/c58-driver-profile.ts";
+import { svC58SmsOther } from "./sv/c58-sms-other.ts";
+import { svC60CrashCatcher } from "./sv/c60-crash-catcher.ts";
 import { svC61FleetNeedsCar } from "./sv/c61-fleet-needs-car.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
@@ -170,5 +173,8 @@ export const sv: Record<MessageKey, string> = {
   ...svC55OfferBackup,
   ...svC56DriverIncome,
   ...svC57AppUpdate,
+  ...svC58DriverProfile,
+  ...svC58SmsOther,
+  ...svC60CrashCatcher,
   ...svC61FleetNeedsCar,
 };

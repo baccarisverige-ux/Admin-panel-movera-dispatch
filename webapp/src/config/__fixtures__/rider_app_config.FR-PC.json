@@ -122,6 +122,13 @@
     "share": false,
     "adjustPickupMeters": 30
   },
+  "driverProfile": {
+    "on": true,
+    "reviews": false
+  },
+  "crashReports": {
+    "on": true
+  },
   "paymentMethods": [
     "cash",
     "card",

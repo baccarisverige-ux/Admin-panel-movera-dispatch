@@ -9,7 +9,7 @@ import { chatSettingsOf } from "../config/chatSettings.ts";
 import { dontMatchOf } from "../config/dontMatchSettings.ts";
 import { emergencyNumbersOf } from "../config/emergencyNumbers.ts";
 import { sosContactsSmsOf } from "../config/sosContactsSms.ts";
-import { smsSignInOf } from "../config/smsSignIn.ts";
+import { SMS_OTHER_HOME, smsOtherOf, smsSignInOf } from "../config/smsSignIn.ts";
 import { MARKETS, hasLiveMarketZones, marketOfZone, standardZoneId, zoneById, type Market, type MarketId } from "../markets/markets.ts";
 import { normalizeStore, unpublishedPriceZones, zoneBook, SLICE_KEY as PRICING_KEY, type PricingStore } from "../pricing/zonePricing.ts";
 import { catalogChanges, readPricingExtras, scheduleOf, sendCatalog, surgeChanges, type HistoryIndex } from "./livePricingOps.ts";
@@ -371,6 +371,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       sosContactsSms: sosContactsSmsOf((document as { sosContactsSms?: unknown }).sosContactsSms),
       // v0.18.133 (contract.json#smsSignIn): CountryRules.smsSignIn (missing = off, 200 a day).
       smsSignIn: smsSignInOf((document as { smsSignIn?: unknown }).smsSignIn),
+      // v0.18.157 (contract.json#smsSignIn.otherCountries): missing = on, 50.
+      smsSignInOther: smsOtherOf((document as { smsSignInOtherCountries?: unknown }).smsSignInOtherCountries),
       onTripMinDonePct: (() => { const v = (document as { onTripOffers?: { minRouteDonePct?: unknown } }).onTripOffers?.minRouteDonePct; return typeof v === "number" && v >= 0 && v <= 100 ? v : 70; })(),
       // Fix job 0 (owner A2-1): read on the Standard; the server ignores a zone's own value.
       ...((document as { walletCreditMax?: { amountMinor: number } }).walletCreditMax ? { walletCreditMax: (document as { walletCreditMax: { amountMinor: number } }).walletCreditMax.amountMinor / market.minorUnits } : {}),
@@ -790,7 +792,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       }
       const facts = zoneFacts(id);
       const hardMax = driverBonusHardMax(market.id as MarketId);
-      const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax }, driverPayChangeMax: next.driverPayChangeMax, bonusCampaignMax: next.bonusCampaignMax, personLimits: next.personLimits, onTripMinDonePct: next.onTripMinDonePct, chainLateFreeCancelMin: next.chainLateFreeCancelMin, calls: next.calls, chat: next.chat, dontMatchAgain: next.dontMatchAgain, ...(id === standardKey(market.id) ? { walletCreditMax: next.walletCreditMax, maxRiderDebt: next.maxRiderDebt, driverOwesLimit: next.driverOwesLimit, riderFeeStripe: next.riderFeeStripe, driverPayRequest: next.driverPayRequest, emergencyNumbers: next.emergencyNumbers, sosContactsSms: next.sosContactsSms, smsSignIn: next.smsSignIn } : {}) }, current?.document ?? null, { standard: id === standardKey(market.id) });
+      const doc = countryRulesOf(market.id, facts.currency, { tips: next.tips.filter((t) => t.enabled).map((t) => t.amount), raiseSteps: next.raiseSteps.filter((r) => r.enabled).map((r) => r.amount), driverBonus: { defaultLimit: next.driverBonusLimit, hardMax }, driverPayChangeMax: next.driverPayChangeMax, bonusCampaignMax: next.bonusCampaignMax, personLimits: next.personLimits, onTripMinDonePct: next.onTripMinDonePct, chainLateFreeCancelMin: next.chainLateFreeCancelMin, calls: next.calls, chat: next.chat, dontMatchAgain: next.dontMatchAgain, ...(id === standardKey(market.id) ? { walletCreditMax: next.walletCreditMax, maxRiderDebt: next.maxRiderDebt, driverOwesLimit: next.driverOwesLimit, riderFeeStripe: next.riderFeeStripe, driverPayRequest: next.driverPayRequest, emergencyNumbers: next.emergencyNumbers, sosContactsSms: next.sosContactsSms, smsSignIn: next.smsSignIn, ...(market.id === SMS_OTHER_HOME && next.smsSignInOther !== undefined && JSON.stringify(next.smsSignInOther) !== JSON.stringify(smsOtherOf((current?.document as { smsSignInOtherCountries?: unknown } | undefined)?.smsSignInOtherCountries)) ? { smsSignInOther: next.smsSignInOther } : {}) } : {}) }, current?.document ?? null, { standard: id === standardKey(market.id) });
       await savePublish(http, "country_rules", id, current, doc, saveNote(saveId, current?.usesStandard === true));
       drafts.delete(key("country_rules", id));
       standardMarks.set("country_rules", id, false);

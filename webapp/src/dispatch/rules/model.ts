@@ -505,11 +505,22 @@ export type ZoneDispatch = {
    */
   shareTrip?: { on: boolean };
   /**
+   * v0.18.158 (owner 2026-11-24 "Add to admin all kind of crash"; contract.json#crashCatcher.setting): whether each app
+   * sends crash reports in this zone. Dispatch › Safety. Sent as RiderAppConfig.crashReports { on } and
+   * DriverAppConfig.crashReports { on }. Optional so rules saved before it still load (on then).
+   */
+  crashReports?: { rider: boolean; driver: boolean };
+  /**
    * v0.18.144 (owner 2026-11-20; contract.json#liveLocation.setting): two-way live location (default off) and the rider
    * app's adjust-pickup banner distance. Dispatch › Safety. Sent as the rider document's liveLocation. Optional so rules
    * saved before it still load (off, 30 m then).
    */
   liveLocation?: { share: boolean; adjustPickupMeters: number };
+  /**
+   * v0.18.155 driver profile (owner 2026-11-20 "Now build all"; contract.json#driverProfile.setting): the rider's driver
+   * profile sheet and the written reviews on it, per zone. Dispatch › Safety. Sent as the rider document's driverProfile.
+   */
+  driverProfile?: { on: boolean; reviews: boolean };
   /**
    * L20 stream (owner 2026-11-17 "Yes, with switch (Rec.)"; contract v0.18.122 contract.json#driverOneStream): the driver
    * app opens one live connection (GET /driver/stream) instead of two. Dispatch › Drivers. Sent as the driver document's

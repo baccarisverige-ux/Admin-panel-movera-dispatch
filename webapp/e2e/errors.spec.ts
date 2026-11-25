@@ -32,7 +32,8 @@ test("Crashes & errors: newest first, filters, mark fixed and reopen, empty stat
   await expect(table.getByRole("row").nth(1)).toContainText("Cannot read properties of undefined");
   await expect(table.getByRole("row").nth(1)).toContainText("Android");
   await expect(table.getByRole("row").nth(1)).toContainText("1.4.2");
-  await expect(page.getByText("7 groups")).toBeVisible();
+  // v0.18.158: the demo adds a native crash (rider iOS) and a freeze (driver Android).
+  await expect(page.getByText("9 groups")).toBeVisible();
 
   await page.getByLabel("App", { exact: true }).selectOption("server");
   await expect(page.getByText("1 groups")).toBeVisible();
@@ -40,7 +41,7 @@ test("Crashes & errors: newest first, filters, mark fixed and reopen, empty stat
   await page.getByLabel("App", { exact: true }).selectOption("");
 
   await page.getByLabel("Platform", { exact: true }).selectOption("ios");
-  await expect(page.getByText("2 groups")).toBeVisible();
+  await expect(page.getByText("3 groups")).toBeVisible();
   await page.getByLabel("Platform", { exact: true }).selectOption("");
   await page.getByLabel("Version", { exact: true }).selectOption("2.1.0");
   await expect(page.getByText("2 groups")).toBeVisible();
