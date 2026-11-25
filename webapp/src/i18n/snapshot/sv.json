@@ -9602,4 +9602,5 @@
 ["✓ {0} cars","✓ {0} bilar"],
 ["Fleet approval","Godkännande av åkeri"],
 ["Fleet needs at least 1 car before approval","Åkeriet behöver minst 1 bil före godkännande"],
-["On: Movera cannot approve a fleet until its owner has added at least one car.","På: Movera kan inte godkänna ett åkeri förrän ägaren har lagt till minst en bil."]]
+["On: Movera cannot approve a fleet until its owner has added at least one car.","På: Movera kan inte godkänna ett åkeri förrän ägaren har lagt till minst en bil."],
+["Country unknown","Okänt land"]]

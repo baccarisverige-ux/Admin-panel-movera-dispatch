@@ -21,7 +21,8 @@ import {
 import { can } from "../auth/permissions";
 import { HealthPill } from "../fleet/ui";
 import { formatMoney } from "../markets/markets";
-import { CATEGORY_LABELS, PHOTO_SIDES, fuelLabel, VEHICLE_RULES_KEY, carDocs, carEarnings, checks, countryOfZone, effectiveVehicleRules, emptyVehicleRules, fits, liveCarDocs, photosOf, setPhoto, shouldHold, type VehicleRules } from "../vehicles/rules";
+import { EXPIRY_WARNING_DAYS } from "../fleet/documents";
+import { CATEGORY_LABELS, PHOTO_SIDES, fuelLabel, VEHICLE_RULES_KEY, carDocs, carCountryOf, carEarnings, checks, effectiveVehicleRules, emptyVehicleRules, fits, liveCarDocs, photosOf, setPhoto, shouldHold, type VehicleRules } from "../vehicles/rules";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trn, trSentences, trx } from "../i18n";
 import { categoryName } from "../riders/profile";
@@ -121,16 +122,18 @@ export function VehicleDetailPage() {
         : "eligible";
   const selectedDriver = driverOptions.find((driver) => driver.id === driverId);
 
-  const country = countryOfZone(record.zoneId);
-  const countryRules = rules.countries[country];
+  // v0.18.161: the car's own country (the server's Vehicle.country); null = unknown, never SE.
+  const country = carCountryOf(record, isLiveData());
+  const countryRules = country ? rules.countries[country] : null;
+  const warnDays = countryRules?.warnDays ?? EXPIRY_WARNING_DAYS;
   const driver = drivers.data?.find((item) => item.id === record.driverId);
   const dops = driver ? driverOps(store.value, { id: driver.id, name: driver.name, fleetId: driver.fleetId, status: driver.status }) : null;
   // Live (owner G2 R1): the server's car papers; the demo keeps its simulated ones.
-  const docs = isLiveData() ? liveCarDocs(record.liveVehicleDocs?.documents, now, countryRules.warnDays) : carDocs(profile, dops ? { vehicle_insurance: dops.documents.vehicle_insurance, vehicle_registration: dops.documents.vehicle_registration } : {}, now, countryRules.warnDays);
+  const docs = isLiveData() ? liveCarDocs(record.liveVehicleDocs?.documents, now, warnDays) : carDocs(profile, dops ? { vehicle_insurance: dops.documents.vehicle_insurance, vehicle_registration: dops.documents.vehicle_registration } : {}, now, warnDays);
   const photos = photosOf(rules, record.id);
   const car = { year: profile.year, seats: profile.seats, fuel: profile.fuel, category: profile.category };
   const fuelText = (() => { const shown = carFuelShown(record, profile); return shown ? fuelLabel(shown).toLowerCase() : "—"; })();
-  const fitsList = fits(car, countryRules);
+  const fitsList = countryRules ? fits(car, countryRules) : [];
   // v0.18.3 (owner G2 R2): the server's Vehicle.ruleProblems; while there are any the car cannot be approved.
   const ruleProblems = record.liveRuleProblems ?? [];
   // Live (owner G2c): the car's own categories from the server and its rule problems; no demo category or seeded photos.
@@ -140,13 +143,13 @@ export function VehicleDetailPage() {
         { label: tr("Car rules"), ok: ruleProblems.length === 0, detail: ruleProblems.length ? ruleProblems.map((item) => ruleProblemText(item)).join(" · ") : tr("{0}, {1} seats, {2}", [profile.year, profile.seats, fuelText]) },
         ...docs.map((doc) => ({ label: doc.label, ok: doc.health === "valid" || doc.health === "expiring", detail: doc.text })),
       ]
-    : checks(car, docs, photos, countryRules, profile.category);
+    : countryRules ? checks(car, docs, photos, countryRules, profile.category) : [];
   const fleetName = (fleetRef: string) => (fleets.data ?? []).find((item) => item.id === fleetRef)?.name ?? fleetRef;
-  const zoneName = zoneById(record.zoneId)?.name ?? record.zoneId;
+  const zoneName = record.zoneId ? zoneById(record.zoneId)?.name ?? record.zoneId : country ? "" : tr("Country unknown");
   const earnings = carEarnings(trips.data ?? [], record.driverId);
   // Live: the server takes cars off the road itself; no simulated hold warning.
-  const hold = !isLiveData() && shouldHold(docs, countryRules) && record.status !== "on_hold";
-  const money = (minor: number) => formatMoney(minor, country);
+  const hold = !isLiveData() && countryRules !== null && shouldHold(docs, countryRules) && record.status !== "on_hold";
+  const money = (minor: number) => (country ? formatMoney(minor, country) : "—");
   const canEdit = Boolean(agent && can(agent.role, "vehicles.edit"));
   // v0.18.5 (owner G2-D5.4): the car's true state from the server; G2-D5.3: the categories the admin may give.
   const carState = liveCats ? liveCarState({ status: record.liveVehicleStatus ?? "pending", documents: record.liveVehicleDocs?.documents ?? [], requiredDocuments: record.liveVehicleDocs?.required ?? [] }) : null;
@@ -218,7 +221,7 @@ export function VehicleDetailPage() {
             {docs.map((doc) => <li key={doc.id}><span><b>{doc.label}</b>{doc.expiresAt ? <small>{trn("Until {0}", doc.expiresAt)}</small> : null}</span><HealthPill health={doc.health}>{doc.text}</HealthPill></li>)}
           </ul>
           )}
-          <p className="vh-help">{trn("Warnings start {0} days before papers expire.", countryRules.warnDays)}</p>
+          <p className="vh-help">{trn("Warnings start {0} days before papers expire.", warnDays)}</p>
         </section>
         <section className="vh-section" aria-label={tr("Trips and earnings")}>
           <h3><Banknote size={16} aria-hidden="true" />{" "}{tr("Trips and earnings")}</h3>

@@ -9602,4 +9602,5 @@
 ["✓ {0} cars","✓ {0} voitures"],
 ["Fleet approval","Approbation de la flotte"],
 ["Fleet needs at least 1 car before approval","La flotte doit avoir au moins 1 voiture avant l’approbation"],
-["On: Movera cannot approve a fleet until its owner has added at least one car.","Activé : Movera ne peut pas approuver une flotte tant que son propriétaire n’a pas ajouté au moins une voiture."]]
+["On: Movera cannot approve a fleet until its owner has added at least one car.","Activé : Movera ne peut pas approuver une flotte tant que son propriétaire n’a pas ajouté au moins une voiture."],
+["Country unknown","Pays inconnu"]]

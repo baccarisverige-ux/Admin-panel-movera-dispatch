@@ -134,6 +134,8 @@ export type Fleet = {
   approvalBlockedReason?: "fleet_has_no_car";
   createdAt: string;
   version: number;
+  /** v0.18.161 (adminListFilters.carZones): the fleet's zone; absent from an older server. */
+  zoneId?: string;
 };
 
 export type FleetDriver = {
@@ -168,6 +170,10 @@ export type Vehicle = {
   ruleProblems?: string[];
   /** v0.18.5 (owner G2-D5.3): the ride categories and extras this car fits now; the admin gives some of them on approval. */
   fitCategories?: string[];
+  /** v0.18.161 (adminListFilters.carZones): the car's zone (fleet's, else driver's first, else null); absent from an older server. */
+  zoneId?: string | null;
+  /** v0.18.161: the car's country (fleet's, else driver's, else null = unknown); absent from an older server. */
+  country?: string | null;
 };
 
 export type FleetInvitationStatus = "pending" | "accepted" | "declined" | "cancelled" | "expired";

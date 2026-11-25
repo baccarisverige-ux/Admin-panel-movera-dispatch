@@ -9,10 +9,10 @@ import { useRecords, useSlice } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
 import { emptyDriverOpsBook, driverOps, vehicleOps, type DriverOpsBook } from "../drivers/ops";
 import { vehicleBlock } from "../drivers/gate";
-import { overallHealth, type DocHealth } from "../fleet/documents";
+import { EXPIRY_WARNING_DAYS, overallHealth, type DocHealth } from "../fleet/documents";
 import { useMarketScope } from "../markets/useMarketScope";
 import { Cards } from "../reports/ui";
-import { CATEGORY_LABELS, VEHICLE_RULES_KEY, carDocs, countryOfZone, effectiveVehicleRules, emptyVehicleRules, fits, liveCarDocs, photosOf, shouldHold, type VehicleRules } from "../vehicles/rules";
+import { CATEGORY_LABELS, VEHICLE_RULES_KEY, carCountryOf, carDocs, effectiveVehicleRules, emptyVehicleRules, fits, liveCarDocs, photosOf, shouldHold, type VehicleRules } from "../vehicles/rules";
 import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { OnboardingSettingsEditor } from "../drivers/OnboardingSettingsEditor";
 import { DataTable } from "../ui/DataTable";
@@ -74,7 +74,11 @@ export function FleetPage() {
         const profile = vehicleOps(store.value, record);
         const driver = record.driverId ? byId.get(record.driverId) : undefined;
         const dops = driver ? driverOps(store.value, { id: driver.id, name: driver.name, fleetId: driver.fleetId, status: driver.status }) : null;
-        const docs = live ? liveCarDocs(record.liveVehicleDocs?.documents, now, rules.countries[countryOfZone(record.zoneId)].warnDays) : carDocs(profile, dops ? { vehicle_insurance: dops.documents.vehicle_insurance, vehicle_registration: dops.documents.vehicle_registration } : {}, now, rules.countries[countryOfZone(record.zoneId)].warnDays);
+        // v0.18.161: the car's own country (the server's), null = unknown (never SE); its rules only when known.
+        const carCountry = carCountryOf(record, live);
+        const country = carCountry ? rules.countries[carCountry] : null;
+        const warnDays = country?.warnDays ?? EXPIRY_WARNING_DAYS;
+        const docs = live ? liveCarDocs(record.liveVehicleDocs?.documents, now, warnDays) : carDocs(profile, dops ? { vehicle_insurance: dops.documents.vehicle_insurance, vehicle_registration: dops.documents.vehicle_registration } : {}, now, warnDays);
         // Live: the server's missing car documents decide; nothing is assumed approved (owner G2 R1).
         // v0.18.5 (G2-D5.4): live papers = missing/rejected/expired (the owner must act), waiting review, or OK.
         const liveHealth = (): DocHealth => {
@@ -84,13 +88,12 @@ export function FleetPage() {
           return stuck ? "invalid" : "review";
         };
         const health = live ? liveHealth() : overallHealth({ valid: 0, expiring: docs.filter((doc) => doc.health === "expiring").length, invalid: docs.filter((doc) => doc.health === "invalid").length, review: docs.filter((doc) => doc.health === "review").length });
-        const country = rules.countries[countryOfZone(record.zoneId)];
         const car = { year: profile.year, seats: profile.seats, fuel: profile.fuel, category: profile.category };
         const photos = photosOf(rules, record.id);
         const photosWaiting = live ? 0 : Object.values(photos).filter((photo) => photo.status !== "approved").length;
         // Live (G2-D5.4): the true state from the server's status and papers.
         const state = live ? liveCarState({ status: record.liveVehicleStatus ?? "pending", documents: record.liveVehicleDocs?.documents ?? [], requiredDocuments: record.liveVehicleDocs?.required ?? [] }) : null;
-        return { record, profile, driver, docs, health, state, fitsList: fits(car, country), photosWaiting, hold: !live && shouldHold(docs, country), issue: live ? (record.liveRuleProblems ?? []).map(ruleProblemText).join(", ") || null : vehicleBlock(car) };
+        return { record, profile, driver, docs, health, state, fitsList: country ? fits(car, country) : [], photosWaiting, hold: !live && country !== null && shouldHold(docs, country), issue: live ? (record.liveRuleProblems ?? []).map(ruleProblemText).join(", ") || null : vehicleBlock(car) };
       });
   }, [agent?.scope.fleetPartnerId, vehicles.data, drivers.data, store.value, rules, now, live]);
 
@@ -124,7 +127,7 @@ export function FleetPage() {
             <p>{tr("Which car fits which category, when papers count as expiring, and what happens when they run out.")}</p>
           </div>
         </header>
-        <OnboardingSettingsEditor key={scope.market.id} country={scope.market.id} part="vehicles" cars={rows.filter((row) => countryOfZone(row.record.zoneId) === scope.market.id).map((row) => ({ year: row.profile.year, seats: row.profile.seats, fuel: row.profile.fuel, category: row.profile.category }))} liveFitCounts={vehicleRuleFitCounts(rows.filter((row) => countryOfZone(row.record.zoneId) === scope.market.id).map((row) => row.record))} />
+        <OnboardingSettingsEditor key={scope.market.id} country={scope.market.id} part="vehicles" cars={rows.filter((row) => carCountryOf(row.record, live) === scope.market.id).map((row) => ({ year: row.profile.year, seats: row.profile.seats, fuel: row.profile.fuel, category: row.profile.category }))} liveFitCounts={vehicleRuleFitCounts(rows.filter((row) => carCountryOf(row.record, live) === scope.market.id).map((row) => row.record))} />
       </div>
     );
   }

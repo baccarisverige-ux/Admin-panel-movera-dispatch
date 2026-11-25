@@ -10,8 +10,8 @@ import type { LiveClient } from "./session.ts";
 /**
  * L78-A (contract v0.18.78 adminListFilters.total; owner 2026-11-12 item 5 "Yes, build", item 109 "50 of N · Load
  * more"): the first page of an admin list may carry `total`; the list bar shows "{loaded} of {total}". Absent =
- * not counted (normal on a 0.18.78 server too): no number, never a stale one. Vehicles and fleets: the server
- * ignores zoneIds / country there (REMINDERS 60), so the count is kept only for All zones.
+ * not counted (normal on a 0.18.78 server too): no number, never a stale one. Vehicles and fleets: before v0.18.161 the
+ * server ignored zoneIds / country there (REMINDERS 60) and the count was kept only for All zones; v0.18.161 sends the pick.
  */
 // Loaded lazily so this file runs (and fails per case) on a base without listPages.ts.
 const pages: Record<string, unknown> = await import("./listPages.ts").catch(() => ({}));
@@ -127,15 +127,18 @@ test("L78-A: a total that is not a whole number >= 0 is ignored", async () => {
   resetLists();
 });
 
-test("L78-A: vehicles / fleets keep the count only for All zones (the server ignores the zone pick there)", async () => {
+// v0.18.161 (adminListFilters.carZones): vehicles / fleets now take the zone pick and count under it (before: the count
+// was kept only for All zones, REMINDERS 60), so the picked zone's count is the server's own.
+test("L78-A + v0.18.161: vehicles / fleets count under the zone pick (zoneId sent, the server's total kept)", async () => {
   for (const name of ["vehicles", "fleets"]) {
     resetLists();
-    const { client } = fakeServer();
+    const { client, reads } = fakeServer({ total: (_route, q, count) => (q.get("zoneId") === "Z001" ? 7 : count) });
     const api = createLiveAdminApi(client);
     await api.list(name, "all");
     assert.equal(queryOf(name).total, name === "vehicles" ? 70 : 60, `${name} all zones`);
     await api.list(name, ["Z001"]);
-    assert.equal(queryOf(name).total, undefined, `${name} one zone`);
+    assert.ok(reads.some((path) => path.startsWith(`/admin/${name}?`) && new URLSearchParams(path.split("?")[1]).get("zoneId") === "Z001"), `${name} sends zoneId`);
+    assert.equal(queryOf(name).total, 7, `${name} one zone`);
     await api.list(name, null);
     assert.ok(queryOf(name).total !== undefined, `${name} back to all zones`);
   }

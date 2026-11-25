@@ -99,6 +99,19 @@ export function countryOfZone(zoneId: string): MarketId {
   return marketOfZone(zoneId)?.id ?? "SE";
 }
 
+/**
+ * v0.18.161 (contract.json#adminListFilters.carZones; owner 2026-11-25 "Yes, fix it": the admin mixed French and Swedish
+ * cars): a car's country. Live: the server's Vehicle.country, else the market of the server's Vehicle.zoneId; never a
+ * guess, so null = unknown (shown as unknown, never as SE). Demo: the zone's country as before.
+ */
+export function carCountryOf(record: Pick<DemoRecord, "zoneId" | "liveVehicleDocs">, live: boolean): MarketId | null {
+  if (!live) return countryOfZone(record.zoneId);
+  const sent = record.liveVehicleDocs?.country;
+  const known = MARKETS.find((item) => item.id === sent)?.id;
+  if (known) return known;
+  return record.zoneId ? marketOfZone(record.zoneId)?.id ?? null : null;
+}
+
 export type CarDoc = { id: "insurance" | "inspection" | "registration"; label: string; expiresAt: string; health: DocHealth; text: string };
 
 /** The car's papers. When the driver uploaded insurance or registration, the worse of the two counts. warnDays: the country's warning days for papers. */

@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.159",
+  "version": "0.18.161",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -1703,7 +1703,9 @@
       "GET /admin/incidents",
       "GET /admin/live/drivers",
       "GET /admin/risk/signals",
-      "GET /admin/kpis"
+      "GET /admin/kpis",
+      "GET /admin/vehicles",
+      "GET /admin/fleets"
     ],
     "reservations": "reservations are trips: GET /admin/trips?kind=scheduled with the same filters",
     "params": {
@@ -1743,7 +1745,19 @@
       "onlyWhenAsked": "v0.18.83 (G34 fix plan P4-B; owner 2026-11-13 12:24 UTC \"Yes (Rec.)\"; proof sup3 P4: every live event reload re-counted page 1, about 2,120 Trips/Payments counts a minute): the lists in total.lists take an optional query key total (boolean, default true). total=false: the server does not count and leaves total out of the page (the rows are the same). The panel counts only when the list page asks: when the list page opens and when its filter (zones, country, status, q or any other filter) changes. Every other first-page read (live event reloads, the alerts, the Dashboard) sends total=false, and the list keeps the number it already shows. absent or total=true: counted as before (the rule above), so an older panel is unchanged. A server before v0.18.83 answers total with 400 invalid_request (reason unknown_filter), so the panel sends it only to a server of v0.18.83 or later. Other routes never take it."
     },
     "scheduledBefore": "v0.18.83 (G34 fix plan A2; owner 2026-11-13 12:24 UTC \"Exact contract filter (Rec.)\"; proof sup3 P6b: the Dashboard's waiting-trips read took 10 pages / 1,000 booked rows every 10 s and showed none of them): GET /admin/trips takes an optional scheduledBefore (Timestamp). With it, a trip of kind live always passes; a trip of kind scheduled passes only when its scheduledAt is at or before scheduledBefore. It only narrows, together with the other filters (status, kind, zones, from / to, ...). The Dashboard's waiting requests use one read: GET /admin/trips?status=requested&status=searching&status=offered&scheduledBefore=<now>, so booked rides that are not due are never read, and a booked ride whose send is late (still requested after its pickup time) stays on the Dashboard. Reservations keeps its own reads (kind=scheduled), unchanged. A malformed value → 400 invalid_request; a server before v0.18.83 answers it with 400 invalid_request (reason unknown_filter), so the panel sends it only to a server of v0.18.83 or later.",
-    "incidentsByPerson": "v0.18.78 (owner 2026-11-12 ~17:30 item 5): GET /admin/incidents takes two more optional filters: driverId (cases whose Incident.driverId is that driver) and riderId (cases whose Incident.riderId is that rider). Both together: cases that match both. They only narrow inside the admin's own zones and with the other filters (status, severity, kind, tripId, zoneId / zoneIds / country, from / to); an id with no case → an empty page (no 404); a malformed id → 400 invalid_request. Used by the driver and rider detail pages and Reports › Care instead of reading every case. A server before v0.18.78 answers these keys with 400 invalid_request (reason unknown_filter), so the panel sends them only to a server of v0.18.78 or later. Rule 33: the server may add an index on incidents.driver_id and incidents.rider_id (built without locking the table, Rule 46) so these filters stay fast at 10,000+ drivers and riders."
+    "incidentsByPerson": "v0.18.78 (owner 2026-11-12 ~17:30 item 5): GET /admin/incidents takes two more optional filters: driverId (cases whose Incident.driverId is that driver) and riderId (cases whose Incident.riderId is that rider). Both together: cases that match both. They only narrow inside the admin's own zones and with the other filters (status, severity, kind, tripId, zoneId / zoneIds / country, from / to); an id with no case → an empty page (no 404); a malformed id → 400 invalid_request. Used by the driver and rider detail pages and Reports › Care instead of reading every case. A server before v0.18.78 answers these keys with 400 invalid_request (reason unknown_filter), so the panel sends them only to a server of v0.18.78 or later. Rule 33: the server may add an index on incidents.driver_id and incidents.rider_id (built without locking the table, Rule 46) so these filters stay fast at 10,000+ drivers and riders.",
+    "carZones": {
+      "since": "0.18.161",
+      "note": "v0.18.161 (owner 2026-11-25 \"Yes, fix it\": the admin mixed French and Swedish cars; Rule 0; X-Api-Version stays `0.5`; additive; no migration; follows v0.18.160): GET /admin/vehicles and GET /admin/fleets take zoneId, zoneIds and country like the other lists (rules above), and their total counts under the same filter.",
+      "carZone": "The zone of a car (Vehicle.zoneId): its fleet's zone; else (a car with no fleet) its driver's first zone (drivers.zoneIds[0]); else none (null). The same rule judges the admin's own zones, zoneId / zoneIds / country, the page and its total, and POST /admin/vehicles/{vehicleId}/review.",
+      "noZone": "A car with no zone is in no zone: it is left out as soon as zoneId, zoneIds or country is given, and is seen only by an all-zones admin with no filter (as before).",
+      "fleetZone": "The zone of a fleet is Fleet.zoneId (the zone of its city, set when the fleet is made; never null on a fleet). country also keeps only fleets whose Fleet.country is that country.",
+      "existingZoneId": "zoneId on these two lists (already taken since v0.5.3) is the same one-zone filter as on the other lists: only that zone, inside the admin's zones; a zone outside them is now 403 forbidden (reason zone_out_of_scope), where an older server gave an empty page.",
+      "fields": "Vehicle.zoneId (string or null): the car's zone by carZone. Vehicle.country (ISO 3166-1 alpha-2 or null): the car's country, its fleet's country, else its driver's country (the country whose car rules and documents apply), else null. Fleet.zoneId (string): the fleet's zone. Sent on every Vehicle and Fleet an admin reads; additive, absent from an older server.",
+      "server": "Rule 33: the car zone is part of the SQL WHERE of both the page and the count (never filtered in code after the read); the fleet zone is fleets.zone_id in the WHERE.",
+      "panel": "The admin sends the picked zones (zoneIds, or zoneId for one zone, and country for \"All zones\" of a country) on both lists, shows the server's Vehicle.zoneId / Vehicle.country / Fleet.zoneId, never guesses a car's zone or country (a car with no country is shown as unknown, never as SE), and never keeps a car or fleet with no zone when a filter is given. An older server that answers 400 unknown_filter is read without the filter and the rows are filtered in the panel by the same rule (no total then).",
+      "apps": "Driver app: not affected (it reads its own cars from GET /driver/vehicles, never these admin lists). Rider app: not affected (it never reads cars or fleets)."
+    }
   },
   "liveDrivers": {
     "note": "v0.5.1 (CONTRACT.md §12), owner decision 11: the admin live map reads driver positions from the server.",

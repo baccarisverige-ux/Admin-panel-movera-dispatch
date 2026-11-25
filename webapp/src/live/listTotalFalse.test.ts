@@ -160,7 +160,9 @@ test("A6: every-page reads (Dashboard waiting trips, due payouts, tickets) and t
   resetLists();
 });
 
-test("A6: vehicles with a zone pick (count not kept) send total=false; back to All zones counts again", async () => {
+// v0.18.161 (adminListFilters.carZones): the server counts vehicles under the zone pick, so a zone pick is a new
+// filter that is counted (before: total=false and no count kept for a zone pick).
+test("A6 + v0.18.161: vehicles with a zone pick are counted (a new filter); back to All zones counts again", async () => {
   resetLists();
   const { client, reads } = fakeServer();
   const api = createLiveAdminApi(client);
@@ -168,8 +170,8 @@ test("A6: vehicles with a zone pick (count not kept) send total=false; back to A
   assert.equal(queryOf("vehicles").total, 70);
   reads.length = 0;
   await api.list("vehicles", ["Z001"]);
-  assert.equal(totalOf(of(reads, "/admin/vehicles")[0]!), "false");
-  assert.equal(queryOf("vehicles").total, undefined);
+  assert.equal(totalOf(of(reads, "/admin/vehicles")[0]!), null);
+  assert.ok(queryOf("vehicles").total !== undefined);
   reads.length = 0;
   await api.list("vehicles", null);
   assert.equal(totalOf(of(reads, "/admin/vehicles")[0]!), null);
