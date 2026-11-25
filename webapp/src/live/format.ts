@@ -218,6 +218,8 @@ export function errorText(error: unknown): string {
   if (error.reason === "bank_not_uploaded") return tr("The driver has not uploaded bank details yet.");
   // v0.18.76 G30 (owner Q6, contract.json#emailVerified.texts.approvalRefused): the country needs a verified e-mail before approval.
   if (error.reason === "email_not_verified") return tr("The driver's e-mail is not verified yet.");
+  // v0.18.159 (contract.json#fleetNeedsCar.refusal): a fleet with no car is never approved while the country's setting is on.
+  if (error.reason === "fleet_has_no_car") return tr("Approve is locked until the owner adds at least 1 car.");
   // v0.18.5 (owner G2-D5.7 "Reason always (Recommended)"): every rejection or block says why.
   if (error.reason === "note_required") return tr("Write why: the driver sees the reason.");
   // v0.18.5 (owner G2-D5.8): an end date more than 15 years ahead (contract documentExpiry.texts.expiry_too_far).
