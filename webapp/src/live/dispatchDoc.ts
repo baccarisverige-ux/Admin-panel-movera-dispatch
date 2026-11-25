@@ -2,6 +2,7 @@
  * The Dispatch rules read back from the server's documents (split from configDocs.ts so the first load carries only
  * this part: dispatch/rules.ts needs it; the save / publish code stays in the lazily loaded live chunk).
  */
+import { liveTrafficFromDoc } from "../dispatch/rules/liveTraffic.ts";
 import { liveLocationOf } from "../dispatch/rules/liveLocation.ts";
 import { completeBookingWindow, completeEarlyEnd, RIDE_CHECK_LIMITS, rideCheckDefault, type ZoneDispatch } from "../dispatch/rules.ts";
 import { completeOfferCard } from "../dispatch/offers.ts";
@@ -46,6 +47,10 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     zone.limits = { maxPickupKm: typeof raw.limits?.maxPickupKm === "number" ? raw.limits.maxPickupKm : 0, maxPickupEtaMin: typeof raw.limits?.maxPickupEtaMin === "number" ? raw.limits.maxPickupEtaMin : 0, farReachKm: typeof far === "number" && far > 0 && far <= 50 ? far : zone.limits.farReachKm };
     const ask = (doc as { reaskLimit?: unknown }).reaskLimit;
     zone.reaskLimit = typeof ask === "number" && Number.isInteger(ask) && ask >= 1 && ask <= 5 ? ask : zone.reaskLimit;
+    // v0.18.163 (contract.json#liveTraffic.setting): set in the document, else not set (the country default).
+    const traffic = liveTrafficFromDoc(doc);
+    if (traffic) zone.liveTraffic = traffic;
+    else delete zone.liveTraffic;
     const nd = raw.noDriverNearby;
     zone.noDriverNearby = {
       on: typeof nd?.on === "boolean" ? nd.on : zone.noDriverNearby.on,

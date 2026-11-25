@@ -240,6 +240,8 @@ export function dispatchDocumentOf(zone: ZoneDispatch, id: string, base: Doc | n
     // v0.18.39 §63 (owner N2): "No driver nearby" once, afterSec after the search started (live rides).
     // v0.18.39 §63: like start/limits, written only when the server document has it or the admin changed it from the default.
     ...n2Parts(zone, base),
+    // v0.18.163 (contract.json#liveTraffic.setting): only once the admin set it (else the country default on the server).
+    ...(zone.liveTraffic ? { liveTraffic: { ...zone.liveTraffic } } : {}),
     waiting: zone.waiting.map((step) => ({ id: step.id, kind: step.kind, on: step.on, afterMin: step.afterMin, message: step.message, extraMin: step.extraMin ?? null })),
     // v0.18.6 (owner G4-E4): the rider raise limit; publishing it also writes the zone's rider app config (server).
     raisePrice: { maxFactor: zone.raisePrice.maxFactor },

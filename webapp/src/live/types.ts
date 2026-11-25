@@ -209,7 +209,7 @@ export type TripPlace = { address?: string; lat: number; lng: number };
 export type TripStopVisit = { arrivedAt?: string; leftAt?: string; arrivedBy?: "auto" | "tap"; away?: { since: string }; pausedSeconds?: number; pauseCount?: number };
 
 /** v0.18.7 (G5 Q4): the server's road-route ETA, refreshed every 30 s while a driver is on the way or driving. */
-export type TripEta = { etaSeconds: number; distanceMeters: number; target: "pickup" | "dropoff"; at: string; source: "osrm" | "estimate" | "stale" };
+export type TripEta = { etaSeconds: number; distanceMeters: number; target: "pickup" | "dropoff"; at: string; source: "google" | "osrm" | "estimate" | "stale" };
 /** v0.18.7 (G5 Q1): the rider as the driver and admin see them from accept to the end (never the rider's own view). */
 export type RiderSummary = { firstName: string; rating?: number };
 /** v0.18.7: the rules a trip is charged by (booking snapshot + the zone's switches at booking time). */

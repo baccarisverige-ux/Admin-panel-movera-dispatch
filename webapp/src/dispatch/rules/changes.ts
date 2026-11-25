@@ -31,7 +31,7 @@ const LABELS: Record<string, string> = {
   "reservation.listAreaTrips": "Trips from the area", "reservation.listOpenAll": "Open to all drivers", "reservation.listOpenAllAfterMin": "Open to all drivers after",
   "reservation.homePopup": "Reservation Home popup", "reservation.homePopupAfterMin": "Home popup after booking",
   "reservation.toRadar": "Reservation to Radar trips", "reservation.radarBeforeMin": "Radar trips before pickup", "reservation.onDriverCancel": "After a driver cancels",
-  "choose.how": "How the mode is chosen", "choose.radarAbove": "Busy level for Radar", "choose.main": "Main mode", "start.mode": "Start & order", "start.nearKm": "Exclusive first within", "limits.maxPickupKm": "Farthest pickup", "limits.maxPickupEtaMin": "Longest pickup time", "limits.farReachKm": "Far reach", "reaskLimit": "Ask one driver at most (offers)", "noDriverNearby.on": "No driver nearby", "noDriverNearby.afterSec": "No driver nearby after (s)", "noDriverNearby.message": "No driver nearby message", "neighbours.on": "Neighbour zones", "choose.times": "Time rules",
+  "choose.how": "How the mode is chosen", "choose.radarAbove": "Busy level for Radar", "choose.main": "Main mode", "start.mode": "Start & order", "start.nearKm": "Exclusive first within", "limits.maxPickupKm": "Farthest pickup", "limits.maxPickupEtaMin": "Longest pickup time", "limits.farReachKm": "Far reach", "reaskLimit": "Ask one driver at most (offers)", "noDriverNearby.on": "No driver nearby", "liveTraffic.on": "Live traffic (Google)", "liveTraffic.offRouteMeters": "Off the route from (m)", "liveTraffic.offRouteSeconds": "Off the route for (s)", "liveTraffic.behindMinutes": "Behind the planned arrival by (min)", "noDriverNearby.afterSec": "No driver nearby after (s)", "noDriverNearby.message": "No driver nearby message", "neighbours.on": "Neighbour zones", "choose.times": "Time rules",
   // Live fix 2026-11-02 (audit 1f): the Start & order fields had no label, so "Se ändringar" showed raw keys.
   "radar.steps": "Radar distance steps", "exclusive.steps": "Exclusive distance steps", "neighbours.zoneIds": "Neighbour zones list", "neighbours.afterStep": "Neighbours from step",
   rulesFrom: "Whose rules", "radius.steps": "Search distance steps", "radius.maxWaitMin": "Longest search",
@@ -327,7 +327,7 @@ const PART_KEYS: Record<TabId, (keyof ZoneDispatch)[]> = {
   reservations: ["reservation"],
   best: ["factors", "radius", "batching", "finishing", "favourite"],
   waiting: ["waiting", "noDriverNearby", "reaskLimit"],
-  rides: ["extras", "longTripKm", "stops", "pickupMove", "samePoint", "pickupSpots", "driverCancel", "riderCancel", "airport", "pickupWait"],
+  rides: ["liveTraffic", "extras", "longTripKm", "stops", "pickupMove", "samePoint", "pickupSpots", "driverCancel", "riderCancel", "airport", "pickupWait"],
   drivers: ["goingHome", "fairness", "decline", "oneStream", "oneStreamFallback"],
   destination: ["destinationMode", "nextTrips"],
   safety: ["safety", "pickupPin", "rideCheck", "shareTrip", "liveLocation", "driverProfile", "crashReports"],
@@ -336,7 +336,8 @@ const PART_KEYS: Record<TabId, (keyof ZoneDispatch)[]> = {
 
 export function copyParts(from: ZoneDispatch, to: ZoneDispatch, parts: readonly TabId[]): ZoneDispatch {
   const next = clone(to) as unknown as Record<string, unknown>;
-  for (const part of parts) for (const key of PART_KEYS[part]) next[key] = clone(from[key]);
+  // v0.18.163: an optional part not set (liveTraffic: the country default) is copied as not set.
+  for (const part of parts) for (const key of PART_KEYS[part]) if (from[key] === undefined) delete next[key]; else next[key] = clone(from[key]);
   return next as unknown as ZoneDispatch;
 }
 

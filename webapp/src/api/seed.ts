@@ -170,7 +170,7 @@ export type LiveTripFacts = {
   /** v0.18.7 (G5): the driver's last position while the trip goes on with a driver (contract.json#pickupWaiting.adminLiveRow). */
   driverLocation: { lat: number; lng: number; measuredAt: string } | null;
   /** v0.18.7 (G5 Q4): the server's road-route ETA to the pickup or the drop-off; null while arrived or after the end. */
-  eta: { etaSeconds: number; distanceMeters: number; target: "pickup" | "dropoff"; at: string; source: "osrm" | "estimate" | "stale" } | null;
+  eta: { etaSeconds: number; distanceMeters: number; target: "pickup" | "dropoff"; at: string; source: "google" | "osrm" | "estimate" | "stale" } | null;
   /** v0.18.7 (G5 Q1): the rider's first name and rating from accept to the end. */
   rider: { firstName: string; rating: number | null } | null;
   /** v0.18.7: the rules the trip is charged by. */
