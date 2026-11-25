@@ -161,3 +161,8 @@
 .ob-guide-line label { min-width: 0; }
 .ob-guide-line input { width: 100%; min-width: 0; box-sizing: border-box; }
 @media (max-width: 700px) { .ob-guide-line { grid-template-columns: 1fr; } }
+/* Owner 2026-11-25: Véhicules grouped by fleet + Flotte filter. */
+.vh-fleet-filter { display: inline-flex; gap: 6px; align-items: center; margin: 8px 0; font-size: 13px; }
+.vh-fleet-filter select { border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font: inherit; }
+tr.dt-group th { background: var(--surface-2, #f4f6f7); text-align: left; padding: 10px 12px; font-size: 14px; }
+.vh-fleet-head small { font-weight: 600; color: var(--muted); font-size: 12.5px; margin-left: 6px; }

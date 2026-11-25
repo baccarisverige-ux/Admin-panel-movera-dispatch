@@ -9642,4 +9642,7 @@
 ["The oldest year of each category still applies to them.","The oldest year of each category still applies to them."],
 ["years","years"],
 ["No file","No file"],
-["Car age: 1 to 30 years.","Car age: 1 to 30 years."]]
+["Car age: 1 to 30 years.","Car age: 1 to 30 years."],
+["{0} car","{0} car"],
+["{0} driver","{0} driver"],
+["Drivers with their own car","Drivers with their own car"]]

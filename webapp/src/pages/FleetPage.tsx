@@ -20,6 +20,7 @@ import { DataTable } from "../ui/DataTable";
 import { tr, trn, trx } from "../i18n";
 import { categoryName } from "../riders/profile";
 import { COUNTRY_LABEL } from "../i18n/countries";
+import { OWN_CAR, fleetGroups, fleetKeyOf, inFleet } from "../vehicles/byFleet";
 import { LIVE_CAR_STATES, liveCarState, liveCarStateLabel, type LiveCarState } from "../vehicles/liveState";
 
 const VIEWS = [
@@ -105,7 +106,11 @@ export function FleetPage() {
     if (id === "photos") return row.photosWaiting > 0;
     return row.record.status === id;
   };
-  const shown = live ? rows.filter((row) => !liveView || row.state === liveView) : rows.filter((row) => inView(row, view));
+  // Owner 2026-11-25 "Groupes par flotte (Recommandé)": the Flotte filter (URL ?fleet=) and one group per fleet.
+  const fleetFilter = params.get("fleet") ?? "";
+  const shown = (live ? rows.filter((row) => !liveView || row.state === liveView) : rows.filter((row) => inView(row, view))).filter((row) => inFleet({ fleetId: row.record.fleetId, driverId: row.driver?.id }, fleetFilter));
+  const groupsShown = fleetGroups(shown.map((row) => ({ fleetId: row.record.fleetId, driverId: row.driver?.id })), fleets.data ?? []);
+  const fleetChoices = fleetGroups(rows.map((row) => ({ fleetId: row.record.fleetId, driverId: row.driver?.id })), fleets.data ?? []);
   const fleetName = (id: string) => (fleets.data ?? []).find((fleet) => fleet.id === id)?.name ?? id;
   const set = (patch: Record<string, string | null>) => setParams(() => {
     const next = new URLSearchParams(globalThis.location.search);
@@ -202,9 +207,28 @@ export function FleetPage() {
       <p className="state-line vh-help">{trn("Fleet partners: {0}.", (fleets.data ?? []).map((fleet) => fleet.name || fleet.id).join(" · ") || tr("none in scope"))}</p>
 
       <LiveListBar list="vehicles" />
+      <label className="vh-fleet-filter">
+        {tr("Fleet")}{" "}
+        <select data-testid="vehicle-fleet-filter" value={fleetFilter} onChange={(event) => set({ fleet: event.target.value || null })}>
+          <option value="">{tr("All fleets")}</option>
+          {fleetChoices.map((group) => <option key={group.key} value={group.key}>{group.key === OWN_CAR ? tr("Drivers with their own car") : group.name}</option>)}
+        </select>
+      </label>
       {live ? (
         <DataTable
           serverSearch="vehicles"
+          groups={{
+            of: (index) => { const row = shown[index]; return row ? fleetKeyOf({ fleetId: row.record.fleetId, driverId: null }) : OWN_CAR; },
+            order: groupsShown.map((group) => group.key),
+            header: (key) => {
+              const group = groupsShown.find((item) => item.key === key);
+              if (!group) return null;
+              const count = trn(group.cars === 1 ? "{0} car" : "{0} cars", group.cars);
+              if (group.key === OWN_CAR) return <span className="vh-fleet-head"><b>{tr("Drivers with their own car")}</b> <small>{count}</small></span>;
+              const name = group.ownerId ? <a href={`/fleets/${group.ownerId}`} onClick={(event) => { event.preventDefault(); event.stopPropagation(); navigate(`/fleets/${group.ownerId}`); }}>{group.name}</a> : group.name;
+              return <span className="vh-fleet-head"><b>{name}</b> <small>{count} · {trn(group.drivers === 1 ? "{0} driver" : "{0} drivers", group.drivers)}</small></span>;
+            },
+          }}
           head={[tr("Plate"), tr("Car"), tr("Driver"), tr("Fleet"), tr("State"), tr("Categories"), tr("Fits"), tr("Year"), tr("Papers"), tr("Rule check")]}
           rowIds={shown.map((row) => row.record.id)}
           rows={shown.map((row) => [
