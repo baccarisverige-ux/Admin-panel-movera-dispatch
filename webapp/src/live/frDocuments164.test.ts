@@ -7,11 +7,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { contractJson } from "../contract/load.ts";
-import { addableTypes, defaultDoc, settingsProblem } from "../drivers/onboardingSettings.ts";
+import { addableTypes, defaultDoc, emptySettingsBook, settingsProblem } from "../drivers/onboardingSettings.ts";
 import { en } from "../i18n/en.ts";
 import { fr } from "../i18n/fr.ts";
 import { sv } from "../i18n/sv.ts";
-import { tooOldForAge } from "../vehicles/rules.ts";
+import { emptyVehicleRules, tooOldForAge, withVehicleSettings } from "../vehicles/rules.ts";
 
 const c = contractJson("contract.json") as { driverOnboarding: { settings: { defaults: Record<string, { documents: unknown; vehicles: Record<string, unknown>; validMonths: unknown; guides: unknown }> }; documents: { types: Record<string, { owner: string }> } } };
 
@@ -62,4 +62,11 @@ test("texts in sv / fr / en", () => {
     for (const dict of [en, fr, sv] as Array<Record<string, string>>) assert.ok(dict[key], key);
   }
   assert.equal((fr as Record<string, string>)["No file"], "Aucun fichier");
+});
+
+test("review: the live settings document carries the age rule into the car fit (withVehicleSettings)", () => {
+  const rules = withVehicleSettings(emptyVehicleRules(), emptySettingsBook());
+  assert.equal(rules.countries.FR.maxAgeYears, 6);
+  assert.equal(rules.countries.FR.hybridElectricExempt, true);
+  assert.equal(rules.countries.SE.maxAgeYears, undefined);
 });

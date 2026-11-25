@@ -224,7 +224,7 @@ export function withVehicleSettings(rules: VehicleRules, book: SettingsBook): Ve
   for (const item of MARKETS) {
     const doc = book.countries[item.id]?.document;
     if (!doc) continue;
-    countries[item.id] = { ...countries[item.id], warnDays: doc.vehicles.warnDays, autoHold: doc.vehicles.autoHold, photosNeeded: doc.vehicles.photosNeeded, categories: countries[item.id].categories.map((rule) => ({ ...rule, ...(doc.vehicles.categories.find((row) => row.category === rule.category) ?? {}) }) as CatRule) };
+    countries[item.id] = { ...countries[item.id], warnDays: doc.vehicles.warnDays, autoHold: doc.vehicles.autoHold, photosNeeded: doc.vehicles.photosNeeded, maxAgeYears: doc.vehicles.maxAgeYears, hybridElectricExempt: doc.vehicles.hybridElectricExempt, categories: countries[item.id].categories.map((rule) => ({ ...rule, ...(doc.vehicles.categories.find((row) => row.category === rule.category) ?? {}) }) as CatRule) };
   }
   return { ...rules, countries };
 }

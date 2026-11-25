@@ -9633,7 +9633,7 @@
 ["Live traffic is not available: trip times use roads without traffic","Trafik i realtid är inte tillgänglig: restider räknas på vägar utan trafik"],
 ["Check that the Routes API is enabled for the server's Google Maps key, and its billing","Kontrollera att Routes API är aktiverat för serverns Google Maps-nyckel, och faktureringen"],
 ["Car age","Bilens ålder"],
-["Rolling: the oldest model year moves up every 1 January. Existing approved cars stay approved; they show the problem in red.","Rullande: det äldsta årsmodellen flyttas fram varje 1 januari. Redan godkända bilar förblir godkända; problemet visas i rött."],
+["Rolling: the oldest model year moves up every 1 January. Existing approved cars stay approved; they show the problem in red.","Rullande: den äldsta årsmodellen flyttas fram varje 1 januari. Redan godkända bilar förblir godkända; problemet visas i rött."],
 ["Maximum car age","Högsta ålder på bilen"],
 ["Model year {0} or newer this year.","Årsmodell {0} eller nyare i år."],
 ["Off: only the oldest year of each category applies.","Av: bara äldsta året för varje kategori gäller."],
