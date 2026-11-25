@@ -30,8 +30,8 @@ const tnd = money("TND");
 
 export const CONFIG_DEFAULTS = {
   maxStops: 3,
-  /** v0.18.7 (owner 2026-10-29 "200 m default, admin can change"): was 500. */
-  maxPickupMoveMeters: 200,
+  /** v0.18.160 (owner 2026-11-23 "rider can adjust the pickup up to 300 m for free"): was 200 (v0.18.7), before that 500. */
+  maxPickupMoveMeters: 300,
   /** v0.18.30 (owner Q9): pickup ≈ drop-off warning under this many metres (contract configDefaults.samePointWarnMeters). */
   samePointWarnMeters: 100,
   /** v0.18.115 BQ-V21 (owner: default on): the rider's approximate pickup entrance chips (contract configDefaults.pickupSpotsOn). */

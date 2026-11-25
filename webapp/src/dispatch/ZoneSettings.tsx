@@ -352,7 +352,7 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
       </Card>
 
       <Card title={tr("Pickup move after accept")} tone="purple" icon={<Move size={18} />} help={tr("After a driver accepts, the rider can move the pickup point a little. A bigger move means cancel and book again. The driver is told about every move. The rider and driver apps read this.")}>
-        {/* v0.18.7 (G5 item 4): default 200 m (was 500), range 0–2000 from the contract; the server refuses a bigger move. */}
+        {/* v0.18.160: default 300 m (owner 2026-11-23, free move; was 200, before that 500), range 0–2000 from the contract; the server refuses a bigger move. */}
         <Row info="dispatch.zone.riderCanMoveThePickupUp" label={tr("Rider can move the pickup up to")} help={tr("0 means the pickup cannot move after accept. At most {0} m. Usual value {1} m; the server refuses a bigger move from the booked pickup.", [PICKUP_MOVE_MAX_METERS, PICKUP_MOVE_DEFAULT])}>
           <Num label={tr("Pickup move limit")} before="up to" value={zone.pickupMove.maxMeters} unit="m" step={pickupMoveField().step} min={pickupMoveField().min} max={pickupMoveField().max} disabled={disabled} onChange={(maxMeters) => set({ pickupMove: { maxMeters: Math.round(maxMeters) } })} />
         </Row>
