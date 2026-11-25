@@ -15,4 +15,5 @@ export const frC63DriverCountry: Record<keyof typeof enC63DriverCountry, string>
   "A driver with data but no country (not shown under any country). Set his country on the driver page. Solved when he has a country.": "Un chauffeur avec des données mais sans pays (il n'apparaît sous aucun pays). Définissez son pays sur sa page. Résolu quand il a un pays.",
   "Change driver country": "Changer le pays du chauffeur",
   "Driver has no country: {0}": "Chauffeur sans pays : {0}",
+  "The driver is set offline. His cars that break the new country's car rules go back to review.": "Le chauffeur est mis hors ligne. Ses voitures qui ne respectent pas les règles du nouveau pays repassent en vérification.",
 };
