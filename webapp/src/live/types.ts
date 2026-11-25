@@ -39,7 +39,8 @@ export type ReviewStatus = "pending" | "approved" | "rejected" | "blocked";
  * v0.18.5 (owner G2-D1 "Keep old until new approved (Recommended)"): renewalOf = the approved document this upload
  * renews; it is listed right after that one and reviewed with its own documentId.
  */
-export type DocumentSummary = { documentId: string; type: string; status: DocumentStatus; expiresAt?: string; renewalOf?: string };
+/** v0.18.164: hasFile = a file is stored (absent from an older server). */
+export type DocumentSummary = { documentId: string; type: string; status: DocumentStatus; expiresAt?: string; renewalOf?: string; hasFile?: boolean; fileUrl?: string };
 
 export type DocumentRecord = {
   documentId: string;

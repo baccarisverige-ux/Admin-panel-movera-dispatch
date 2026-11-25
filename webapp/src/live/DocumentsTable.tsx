@@ -108,9 +108,14 @@ export function DocumentsTable({ required, documents, onChanged, title, driverId
               {rows.map((row) => {
                 const uploaded = row.document && row.status !== "missing";
                 const adminCheck = isAdminCheck(row.type);
-                const canOpen = Boolean(uploaded && documentHasFile(row.type));
+                // v0.18.164 (documents.reviewNeedsFile, owner 2026-11-25 "Yes, fix all 3"): a file document without a file is never opened or approved.
+                const fileType = documentHasFile(row.type);
+                const hasFile = row.document?.hasFile !== false; // an older server sends no hasFile: keep the old buttons (the server still refuses no_file)
+                const noFile = Boolean(uploaded && fileType && !hasFile);
+                const canOpen = Boolean(uploaded && fileType && hasFile);
                 // G2-D1: with a renewal the new upload is reviewed (Compare and review), not the current document.
-                const canDecide = Boolean(uploaded && mayReview && row.status !== "approved" && !adminCheck && !row.renewal);
+                const canDecide = Boolean(uploaded && mayReview && row.status !== "approved" && !adminCheck && !row.renewal && !noFile);
+                const canReject = Boolean(uploaded && mayReview && row.status !== "approved" && !adminCheck && !row.renewal);
                 // v0.17.0 (owner items 8, 13): the info session is held by Movera; the driver sees "Waiting for Movera".
                 const canMarkHeld = Boolean(adminCheck && mayReview && driverId && row.status !== "approved");
                 const renewal = row.renewal;
@@ -128,7 +133,8 @@ export function DocumentsTable({ required, documents, onChanged, title, driverId
                       {canOpen && mayReview ? <button data-command="admin.server.documentOpen" type="button" className="link-action" onClick={() => void open(row)}>{tr("Open")}</button> : null}
                       {canMarkHeld ? <button data-command="admin.server.documentCheck" type="button" className="link-action" onClick={() => setCheck(row)}>{tr("Mark held")}</button> : null}
                       {canDecide ? <button data-command="admin.server.documentReview" type="button" className="link-action" onClick={() => setDecision({ row, kind: "approved" })}>{tr("Approve")}</button> : null}
-                      {canDecide ? <button data-command="admin.server.documentReview" type="button" className="link-action live-danger-link" onClick={() => setDecision({ row, kind: "rejected" })}>{tr("Reject")}</button> : null}
+                      {noFile ? <span className="live-muted" data-testid="no-file">{tr("No file")}</span> : null}
+                      {canReject ? <button data-command="admin.server.documentReview" type="button" className="link-action live-danger-link" onClick={() => setDecision({ row, kind: "rejected" })}>{tr("Reject")}</button> : null}
                       {!uploaded && !adminCheck ? <span className="live-muted">{tr("Nothing uploaded yet")}</span> : null}
                       {renewal && mayReview ? <button data-command="admin.server.documentOpen" type="button" className="link-action" onClick={() => void openCompare(row)}>{renewalWaiting ? tr("Compare and review") : tr("Compare")}</button> : null}
                     </td>
