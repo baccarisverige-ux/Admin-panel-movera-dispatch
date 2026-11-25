@@ -16,7 +16,7 @@ export function CarNoCountryError({ record, compact = false }: { record: Pick<De
   if (!carHasNoCountry(record)) return null;
   const owner = record.fleetId ? `/fleets/${record.fleetId}` : record.driverId ? `/drivers/${record.driverId}` : null;
   return (
-    <span className={compact ? "vh-rule-bad" : "vh-rule-bad vh-warn"} role="alert" data-testid="car-no-country-error">
+    <span className={compact ? "vh-rule-bad" : "vh-rule-bad vh-warn"} {...(compact ? {} : { role: "alert" })} data-testid="car-no-country-error">
       <AlertTriangle size={14} aria-hidden="true" />{" "}{tr("Error: this car has no country. Check what happened.")}{" "}
       {tr("Car {0}", [record.id])}{" "}
       {owner ? (

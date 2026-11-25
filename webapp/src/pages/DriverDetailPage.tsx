@@ -15,6 +15,7 @@ import { LiveDocBox } from "../live/LiveDocBox";
 import { LiveMessagePerson } from "../live/LiveMessagePerson";
 import { activateEmphasised, driverCategoryFits, driverHistoryShown } from "../live/realOnly";
 import { ActivationRefused, VehicleBlocked, refusedDetails } from "../live/ActivationRefused";
+import { CarNoCountryError } from "../vehicles/CarNoCountryError";
 import { callHref } from "../live/masking";
 import { EmailVerifiedBadge } from "../live/EmailVerifiedBadge";
 import { NotFoundRecord } from "../ui/NotFoundRecord";
@@ -623,6 +624,8 @@ export function DriverDetailPage() {
                   <p>{trn("{0} {1} · {2} · {3} seats · {4} · {5}", record.make ?? tr("Vehicle"), record.model ?? "", vehicle.year, vehicle.seats, vehicle.fuel, vehicle.category)}</p>
                   {liveData ? <small>{statusLabel(record.status)}</small> : <small>{trn("Inspection until {0} · insurance until {1} · {2}", vehicle.inspectionExpiresAt || "—", vehicle.insuranceExpiresAt || "—", statusLabel(record.status))}</small>}
                   <VehicleBlocked missing={record.liveVehicleMissing} country={record.liveVehicleDocs?.country} />
+                  {/* v0.18.161 (owner "Show as errors and must check what happen"). */}
+                  <CarNoCountryError record={record} compact />
                 </div>
               </div>
             );

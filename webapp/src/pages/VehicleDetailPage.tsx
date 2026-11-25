@@ -22,7 +22,7 @@ import { can } from "../auth/permissions";
 import { HealthPill } from "../fleet/ui";
 import { formatMoney } from "../markets/markets";
 import { EXPIRY_WARNING_DAYS } from "../fleet/documents";
-import { CarNoCountryError } from "../vehicles/CarNoCountryError";
+import { CarNoCountryError, carHasNoCountry } from "../vehicles/CarNoCountryError";
 import { CATEGORY_LABELS, PHOTO_SIDES, fuelLabel, VEHICLE_RULES_KEY, carDocs, carCountryOf, carEarnings, checks, effectiveVehicleRules, emptyVehicleRules, fits, liveCarDocs, photosOf, setPhoto, shouldHold, type VehicleRules } from "../vehicles/rules";
 import { CommandButton } from "../ui/CommandButton";
 import { tr, trn, trSentences, trx } from "../i18n";
@@ -172,7 +172,7 @@ export function VehicleDetailPage() {
       </header>
 
       {/* v0.18.161 (owner "Show as errors and must check what happen"): a car with no country. */}
-      <p><CarNoCountryError record={record} /></p>
+      {carHasNoCountry(record) ? <p><CarNoCountryError record={record} /></p> : null}
       <p className="state-line">{trSentences(notice)} {trSentences(store.message ?? "")}</p>
       {hold ? <p className="vh-warn"><AlertTriangle size={14} aria-hidden="true" />{" "}{tr("Insurance or inspection has expired. Vehicle rules say this car should be on hold.")}</p> : null}
 

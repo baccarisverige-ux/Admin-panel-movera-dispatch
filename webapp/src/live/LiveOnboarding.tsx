@@ -10,6 +10,7 @@ import { useMarketScope } from "../markets/useMarketScope";
 import { statusLabel } from "../domain/labels";
 import { activationMissing, groupMissing, liveFunnel, type FunnelStep } from "./activation";
 import { VehicleBlocked } from "./ActivationRefused";
+import { CarNoCountryError } from "../vehicles/CarNoCountryError";
 import { LiveDriverDocuments } from "./LiveDriverDocuments";
 import { LiveListBar } from "./LiveListBar";
 import { DataTable } from "../ui/DataTable";
@@ -152,6 +153,8 @@ function Selected({ account, kind, cars }: { account: Account; kind: string; car
             <li key={car.id} data-vehicle-id={car.id}>
               <Car size={16} aria-hidden="true" /> <Link to={`/vehicles/${encodeURIComponent(car.id)}`}><strong>{car.plate ?? car.id}</strong></Link> {[car.make, car.model].filter(Boolean).join(" ")} · {statusLabel(car.status)}
               <VehicleBlocked missing={car.liveVehicleMissing} country={car.liveVehicleDocs?.country} />
+              {/* v0.18.161 (owner "Show as errors and must check what happen"). */}
+              <CarNoCountryError record={car} compact />
             </li>
           ))}
         </ul>

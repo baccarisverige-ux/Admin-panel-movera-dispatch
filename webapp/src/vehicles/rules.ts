@@ -99,16 +99,16 @@ export function countryOfZone(zoneId: string): MarketId {
   return marketOfZone(zoneId)?.id ?? "SE";
 }
 
-/**
- * v0.18.161 (contract.json#adminListFilters.carZones; owner 2026-11-25 "Yes, fix it": the admin mixed French and Swedish
- * cars): a car's country. Live: the server's Vehicle.country, else the market of the server's Vehicle.zoneId; never a
- * guess, so null = unknown (shown as unknown, never as SE). Demo: the zone's country as before.
- */
 /** v0.18.161 (carZones.noCountry, owner "Show as errors and must check what happen"): the server said the car has no country. */
 export function carHasNoCountry(record: Pick<DemoRecord, "liveNoCountry">): boolean {
   return record.liveNoCountry === true;
 }
 
+/**
+ * v0.18.161 (contract.json#adminListFilters.carZones; owner 2026-11-25 "Yes, fix it": the admin mixed French and Swedish
+ * cars): a car's country. Live: the server's Vehicle.country, else the market of the server's Vehicle.zoneId; never a
+ * guess, so null = unknown (shown as unknown, never as SE). Demo: the zone's country as before.
+ */
 export function carCountryOf(record: Pick<DemoRecord, "zoneId" | "liveVehicleDocs">, live: boolean): MarketId | null {
   if (!live) return countryOfZone(record.zoneId);
   const sent = record.liveVehicleDocs?.country;

@@ -7,7 +7,7 @@ import { carCountryOf, carHasNoCountry } from "../vehicles/rules.ts";
 import type { LiveClient } from "./session.ts";
 import type { Driver, Vehicle } from "./types.ts";
 import contract from "../../../contracts/contract.json" with { type: "json" };
-import { kindDef } from "../alerts/engine.ts";
+import { alertsFromServer, kindDef } from "../alerts/engine.ts";
 import { en } from "../i18n/en.ts";
 import { sv } from "../i18n/sv.ts";
 import { fr } from "../i18n/fr.ts";
@@ -141,4 +141,9 @@ test("v0.18.161 owner \"Show as errors\": a car with no country is an error; the
   assert.equal((sv as Record<string, string>)[key], "Fel: bilen har inget land. Kontrollera vad som hänt.");
   assert.equal((fr as Record<string, string>)[key], "Erreur : cette voiture n'a pas de pays. Vérifiez ce qui s'est passé.");
   assert.ok((sv as Record<string, string>)["Car with no country: {0}"]);
+});
+
+test("v0.18.161 review S-c: the car_no_country alert opens the car page", () => {
+  const [alert] = alertsFromServer([{ alertId: "a1", kind: "car_no_country", level: "important", title: "Car with no country: NC 1", since: "2026-11-25T10:00:00Z", state: "open", country: "SE", ref: { vehicleId: "veh_nc_1", driverId: "D1" } }], []);
+  assert.equal(alert?.path, "/vehicles/veh_nc_1");
 });
