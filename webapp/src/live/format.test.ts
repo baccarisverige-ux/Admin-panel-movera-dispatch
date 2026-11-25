@@ -20,7 +20,7 @@ type Contract = {
 const contract = contractJson<Contract>("contract.json");
 
 test("the onboarding constants equal contract.json#driverOnboarding (v0.5.3)", () => {
-  assert.equal(contract.version, "0.18.163");
+  assert.equal(contract.version, "0.18.164");
   assert.deepEqual(DOCUMENT_TYPES, contract.driverOnboarding.documents.types);
   assert.deepEqual(REQUIRED_DOCUMENTS, contract.driverOnboarding.documents.required);
   assert.deepEqual(ONBOARDING_COUNTRIES, contract.driverOnboarding.countries);
@@ -79,7 +79,7 @@ test("required documents: the server's lists win, the contract fills in; company
   assert.deepEqual(requiredForVehicle({}), []);
 });
 
-test("splitDocuments: company uploads go to the company table, shared types (national_id in France) to both", () => {
+test("splitDocuments: company uploads go to the company table, shared types to both (v0.18.164: national_id only in the FR person list)", () => {
   const docs: DocumentSummary[] = [
     { documentId: "1", type: "terms", status: "approved" },
     { documentId: "2", type: "company_registration", status: "in_review" },
@@ -88,7 +88,9 @@ test("splitDocuments: company uploads go to the company table, shared types (nat
   ];
   const fr = splitDocuments(docs, { person: [...REQUIRED_DOCUMENTS.FR!.driver], company: [...REQUIRED_DOCUMENTS.FR!.fleet] });
   assert.deepEqual(fr.person.map((d) => d.type), ["terms", "national_id", "some_extra"]);
-  assert.deepEqual(fr.company.map((d) => d.type), ["company_registration", "national_id"]);
+  assert.deepEqual(fr.company.map((d) => d.type), ["company_registration"]);
+  const shared = splitDocuments(docs, { person: ["national_id"], company: ["national_id"] });
+  assert.deepEqual(shared.company.map((d) => d.type), ["national_id"]);
   const none = splitDocuments(docs, { person: ["terms"], company: [] });
   assert.equal(none.person.length, 4);
   assert.equal(none.company.length, 0);
