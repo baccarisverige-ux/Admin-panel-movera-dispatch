@@ -505,6 +505,12 @@ export type ZoneDispatch = {
    */
   shareTrip?: { on: boolean };
   /**
+   * v0.18.158 (owner 2026-11-24 "Add to admin all kind of crash"; contract.json#crashCatcher.setting): whether each app
+   * sends crash reports in this zone. Dispatch › Safety. Sent as RiderAppConfig.crashReports { on } and
+   * DriverAppConfig.crashReports { on }. Optional so rules saved before it still load (on then).
+   */
+  crashReports?: { rider: boolean; driver: boolean };
+  /**
    * v0.18.144 (owner 2026-11-20; contract.json#liveLocation.setting): two-way live location (default off) and the rider
    * app's adjust-pickup banner distance. Dispatch › Safety. Sent as the rider document's liveLocation. Optional so rules
    * saved before it still load (off, 30 m then).

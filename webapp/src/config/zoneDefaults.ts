@@ -38,6 +38,8 @@ export const CONFIG_DEFAULTS = {
   pickupSpotsOn: true,
   /** v0.18.116 BQ-S10 (owner S10 Q6: default on): riders can share a live trip link (contract configDefaults.shareTripOn). */
   shareTripOn: true,
+  /** v0.18.158 (owner 2026-11-24 "Add to admin all kind of crash"): the apps send crash reports (contract configDefaults.crashReportsOn). */
+  crashReportsOn: true,
   /** v0.18.144 (owner 2026-11-20; supervisor: OFF until the load test passes): two-way live location (contract configDefaults.liveLocationShare). */
   liveLocationShare: false,
   /** v0.18.144: the rider app's adjust-pickup banner shows when the rider is farther than this from the pickup (contract configDefaults.adjustPickupMeters). */

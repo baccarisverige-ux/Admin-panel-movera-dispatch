@@ -83,6 +83,7 @@ import { enC56DriverIncome } from "./en/c56-driver-income.ts";
 import { enC57AppUpdate } from "./en/c57-app-update.ts";
 import { enC58DriverProfile } from "./en/c58-driver-profile.ts";
 import { enC58SmsOther } from "./en/c58-sms-other.ts";
+import { enC60CrashCatcher } from "./en/c60-crash-catcher.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -172,6 +173,7 @@ export const en = {
   ...enC57AppUpdate,
   ...enC58DriverProfile,
   ...enC58SmsOther,
+  ...enC60CrashCatcher,
 } as const;
 
 export type MessageKey = keyof typeof en;

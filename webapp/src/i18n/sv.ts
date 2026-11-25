@@ -84,6 +84,7 @@ import { svC56DriverIncome } from "./sv/c56-driver-income.ts";
 import { svC57AppUpdate } from "./sv/c57-app-update.ts";
 import { svC58DriverProfile } from "./sv/c58-driver-profile.ts";
 import { svC58SmsOther } from "./sv/c58-sms-other.ts";
+import { svC60CrashCatcher } from "./sv/c60-crash-catcher.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./sv/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -173,4 +174,5 @@ export const sv: Record<MessageKey, string> = {
   ...svC57AppUpdate,
   ...svC58DriverProfile,
   ...svC58SmsOther,
+  ...svC60CrashCatcher,
 };

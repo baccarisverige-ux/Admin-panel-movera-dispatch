@@ -126,6 +126,9 @@
     "on": true,
     "reviews": false
   },
+  "crashReports": {
+    "on": true
+  },
   "paymentMethods": [
     "cash",
     "card",
