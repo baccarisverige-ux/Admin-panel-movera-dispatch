@@ -9642,4 +9642,9 @@
 ["The oldest year of each category still applies to them.","Äldsta året för varje kategori gäller fortfarande."],
 ["years","år"],
 ["No file","Ingen fil"],
-["Car age: 1 to 30 years.","Bilens ålder: 1 till 30 år."]]
+["Car age: 1 to 30 years.","Bilens ålder: 1 till 30 år."],
+["{0} car","{0} bil"],
+["{0} driver","{0} förare"],
+["Drivers with their own car","Förare med egen bil"],
+["(loaded so far)","(hittills laddade)"],
+["Fleet groups and counts cover the cars loaded so far. Load more to see every car.","Flottgrupper och antal gäller bilarna som laddats hittills. Ladda fler för att se alla bilar."]]

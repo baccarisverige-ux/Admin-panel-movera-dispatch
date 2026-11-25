@@ -18,10 +18,12 @@ test("vehicles: coloured views, papers, photos, checks and what the car earns", 
   await session(page);
   await page.goto("/vehicles");
   await expect(page.getByRole("heading", { level: 2, name: "Vehicles" })).toBeVisible();
+  // Owner 2026-11-25 "Groupes par flotte": the demo table shows fleet group rows too.
+  await expect(page.getByTestId("table-group").first()).toBeVisible();
   const views = page.getByRole("navigation", { name: "Vehicle views" });
   await views.getByRole("button", { name: /Photos to review/ }).click();
   await expect(page).toHaveURL(/show=photos/);
-  await expect(page.locator("tbody tr").first()).toContainText("photo");
+  await expect(page.locator("tbody tr:not(.dt-group)").first()).toContainText("photo");
   await page.goto("/vehicles/V0003");
   await expect(page.getByRole("heading", { level: 2, name: "MVR 102" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Categories it fits" })).toHaveCount(0);

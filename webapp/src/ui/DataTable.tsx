@@ -2,7 +2,7 @@ import { logExport } from "../reports/activityLog";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { listQueryOf, setListQuery, type LiveListName } from "../live/liveLists";
-import { isValidElement, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, isValidElement, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type SortingState } from "@tanstack/react-table";
 import { statusLabel, statusPresentation } from "../domain/labels";
 import { toCsv } from "../reports/csv";
@@ -51,6 +51,8 @@ type DataTableProps = {
   onRow?: (index: number) => void;
   /** Live builds: this box searches the server list instead (src/live/liveLists.ts); the demo searches its rows. */
   serverSearch?: LiveListName;
+  /** Optional groups (owner 2026-11-25 vehicles by fleet): rows stay together under a header row, in `order`; a column sort sorts inside each group. */
+  groups?: { of: (sourceIndex: number) => string; order: readonly string[]; header: (key: string) => ReactNode };
 };
 
 function stableRows(rows: TableCell[][], rowIds?: string[]): Row[] {
@@ -71,7 +73,7 @@ function stableRows(rows: TableCell[][], rowIds?: string[]): Row[] {
   });
 }
 
-export function DataTable({ head, rows, rowIds, className, state = "ready", onRetry, onRow, serverSearch }: DataTableProps) {
+export function DataTable({ head, rows, rowIds, className, state = "ready", onRetry, onRow, serverSearch, groups }: DataTableProps) {
   const { agent } = useSession();
   const live = useLiveSessionMaybe();
   const queryClient = useQueryClient();
@@ -118,7 +120,12 @@ export function DataTable({ head, rows, rowIds, className, state = "ready", onRe
     getSortedRowModel: getSortedRowModel(),
   });
 
-  const sorted = table.getRowModel().rows;
+  const tableRows = table.getRowModel().rows;
+  const sorted = useMemo(() => {
+    if (!groups) return tableRows;
+    const rank = (row: (typeof tableRows)[number]) => { const at = groups.order.indexOf(groups.of(row.original.sourceIndex)); return at < 0 ? groups.order.length : at; };
+    return tableRows.map((row, index) => ({ row, index })).sort((a, b) => rank(a.row) - rank(b.row) || a.index - b.index).map((item) => item.row);
+  }, [groups, tableRows]);
   const pageCount = Math.max(1, Math.ceil(sorted.length / 25));
   const safePage = Math.min(page, pageCount - 1);
   const visible = sorted.slice(safePage * 25, safePage * 25 + 25);
@@ -170,8 +177,14 @@ export function DataTable({ head, rows, rowIds, className, state = "ready", onRe
             ))}
           </thead>
           <tbody>
-            {visible.map((row) => (
-              <tr key={row.id} onClick={() => onRow?.(row.original.sourceIndex)}>
+            {visible.map((row, at) => (
+              <Fragment key={row.id}>
+              {groups && (at === 0 || groups.of(visible[at - 1]!.original.sourceIndex) !== groups.of(row.original.sourceIndex)) ? (
+                <tr className="dt-group" data-testid="table-group">
+                  <th colSpan={head.length + 1} scope="colgroup">{groups.header(groups.of(row.original.sourceIndex))}</th>
+                </tr>
+              ) : null}
+              <tr onClick={() => onRow?.(row.original.sourceIndex)}>
                 {row.original.cells.map((cell, index) => (
                   <td key={`${row.id}-${index}`}>{renderCell(cell)}</td>
                 ))}
@@ -182,6 +195,7 @@ export function DataTable({ head, rows, rowIds, className, state = "ready", onRe
                   ) : null}
                 </td>
               </tr>
+              </Fragment>
             ))}
           </tbody>
         </table>

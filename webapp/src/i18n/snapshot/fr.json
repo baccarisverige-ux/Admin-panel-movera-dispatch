@@ -9642,4 +9642,9 @@
 ["The oldest year of each category still applies to them.","L’année la plus ancienne de chaque catégorie s’applique toujours."],
 ["years","ans"],
 ["No file","Aucun fichier"],
-["Car age: 1 to 30 years.","Âge du véhicule : 1 à 30 ans."]]
+["Car age: 1 to 30 years.","Âge du véhicule : 1 à 30 ans."],
+["{0} car","{0} voiture"],
+["{0} driver","{0} chauffeur"],
+["Drivers with their own car","Chauffeurs avec leur propre voiture"],
+["(loaded so far)","(chargées pour l’instant)"],
+["Fleet groups and counts cover the cars loaded so far. Load more to see every car.","Les groupes et les nombres par flotte portent sur les voitures déjà chargées. Chargez la suite pour voir toutes les voitures."]]
