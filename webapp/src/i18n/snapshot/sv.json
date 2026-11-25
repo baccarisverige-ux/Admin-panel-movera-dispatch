@@ -9632,4 +9632,14 @@
 ["Behind the planned arrival by more than","Efter planerad ankomst med mer än"],
 ["About 2 Google calls per trip: the price, then the drive to the pickup. If Google does not answer, trip times are estimated and admins get an alert.","Ungefär 2 anrop till Google per resa: priset, sedan körningen till upphämtningen. Om Google inte svarar uppskattas restiderna och admin får ett larm."],
 ["Live traffic is not available: trip times are estimated (straight line)","Trafik i realtid är inte tillgänglig: restiderna uppskattas fågelvägen"],
-["Check that the Routes API is enabled for the server's Google Maps key, and its billing","Kontrollera att Routes API är aktiverat för serverns Google Maps-nyckel, och faktureringen"]]
+["Check that the Routes API is enabled for the server's Google Maps key, and its billing","Kontrollera att Routes API är aktiverat för serverns Google Maps-nyckel, och faktureringen"],
+["Car age","Bilens ålder"],
+["Rolling: the oldest model year moves up every 1 January. Existing approved cars stay approved; they show the problem in red.","Rullande: den äldsta årsmodellen flyttas fram varje 1 januari. Redan godkända bilar förblir godkända; problemet visas i rött."],
+["Maximum car age","Högsta ålder på bilen"],
+["Model year {0} or newer this year.","Årsmodell {0} eller nyare i år."],
+["Off: only the oldest year of each category applies.","Av: bara äldsta året för varje kategori gäller."],
+["Hybrid and electric cars are exempt from the age limit","Hybrid- och elbilar är undantagna från åldersgränsen"],
+["The oldest year of each category still applies to them.","Äldsta året för varje kategori gäller fortfarande."],
+["years","år"],
+["No file","Ingen fil"],
+["Car age: 1 to 30 years.","Bilens ålder: 1 till 30 år."]]

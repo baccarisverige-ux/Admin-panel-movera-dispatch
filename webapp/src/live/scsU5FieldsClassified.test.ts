@@ -188,6 +188,8 @@ const ENTRIES: Entry[] = [
     schema: "OnboardingSettings",
     built: wireDocument(defaultDoc("SE")) as unknown as Doc,
     kept: ["documentTypes"],
+    // v0.18.164 (vehicleRules.maxAge): the editor writes them when the admin turns the car age on (FR by default; SE has none).
+    ownedWhenSet: ["vehicles.maxAgeYears", "vehicles.hybridElectricExempt"],
     save: merge,
   },
 ];

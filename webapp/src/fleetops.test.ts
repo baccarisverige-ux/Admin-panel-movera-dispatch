@@ -86,7 +86,7 @@ console.log("fleet ops ok");
   const se = liveCompanyDocs(seFacts, "SE", at, 30);
   assert(se.total === 4, `SE has 4 company documents, not 7 (got ${se.total})`);
   assert(se.counts.valid === 1 && se.counts.review === 1 && se.counts.invalid === 2, "approved, in review and 2 missing");
-  assert(liveCompanyDocs(undefined, "FR", at, 30).total === 6, "FR has 6 company documents");
+  assert(liveCompanyDocs(undefined, "FR", at, 30).total === 4, "FR has 4 company documents (v0.18.164 Uber FR)");
   assert(liveCompanyDocs({ ...seFacts, requiredFleetDocuments: ["company_registration"] }, "SE", at, 30).total === 1, "the server's list wins");
   assert(liveAverageRating([{ id: "a", name: "", phone: "", zoneId: "", status: "active" }]) === null, "no rating from the server: null (—), never invented");
   assert(liveAverageRating([{ id: "a", name: "", phone: "", zoneId: "", status: "active", liveDriver: { onlineStatus: "offline", rating: 4.5, location: null, lastFixAt: null, stale: null, activeTripId: null } }]) === 4.5, "the server's rating");
