@@ -28,7 +28,7 @@ export const SETTING_FILES: Readonly<Record<string, readonly string[]>> = {
     "pricing/FeesPanel.tsx", "pricing/HistoryPanel.tsx", "pricing/PickupPayPanel.tsx", "pricing/PriceTable.tsx", "pricing/SurgePanel.tsx",
     "pricing/SurgeQuickPopup.tsx", "pricing/SurgeSlider.tsx", "pricing/TestRide.tsx",
   ],
-  "Tips & limits": ["pricing/CountryExtrasPanel.tsx", "pricing/ChatSettingsCard.tsx", "pricing/EmergencyNumbersEditor.tsx", "pricing/SmsSignInCard.tsx"],
+  "Tips & limits": ["pricing/CountryExtrasPanel.tsx", "pricing/ChatSettingsCard.tsx", "pricing/EmergencyNumbersEditor.tsx", "pricing/SmsSignInCard.tsx", "pricing/SmsOtherCountriesCard.tsx"],
   "Settings": ["pages/ConfigPage.tsx", "config/CountryAppsPanel.tsx", "config/RequestLimitsPanel.tsx", "config/AppUpdatePanel.tsx", "platform/SettingsParts.tsx"],
   "Dispatch": [
     "pages/DispatchPage.tsx", "pages/DispatchSectionPage.tsx", "dispatch/ActivityView.tsx", "dispatch/AllFeaturesView.tsx", "dispatch/AssignPanel.tsx",
