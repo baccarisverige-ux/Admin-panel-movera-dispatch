@@ -1,11 +1,12 @@
 import { liveLocationOf } from "./rules/liveLocation";
+import { liveTrafficOf, RECALL_RANGES } from "./rules/liveTraffic";
 import { RideCheckCard } from "./RideCheckCard";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import {
   ArrowDown, ArrowUp, Baby, Bell, Clock, Gauge, Heart, Home, Layers, ListOrdered, Luggage, Mail, MapPin, MessageSquare,
   MonitorSmartphone, Moon, PawPrint, Plane, Plus, Route, Scale, Shield, ShieldAlert, Smartphone, Sparkles, Star, Timer, Trash2,
-  TrendingUp, UserCheck, UserX, Users, Accessibility, Zap, Coins, Move, KeyRound,
+  TrendingUp, UserCheck, UserX, Users, Accessibility, Zap, Coins, Move, KeyRound, Car,
 } from "lucide-react";
 import { market, type MarketId } from "../markets/markets";
 import type { CommissionRule } from "../pricing/commissionSteps";
@@ -317,6 +318,18 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
   const set = (patch: Partial<ZoneDispatch>) => onChange({ ...zone, ...patch });
   return (
     <div className="dx-cards">
+      {/* v0.18.163 (contract.json#liveTraffic.setting / recall; owner 2026-11-25 "Google trafic réel"): the one place of this setting. */}
+      <Card title={tr("Live traffic (Google)")} info="dispatch.zone.liveTraffic" tone="blue" icon={<Car size={18} />} help={tr("Trip times with today's traffic from Google, for prices, offers and the trip's ETA. Off: a straight-line estimate. Usual value: on in Sweden and France.")} off={!liveTrafficOf(zone, countryId).on} aside={<Switch label={tr("Live traffic (Google)")} on={liveTrafficOf(zone, countryId).on} disabled={disabled} onChange={(on) => set({ liveTraffic: { ...liveTrafficOf(zone, countryId), on } })} />}>
+        <Row info="dispatch.zone.liveTrafficOffRoute" label={tr("Ask Google again when the driver leaves the route")}>
+          <Num label={tr("Off the route from")} value={liveTrafficOf(zone, countryId).offRouteMeters} unit="m" min={RECALL_RANGES.offRouteMeters[0]} max={RECALL_RANGES.offRouteMeters[1]} disabled={disabled || !liveTrafficOf(zone, countryId).on} onChange={(offRouteMeters) => set({ liveTraffic: { ...liveTrafficOf(zone, countryId), offRouteMeters: Math.round(offRouteMeters) } })} />
+          <Num label={tr("for more than")} value={liveTrafficOf(zone, countryId).offRouteSeconds} unit="s" min={RECALL_RANGES.offRouteSeconds[0]} max={RECALL_RANGES.offRouteSeconds[1]} disabled={disabled || !liveTrafficOf(zone, countryId).on} onChange={(offRouteSeconds) => set({ liveTraffic: { ...liveTrafficOf(zone, countryId), offRouteSeconds: Math.round(offRouteSeconds) } })} />
+        </Row>
+        <Row info="dispatch.zone.liveTrafficBehind" label={tr("Ask Google again when the driver is late")}>
+          <Num label={tr("Behind the planned arrival by more than")} value={liveTrafficOf(zone, countryId).behindMinutes} unit="min" min={RECALL_RANGES.behindMinutes[0]} max={RECALL_RANGES.behindMinutes[1]} disabled={disabled || !liveTrafficOf(zone, countryId).on} onChange={(behindMinutes) => set({ liveTraffic: { ...liveTrafficOf(zone, countryId), behindMinutes: Math.round(behindMinutes) } })} />
+        </Row>
+        <small className="as-help" data-testid="dx-live-traffic-note">{tr("About 2 Google calls per trip: the price, then the drive to the pickup. If Google does not answer, trip times are estimated and admins get an alert.")}</small>
+      </Card>
+
       <PickupWaitCard zone={zone} onChange={onChange} disabled={disabled} symbol={symbol} money={money} countryId={countryId} waitBases={waitBases} onAllZones={onWaitAllZones} country={country} onCountry={onCountry} countryName={countryName} />
 
       <Card title={tr("Special requests")} tone="purple" icon={<ListOrdered size={18} />} help={tr("Only drivers who have it get the request. The badge shows on the driver's offer and in the rider app.")}>
