@@ -81,6 +81,7 @@ import { enC54Sessions } from "./en/c54-sessions.ts";
 import { enC55OfferBackup } from "./en/c55-offer-backup.ts";
 import { enC56DriverIncome } from "./en/c56-driver-income.ts";
 import { enC57AppUpdate } from "./en/c57-app-update.ts";
+import { enC58DriverProfile } from "./en/c58-driver-profile.ts";
 import { enC58SmsOther } from "./en/c58-sms-other.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
@@ -169,6 +170,7 @@ export const en = {
   ...enC55OfferBackup,
   ...enC56DriverIncome,
   ...enC57AppUpdate,
+  ...enC58DriverProfile,
   ...enC58SmsOther,
 } as const;
 

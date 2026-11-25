@@ -82,6 +82,7 @@ import { frC54Sessions } from "./fr/c54-sessions.ts";
 import { frC55OfferBackup } from "./fr/c55-offer-backup.ts";
 import { frC56DriverIncome } from "./fr/c56-driver-income.ts";
 import { frC57AppUpdate } from "./fr/c57-app-update.ts";
+import { frC58DriverProfile } from "./fr/c58-driver-profile.ts";
 import { frC58SmsOther } from "./fr/c58-sms-other.ts";
 
 /** French. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
@@ -170,5 +171,6 @@ export const fr: Record<MessageKey, string> = {
   ...frC55OfferBackup,
   ...frC56DriverIncome,
   ...frC57AppUpdate,
+  ...frC58DriverProfile,
   ...frC58SmsOther,
 };

@@ -336,6 +336,7 @@ export const svC1ContractV072Part3: Record<keyof typeof enC1ContractV072Part3, s
   "Your session has ended. Sign in again.": "Din session har avslutats. Logga in igen.",
   "Write why: the driver sees the reason.": "Skriv varför: föraren ser anledningen.",
   "Check the end date": "Kontrollera slutdatumet",
+  "Not a date. Type it as {0}.": "Inte ett datum. Skriv det som {0}.",
   "At most {0} years from today.": "Högst {0} år från i dag.",
   "Give the car at least one ride category.": "Ge bilen minst en resekategori.",
   "Compare and review": "Jämför och granska",

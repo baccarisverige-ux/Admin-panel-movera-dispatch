@@ -11,6 +11,7 @@ import { errorText, shortDate, shortDateTime } from "./format";
 import { EXPIRY_MAX_YEARS_AHEAD as EXPIRY_YEARS, endDateFrom, endDateTooFar, maxEndDate } from "../drivers/onboardingSettings";
 import type { Page } from "./types";
 import { DateInput } from "../ui/DateInput";
+import { dayIn } from "../ui/dateText";
 
 /** A failed call, in words: the server's message, "Your role cannot do that." on 403, the request id when unexpected. */
 export function ErrorLine({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
@@ -136,6 +137,8 @@ export type DecisionDialogProps = {
   expiryRequired?: boolean;
   /** v0.18.3 (owner G2 R9): months the type is valid from its issue date in this country; the end date fills itself (editable). */
   validMonths?: number;
+  /** The document country's time zone: "today" for the issue and end dates (default Europe/Stockholm). */
+  timeZone?: string;
   danger?: boolean;
   /** The "?" of the dialog (ui/ConfirmInfo.tsx): where it acts, who it affects and how to undo it, when the screen knows more than the default. */
   where?: ReactNode;
@@ -154,11 +157,14 @@ export type DecisionDialogProps = {
 };
 
 /** One dialog for every live decision: a summary, a note when the contract needs one, Confirm and Cancel. */
-export function DecisionDialog({ open, title, summary, confirmLabel, note, noteLabel, expiry = false, expiryRequired = false, validMonths, danger = false, where, who, undo, command, money, when, onClose, onConfirm }: DecisionDialogProps) {
+export function DecisionDialog({ open, title, summary, confirmLabel, note, noteLabel, expiry = false, expiryRequired = false, validMonths, timeZone = "Europe/Stockholm", danger = false, where, who, undo, command, money, when, onClose, onConfirm }: DecisionDialogProps) {
   const [text, setText] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [issuedAt, setIssuedAt] = useState("");
   const [typedEnd, setTypedEnd] = useState(false);
+  // Doc dates review: a box whose text is not a real day blocks Confirm (its last good value is never sent instead).
+  const [issuedBad, setIssuedBad] = useState(false);
+  const [expiresBad, setExpiresBad] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   useEffect(() => {
@@ -167,6 +173,8 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
       setExpiresAt("");
       setIssuedAt("");
       setTypedEnd(false);
+      setIssuedBad(false);
+      setExpiresBad(false);
       setError(null);
       setBusy(false);
     }
@@ -174,14 +182,16 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
   const trimmed = text.trim();
   const noteMissing = note === "required" && trimmed.length === 0;
   const tooLong = trimmed.length > 1000;
-  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
-  const today = new Date().toISOString().slice(0, 10);
+  // Doc dates (2026-11-24): today and tomorrow in the document's country (default Stockholm), never the UTC day.
+  const tomorrow = dayIn(Date.now() + 86_400_000, timeZone);
+  const today = dayIn(Date.now(), timeZone);
   const issuedInFuture = expiry && Boolean(issuedAt) && issuedAt > today;
   const expiryMissing = expiry && expiryRequired && (!expiresAt || expiresAt < tomorrow);
   // v0.18.5 (owner G2-D5.8): at most 15 years from today; later is "Check the end date" and is not sent.
   const latestEnd = maxEndDate();
   const expiryTooFar = expiry && Boolean(expiresAt) && endDateTooFar(expiresAt);
-  const blocked = noteMissing || tooLong || expiryMissing || expiryTooFar || issuedInFuture || busy;
+  const datesBad = expiry && (issuedBad || expiresBad);
+  const blocked = noteMissing || tooLong || expiryMissing || expiryTooFar || issuedInFuture || datesBad || busy;
   return (
     <Modal open={open} title={title} onClose={onClose}>
       <form
@@ -212,7 +222,7 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
         {expiry ? (
           <label>
             {tr("Issue date (on the document)")}
-            <DateInput data-testid="issued-at" value={issuedAt} max={today} aria-invalid={issuedInFuture} onChange={(event) => {
+            <DateInput data-testid="issued-at" value={issuedAt} max={today} aria-invalid={issuedInFuture || issuedBad} onValidity={(valid) => setIssuedBad(!valid)} onChange={(event) => {
               const next = event.target.value;
               setIssuedAt(next);
               // The end date follows the issue date until the admin types one (owner G2 R9: "Auto 6 months, editable").
@@ -225,7 +235,7 @@ export function DecisionDialog({ open, title, summary, confirmLabel, note, noteL
         {expiry ? (
           <label>
             {expiryRequired ? tr("Valid until (required)") : tr("Valid until (optional)")}
-            <DateInput data-testid="expires-at" value={expiresAt} min={expiryRequired ? tomorrow : undefined} max={latestEnd} required={expiryRequired} aria-invalid={expiryMissing || expiryTooFar} onChange={(event) => { setTypedEnd(true); setExpiresAt(event.target.value); }} />
+            <DateInput data-testid="expires-at" value={expiresAt} min={expiryRequired ? tomorrow : undefined} max={latestEnd} required={expiryRequired} aria-invalid={expiryMissing || expiryTooFar || expiresBad} onValidity={(valid) => { setExpiresBad(!valid); if (!valid) setTypedEnd(true); }} onChange={(event) => { setTypedEnd(true); setExpiresAt(event.target.value); }} />
           </label>
         ) : null}
         {expiryTooFar ? <p className="vh-help live-error" role="alert" data-testid="expiry-too-far">{tr("Check the end date")} · {tr("At most {0} years from today.", [EXPIRY_YEARS])}</p> : null}
