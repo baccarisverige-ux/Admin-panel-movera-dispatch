@@ -173,6 +173,10 @@ export function OnboardingSettingsEditor({ country, part, cars = [], liveFitCoun
               <Row label={tr("Driver needs a verified e-mail before approval")} help={tr("On: Movera cannot approve a new driver until their e-mail is verified (drivers who were active before are not checked).")} on={current.emailVerifiedForApproval === true} onToggle={(on) => (on ? setAskEmailCheck(true) : patch({ emailVerifiedForApproval: false }))} />
               <p className="fd-banner amber" data-testid="email-check-warning">{tr("Until Movera's own e-mail domain is added in the e-mail service, codes reach only the test address. Turning this on now stops new drivers from being approved.")}</p>
             </Card>
+            {/* v0.18.159 (contract.json#fleetNeedsCar.setting, owner 2026-11-24): default on; missing = on. */}
+            <Card title={tr("Fleet approval")} icon={<CarFront size={18} />} tone="blue">
+              <Row label={tr("Fleet needs at least 1 car before approval")} help={tr("On: Movera cannot approve a fleet until its owner has added at least one car.")} on={current.fleetNeedsCarForApproval !== false} onToggle={(on) => patch({ fleetNeedsCarForApproval: on })} />
+            </Card>
           </>
         ) : (
           <>

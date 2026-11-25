@@ -1276,6 +1276,9 @@
       }
     }
   },
+  "crashReports": {
+    "on": true
+  },
   "sourceRevisions": {
     "dispatch": 1,
     "pricing": 1,

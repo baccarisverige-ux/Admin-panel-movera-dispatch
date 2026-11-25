@@ -147,7 +147,7 @@ const ENTRIES: Entry[] = [
     schema: "CountryRules",
     built: countryRulesOf("SE", "SEK", countryInput, null),
     // v0.18.134 accountDeletion: written by Riders › Account deletion requests only (live/accountDeletion.ts); kept by the Tips & limits save.
-    kept: ["payoutMode", "payoutSchedule", "calls.adminCallRoles", "calls.phoneProvider", "accountDeletion", "accountDeletion.eraseEnabled", "accountDeletion.eraseAfterDays"],
+    kept: ["payoutMode", "payoutSchedule", "calls.adminCallRoles", "calls.phoneProvider", "accountDeletion", "accountDeletion.eraseEnabled", "accountDeletion.eraseAfterDays", "smsSignInOtherCountries", "smsSignInOtherCountries.enabled", "smsSignInOtherCountries.dailyCap", "smsSignInOtherCountries.perCodeDailyCap", "smsSignInOtherCountries.perMinuteCap", "smsSignInOtherCountries.blockedCallingCodes"],
     save: (stored) => countryRulesOf("SE", "SEK", countryInput, stored),
   },
   {
@@ -177,6 +177,8 @@ const ENTRIES: Entry[] = [
       "pickupPay.byCategory", "pickupPay.perKm", "pickupPay.perMin", "pickupPay.freeKm", "pickupPay.freeMin", "pickupPay.ranges", "pickupPay.maxPerRide",
       "driverBonus", "driverBonus.defaultLimit", "driverBonus.hardMax", "appUpdate.storeUrl", "dontMatchAgain", "paymentOptions",
       "emergencyNumbers", "sosContactsSms", "sosContactsSms.connected",
+      // v0.18.155 driver profile: the server serves the zone's rider-document driverProfile in the driver document; the admin never writes it there.
+      "driverProfile", "driverProfile.reviews",
       // v0.18.154 P16c: written by Settings › Minimum app version (config/AppUpdatePanel.tsx) only; kept by every other save.
       "appUpdate.minVersion", "appUpdate.storeUrls",
     ],

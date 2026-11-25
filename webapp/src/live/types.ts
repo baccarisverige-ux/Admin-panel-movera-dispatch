@@ -130,6 +130,8 @@ export type Fleet = {
   code?: string;
   driverCount: number;
   vehicleCount: number;
+  /** v0.18.159 (contract.json#fleetNeedsCar.adminView): fleet_has_no_car while approval is refused (published setting + no car). */
+  approvalBlockedReason?: "fleet_has_no_car";
   createdAt: string;
   version: number;
 };

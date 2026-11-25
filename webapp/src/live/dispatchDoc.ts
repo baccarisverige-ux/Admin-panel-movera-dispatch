@@ -86,7 +86,7 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   const fence = driver?.["waiting"] as { autoArriveMeters?: unknown; leaveMeters?: unknown } | undefined;
   const pair = validAutoArrive(fence?.autoArriveMeters ?? AUTO_ARRIVE_DEFAULT_METERS, fence?.leaveMeters ?? LEAVE_DEFAULT_METERS);
   if (fence && (fence.autoArriveMeters !== undefined || fence.leaveMeters !== undefined)) zone.pickupWait = { ...zone.pickupWait, ...(pair ?? { autoArriveMeters: AUTO_ARRIVE_DEFAULT_METERS, leaveMeters: LEAVE_DEFAULT_METERS }) };
-  // v0.18.7 (G5 item 4): the pickup move limit the server checks (booking.maxPickupMoveMeters, 0–2000; migration 0041 moved 500 to 200, migration 0133 moves 200 to 300 in v0.18.156).
+  // v0.18.7 (G5 item 4): the pickup move limit the server checks (booking.maxPickupMoveMeters, 0–2000; migration 0041 moved 500 to 200, migration 0133 moves 200 to 300 in v0.18.160).
   const move = validPickupMove((driver?.["booking"] as { maxPickupMoveMeters?: unknown } | undefined)?.maxPickupMoveMeters);
   if (move !== null) zone.pickupMove = { maxMeters: move };
   // v0.18.30 (owner Q9): "Shortest ride (m)" as the zone's drivers and the server get it (booking.samePointWarnMeters, 0–1000).
@@ -106,6 +106,13 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
       retryOneAfterMinutes: whole(fallback?.retryOneAfterMinutes, 60, CONFIG_DEFAULTS.driverOneStreamFallback.retryOneAfterMinutes),
     };
   }
+  // v0.18.158 (contract.json#crashCatcher.setting): each app's crash reports switch as the server serves it (missing = on);
+  // a document not read keeps the rules' own value.
+  if (rider || driver) {
+    const read = (d: Doc | null, own: boolean) => (d ? ((d["crashReports"] as { on?: unknown } | undefined)?.on ?? true) === true : own);
+    const before = zone.crashReports ?? { rider: true, driver: true };
+    zone.crashReports = { rider: read(rider, before.rider), driver: read(driver, before.driver) };
+  }
   // One rider document read serves both rider switches below; no rider document (not read, or the read failed) keeps the
   // rules' own values.
   if (rider) {
@@ -120,6 +127,9 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
     zone.shareTrip = { on: typeof on === "boolean" ? on : typeof older === "boolean" ? older : true };
     // v0.18.144 (contract.json#liveLocation.setting): never saved or a bad value = the default (off, 30 m), as the server.
     zone.liveLocation = liveLocationOf({ liveLocation: rider["liveLocation"] as ZoneDispatch["liveLocation"] });
+    // v0.18.155 (contract.json#driverProfile.setting): never saved = the contract defaults (profile on, reviews off).
+    const dp = rider["driverProfile"] as { on?: unknown; reviews?: unknown } | undefined;
+    zone.driverProfile = { on: typeof dp?.on === "boolean" ? dp.on : true, reviews: typeof dp?.reviews === "boolean" ? dp.reviews : false };
   }
   // v0.18.8 (G6): the free wait at each stop the server charges by (waiting.stopFreeWaitMin, 0–20; 0 while stops are off).
   const stopFree = (driver?.["waiting"] as { stopFreeWaitMin?: unknown } | undefined)?.stopFreeWaitMin;

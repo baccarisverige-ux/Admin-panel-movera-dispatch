@@ -30,7 +30,7 @@ const tnd = money("TND");
 
 export const CONFIG_DEFAULTS = {
   maxStops: 3,
-  /** v0.18.156 (owner 2026-11-23 "rider can adjust the pickup up to 300 m for free"): was 200 (v0.18.7), before that 500. */
+  /** v0.18.160 (owner 2026-11-23 "rider can adjust the pickup up to 300 m for free"): was 200 (v0.18.7), before that 500. */
   maxPickupMoveMeters: 300,
   /** v0.18.30 (owner Q9): pickup ≈ drop-off warning under this many metres (contract configDefaults.samePointWarnMeters). */
   samePointWarnMeters: 100,
@@ -38,10 +38,16 @@ export const CONFIG_DEFAULTS = {
   pickupSpotsOn: true,
   /** v0.18.116 BQ-S10 (owner S10 Q6: default on): riders can share a live trip link (contract configDefaults.shareTripOn). */
   shareTripOn: true,
+  /** v0.18.158 (owner 2026-11-24 "Add to admin all kind of crash"): the apps send crash reports (contract configDefaults.crashReportsOn). */
+  crashReportsOn: true,
   /** v0.18.144 (owner 2026-11-20; supervisor: OFF until the load test passes): two-way live location (contract configDefaults.liveLocationShare). */
   liveLocationShare: false,
   /** v0.18.144: the rider app's adjust-pickup banner shows when the rider is farther than this from the pickup (contract configDefaults.adjustPickupMeters). */
   adjustPickupMeters: 30,
+  /** v0.18.155 driver profile (owner 2026-11-20 "Now build all"): the rider sees the driver profile sheet (contract configDefaults.driverProfileOn). */
+  driverProfileOn: true,
+  /** v0.18.155: written reviews on the profile, each shown only after an admin approves it; off until a zone has moderators (contract configDefaults.driverReviewsOn). */
+  driverReviewsOn: false,
   /** v0.18.122 L20 stream (owner 2026-11-17 "Yes, with switch (Rec.)", off until tested): one live connection per driver phone (contract configDefaults.driverOneStream). */
   driverOneStream: false,
   /**

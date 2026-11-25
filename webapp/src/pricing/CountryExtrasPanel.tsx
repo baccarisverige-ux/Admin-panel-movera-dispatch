@@ -39,6 +39,9 @@ import { CommandButton } from "../ui/CommandButton";
 import { FieldErrorScope, useFieldErrors } from "../ui/fieldErrors";
 import { NumberField } from "./NumberField";
 import { SmsSignInCard } from "./SmsSignInCard";
+import { SmsOtherCountriesCard } from "./SmsOtherCountriesCard";
+import { SMS_OTHER_HOME } from "../config/smsSignIn";
+import { useSession } from "../auth/SessionContext";
 import { EmergencyNumbersEditor } from "./EmergencyNumbersEditor";
 import { ChatSettingsCard } from "./ChatSettingsCard";
 import { currencySymbol, fromSek, money, tipMax } from "./zonePricing";
@@ -135,6 +138,9 @@ function withoutTipFlag(mixed: MixedTipRules | undefined, flag: (typeof TIP_FLAG
 
 export function CountryExtrasPanel({ country, canEdit, section, focus = null, onDirty, onNotice, targets, zoneId: shownZone }: Props) {
   const { book, loading: bookLoading, slice } = useCountrySettings();
+  // v0.18.157 (contract.json#smsSignIn.otherCountries.admin): the other-countries card is for super admins only.
+  const { agent } = useSession();
+  const isSuper = agent?.role === "super";
   const zoneId = targets ? (shownZone && targets.includes(shownZone) ? shownZone : targets[0]) : undefined;
   const onStandard = !zoneId || zoneId === `standard-${country}`;
   // v0.8.1 live: each zone's (or Standard's) own Tips & limits, read when this tab opens.
@@ -353,6 +359,12 @@ export function CountryExtrasPanel({ country, canEdit, section, focus = null, on
           <div id="extras-sms-sign-in" className="cx-anchor">
             <SmsSignInCard value={onStandard ? shown.smsSignIn : countrySettingsOf(book, country).smsSignIn} saved={onStandard ? saved.smsSignIn : countrySettingsOf(book, country).smsSignIn} canEdit={canEdit} onStandard={onStandard} onChange={(smsSignIn) => edit({ smsSignIn })} />
           </div>
+          {/* v0.18.157 (contract.json#smsSignIn.otherCountries): Sweden Standard, super admins only. */}
+          {isSuper && onStandard && country === SMS_OTHER_HOME ? (
+            <div id="extras-sms-other-countries" className="cx-anchor">
+              <SmsOtherCountriesCard value={shown.smsSignInOther} saved={saved.smsSignInOther} canEdit={canEdit} onChange={(smsSignInOther) => edit({ smsSignInOther })} />
+            </div>
+          ) : null}
           <div id="extras-person-limits" className="cx-anchor">
             <div className="fee-card" data-testid="person-limits">
               <div>

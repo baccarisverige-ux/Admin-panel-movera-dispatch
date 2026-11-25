@@ -452,10 +452,10 @@ assert(waitChange.includes("Far pickup from: 5 → 6") && waitChange.includes("F
 assert(copyParts({ ...base, pickupWait: { ...wait, farPickupKm: 9 } }, zoneDefault("Z002"), ["rides"]).pickupWait.farPickupKm === 9, "waiting copies with Rides & stops");
 
 // Q39/Q40: max stops 3 and the pickup move limit per zone, in Dispatch (v0.18.7: 200 m, was 500; range 0–2000).
-assert(base.stops.max === 3 && base.pickupMove.maxMeters === 300, "Q39/Q40 defaults (v0.18.156: 300 m)");
+assert(base.stops.max === 3 && base.pickupMove.maxMeters === 300, "Q39/Q40 defaults (v0.18.160: 300 m)");
 assert(zoneIssues({ ...base, pickupMove: { maxMeters: 2001 } }).some((issue) => issue.startsWith("Pickup move after accept")), "the pickup move limit has a maximum");
 assert(changeLines(base, { ...base, pickupMove: { maxMeters: 400 } }).includes("Pickup move after accept (m): 300 → 400"), "a change line for the pickup move limit");
-assert(liveRules(emptyDispatchBook(), "Z001").pickupMove.maxMeters === 300, "an older save without the setting gets 300 m (v0.18.156)");
+assert(liveRules(emptyDispatchBook(), "Z001").pickupMove.maxMeters === 300, "an older save without the setting gets 300 m (v0.18.160)");
 assert(copyParts({ ...base, pickupMove: { maxMeters: 250 } }, zoneDefault("Z002"), ["rides"]).pickupMove.maxMeters === 250, "the pickup move limit copies with Rides & stops");
 
 // Country rules: driving limit warnings, cancel rate, cancel reasons.

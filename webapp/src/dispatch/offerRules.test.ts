@@ -106,12 +106,12 @@ test("G4 live fix: the Rider raise limit box carries the contract's min, max and
 
 /* ---------- Driver group 5 (contract v0.18.7, Rules decisions/driver-g5.md) ---------- */
 
-test("G5 item 4 + v0.18.156: the pickup move limit is 300 m by default (owner 2026-11-23), 0–2000 in steps of 10, as the contract says; the exporter writes it", () => {
+test("G5 item 4 + v0.18.160: the pickup move limit is 300 m by default (owner 2026-11-23), 0–2000 in steps of 10, as the contract says; the exporter writes it", () => {
   assert.equal(PICKUP_MOVE_DEFAULT, 300);
   assert.deepEqual(PICKUP_MOVE_RANGE, [0, 2000]);
   assert.equal(contract.configDefaults.maxPickupMoveMeters, PICKUP_MOVE_DEFAULT);
   assert.deepEqual(pickupMoveField(), { min: 0, max: 2000, step: 10 });
-  assert.equal(zone().pickupMove.maxMeters, 300); // v0.18.156 (owner 2026-11-23): free move up to 300 m
+  assert.equal(zone().pickupMove.maxMeters, 300); // v0.18.160 (owner 2026-11-23): free move up to 300 m
   assert.equal(validPickupMove(350), 350);
   for (const bad of [-1, 2001, 12.5, Number.NaN, "200", null]) assert.equal(validPickupMove(bad), null, String(bad));
   assert.ok(zoneIssues({ ...zone(), pickupMove: { maxMeters: 2500 } }).some((issue) => issue.startsWith("Pickup move after accept: 0 to 2000 m")));

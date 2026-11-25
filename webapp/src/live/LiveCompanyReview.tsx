@@ -4,6 +4,7 @@ import { Building2 } from "lucide-react";
 import { tr, trn } from "../i18n";
 import { useLiveSession } from "./LiveSessionContext";
 import { DecisionDialog, ErrorLine, Status } from "./ui";
+import { fleetCarLine } from "./fleetNeedsCar";
 import type { Fleet, FleetView } from "./types";
 
 /**
@@ -22,6 +23,7 @@ export function LiveCompanyReview({ fleetId }: { fleetId: string }) {
   const fleet = query.data.fleet;
   const pending = fleet.status === "pending";
   const mayDecide = can("drivers.activate") && fleet.status !== "approved";
+  const cars = fleetCarLine(query.data.vehicles?.length ?? fleet.vehicleCount ?? 0, fleet.approvalBlockedReason) // v0.18.159: the server decides (published setting);
   return (
     <section className="panel live-company" data-testid="company-review" data-fleet-status={fleet.status} aria-label={tr("New company")}>
       <div className="panel-title-row">
@@ -30,9 +32,11 @@ export function LiveCompanyReview({ fleetId }: { fleetId: string }) {
       </div>
       <p className="fd-sub">{trn("Org. number {0}. Approve the company like a new fleet; the account is activated when its documents are approved.", fleet.orgNumber)}</p>
       {pending ? <p className="fd-banner amber">{tr("Waiting for Movera: the company has not been approved yet.")}</p> : null}
+      <p className={`fd-sub fleet-cars-line ${cars.tone}`} data-testid="fleet-cars-line" data-tone={cars.tone}><strong>{tr("Cars")}</strong> · {cars.text}</p>
+      {cars.locked && mayDecide ? <p className="fd-banner red" data-testid="fleet-approve-locked">{cars.lockText}</p> : null}
       {mayDecide ? (
         <div className="actions">
-          <button data-command="admin.server.fleetReview" type="button" className="primary-btn" onClick={() => setDecision("approved")}>{tr("Approve the company")}</button>
+          <button data-command="admin.server.fleetReview" type="button" className="primary-btn" disabled={cars.locked} aria-disabled={cars.locked} title={cars.locked ? cars.lockText : undefined} onClick={() => setDecision("approved")}>{tr("Approve the company")}</button>
           <button data-command="admin.server.fleetReview" type="button" className="secondary-btn" onClick={() => setDecision("rejected")}>{tr("Reject the company")}</button>
         </div>
       ) : null}

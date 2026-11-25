@@ -15,8 +15,8 @@ import { sv } from "../i18n/sv.ts";
 const C = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", import.meta.url), "utf8"));
 const OPENAPI = readFileSync(new URL("../../../contracts/openapi.yaml", import.meta.url), "utf8");
 
-test("the admin pins the contract it carries (0.18.156)", () => {
-  assert.equal(C.version, "0.18.156");
+test("the admin pins the contract it carries (0.18.160)", () => {
+  assert.equal(C.version, "0.18.160");
   assert.equal(CONTRACT_VERSION, C.version);
 });
 
