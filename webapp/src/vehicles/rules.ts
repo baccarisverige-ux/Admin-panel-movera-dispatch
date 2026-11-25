@@ -104,6 +104,11 @@ export function countryOfZone(zoneId: string): MarketId {
  * cars): a car's country. Live: the server's Vehicle.country, else the market of the server's Vehicle.zoneId; never a
  * guess, so null = unknown (shown as unknown, never as SE). Demo: the zone's country as before.
  */
+/** v0.18.161 (carZones.noCountry, owner "Show as errors and must check what happen"): the server said the car has no country. */
+export function carHasNoCountry(record: Pick<DemoRecord, "liveNoCountry">): boolean {
+  return record.liveNoCountry === true;
+}
+
 export function carCountryOf(record: Pick<DemoRecord, "zoneId" | "liveVehicleDocs">, live: boolean): MarketId | null {
   if (!live) return countryOfZone(record.zoneId);
   const sent = record.liveVehicleDocs?.country;

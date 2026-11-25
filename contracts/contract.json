@@ -1755,8 +1755,9 @@
       "existingZoneId": "zoneId on these two lists (already taken since v0.5.3) is the same one-zone filter as on the other lists: only that zone, inside the admin's zones; a zone outside them is now 403 forbidden (reason zone_out_of_scope), where an older server gave an empty page.",
       "fields": "Vehicle.zoneId (string or null): the car's zone by carZone. Vehicle.country (ISO 3166-1 alpha-2 or null): the car's country, its fleet's country, else its driver's country (the country whose car rules and documents apply), else null. Fleet.zoneId (string): the fleet's zone. Sent on every Vehicle and Fleet an admin reads; additive, absent from an older server.",
       "server": "Rule 33: the car zone is part of the SQL WHERE of both the page and the count (never filtered in code after the read); the fleet zone is fleets.zone_id in the WHERE.",
-      "panel": "The admin sends the picked zones (zoneIds, or zoneId for one zone, and country for \"All zones\" of a country) on both lists, shows the server's Vehicle.zoneId / Vehicle.country / Fleet.zoneId, never guesses a car's zone or country (a car with no country is shown as unknown, never as SE), and never keeps a car or fleet with no zone when a filter is given. A server before v0.18.161 ignores these keys (it answers the whole scope, no 400) and sends no Vehicle.zoneId / Fleet.zoneId: the panel knows it by rows without zoneId, then filters the rows itself with the older rule (rows with no zone kept, the zone guessed from the driver as before) and shows no total; a 400 unknown_filter is handled the same way. The admin may go live before the server, so it must work with both.",
-      "apps": "Driver app: not affected (it reads its own cars from GET /driver/vehicles, never these admin lists). Rider app: not affected (it never reads cars or fleets)."
+      "panel": "The admin sends the picked zones (zoneIds, or zoneId for one zone, and country for \"All zones\" of a country) on both lists, shows the server's Vehicle.zoneId / Vehicle.country / Fleet.zoneId, never guesses a car's zone or country (a car with no country is shown as an error, never as SE; noCountry), and never keeps a car or fleet with no zone when a filter is given. A server before v0.18.161 ignores these keys (it answers the whole scope, no 400) and sends no Vehicle.zoneId / Fleet.zoneId: the panel knows it by rows without zoneId, then filters the rows itself with the older rule (rows with no zone kept, the zone guessed from the driver as before) and shows no total; a 400 unknown_filter is handled the same way. The admin may go live before the server, so it must work with both.",
+      "apps": "Driver app: not affected (it reads its own cars from GET /driver/vehicles, never these admin lists). Rider app: not affected (it never reads cars or fleets).",
+      "noCountry": "v0.18.161 (owner 2026-11-25 \"Show as errors and must check what happen\"): a car with no country (Vehicle.country null on a server of v0.18.161 or later) is a data error. The admin shows it as a red error in every car list and on the car page: \"Error: this car has no country. Check what happened.\" (sv / fr), the car id, and a button that opens the car's owner (its fleet, else its driver). The server raises the alert kind car_no_country (alertDesk.serverDetection.kindDefaults.car_no_country) for each such car."
     }
   },
   "liveDrivers": {
@@ -5080,6 +5081,10 @@
             "critical": 20
           },
           "rule": "A server alert (alertDesk kind app_crash, group system) for every crash group of the rider or driver app (kinds dart_error, native_crash, freeze, crash; never error or server) that is open and was first seen in the last 24 hours, once its count reaches the kind's Important limit (default 1, so a NEW crash type alerts at once); Critical from the Critical limit (default 20). One alert per group and country (every country that has a zone; the zone of the report when it sent one). Solved by itself when the group is marked fixed or is older than 24 hours. The admin changes the limits, the level or switches it off in Alerts › Settings, like every other kind."
+        },
+        "car_no_country": {
+          "level": "important",
+          "rule": "v0.18.161 (owner 2026-11-25 \"Show as errors and must check what happen\"; adminListFilters.carZones.noCountry): a server alert (group system) for every car whose country is unknown (Vehicle.country null: no fleet, and no driver or a driver with no country). One alert per car and country, raised in every country that has a zone (the car has none), no zone; title \"Car with no country: {plate}\", detail the car id; ref.driverId when the car has a driver. Solved when the car has a country (or is removed). The admin can switch the kind off like any kind."
         }
       },
       "commands": "take / pass / snooze / done on a server alert: the kind, zone and title stored by the server win over what the call sends. done closes it (state done).",
@@ -5121,7 +5126,8 @@
       "booked_taken_back": "dispatch",
       "no_driver_nearby": "dispatch",
       "booked_no_driver_ended": "dispatch",
-      "app_crash": "system"
+      "app_crash": "system",
+      "car_no_country": "system"
     },
     "permissions": {
       "note": "Seeing an alert needs its group's read permission; acting on it (take, done, snooze, pass) needs its group's act permission or alerts.manage. Mutes, settings and rules need alerts.manage. Quiet hours: the admin's own (overview.read).",

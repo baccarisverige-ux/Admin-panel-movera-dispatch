@@ -181,6 +181,7 @@ export function vehicleRecord(vehicle: Vehicle, drivers: ReadonlyMap<string, Dri
     liveRuleProblems: [...(vehicle.ruleProblems ?? [])],
     liveCategoryIds: [...(vehicle.categoryIds ?? [])],
     liveVehicleStatus: vehicle.status,
+    ...(vehicle.country === null ? { liveNoCountry: true as const } : {}),
     ...(vehicle.fitCategories ? { liveFitCategories: [...vehicle.fitCategories] } : {}),
     liveVehicleDocs: { documents: [...(vehicle.documents ?? [])], required: requiredForVehicle(vehicle, country), ...(country ? { country } : {}) },
   };

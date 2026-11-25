@@ -3,9 +3,14 @@ import assert from "node:assert/strict";
 import { ApiError } from "../api/httpClient.ts";
 import { createLiveAdminApi, vehicleRecord } from "./liveAdminApi.ts";
 import { listQueryOf, resetLists } from "./liveLists.ts";
-import { carCountryOf } from "../vehicles/rules.ts";
+import { carCountryOf, carHasNoCountry } from "../vehicles/rules.ts";
 import type { LiveClient } from "./session.ts";
 import type { Driver, Vehicle } from "./types.ts";
+import contract from "../../../contracts/contract.json" with { type: "json" };
+import { kindDef } from "../alerts/engine.ts";
+import { en } from "../i18n/en.ts";
+import { sv } from "../i18n/sv.ts";
+import { fr } from "../i18n/fr.ts";
 
 /**
  * v0.18.161 (contract.json#adminListFilters.carZones; owner 2026-11-25 "Yes, fix it": the admin mixed French and Swedish
@@ -118,4 +123,22 @@ test("v0.18.161 review S1: a server before v0.18.161 ignores the filter and send
   assert.deepEqual(cars.map((row) => row.id).sort(), ["V1", "V2"]);
   assert.equal((listQueryOf("vehicles" as never) as { total?: number }).total, undefined, "the whole-scope count is never shown");
   resetLists();
+});
+
+test("v0.18.161 owner \"Show as errors\": a car with no country is an error; the car_no_country alert kind matches the contract; texts sv/fr", () => {
+  const drivers = new Map([["D1", sweDriver]]);
+  const lost = vehicleRecord(car(4, null, null) as unknown as Vehicle, drivers);
+  assert.equal(carHasNoCountry(lost), true);
+  assert.equal(carHasNoCountry(vehicleRecord(car(2, "FR-PC", "FR") as unknown as Vehicle, drivers)), false);
+  assert.equal(carHasNoCountry(vehicleRecord(car(5, undefined, undefined) as unknown as Vehicle, drivers)), false, "an older server: no error claimed");
+  const C = contract as unknown as { alertDesk: { kindGroups: Record<string, string>; serverDetection: { kindDefaults: Record<string, { level: string }> } } };
+  const kind = kindDef("car_no_country");
+  assert.ok(kind);
+  assert.equal(kind.group, C.alertDesk.kindGroups["car_no_country"]);
+  assert.equal(kind.level, C.alertDesk.serverDetection.kindDefaults["car_no_country"]!.level);
+  const key = "Error: this car has no country. Check what happened.";
+  assert.equal((en as Record<string, string>)[key], key);
+  assert.equal((sv as Record<string, string>)[key], "Fel: bilen har inget land. Kontrollera vad som hänt.");
+  assert.equal((fr as Record<string, string>)[key], "Erreur : cette voiture n'a pas de pays. Vérifiez ce qui s'est passé.");
+  assert.ok((sv as Record<string, string>)["Car with no country: {0}"]);
 });

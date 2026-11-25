@@ -9603,4 +9603,11 @@
 ["Fleet approval","Approbation de la flotte"],
 ["Fleet needs at least 1 car before approval","La flotte doit avoir au moins 1 voiture avant l’approbation"],
 ["On: Movera cannot approve a fleet until its owner has added at least one car.","Activé : Movera ne peut pas approuver une flotte tant que son propriétaire n’a pas ajouté au moins une voiture."],
-["Country unknown","Pays inconnu"]]
+["Error: this car has no country. Check what happened.","Erreur : cette voiture n'a pas de pays. Vérifiez ce qui s'est passé."],
+["Car {0}","Voiture {0}"],
+["Open the fleet","Ouvrir la flotte"],
+["Open the driver","Ouvrir le chauffeur"],
+["No owner","Aucun propriétaire"],
+["Car with no country: {0}","Voiture sans pays : {0}"],
+["Car with no country","Voiture sans pays"],
+["A car whose country is unknown (no fleet, no driver or a driver with no country). Someone must check what happened. Solved when the car has a country.","Une voiture dont le pays est inconnu (pas de flotte, pas de chauffeur ou un chauffeur sans pays). Quelqu'un doit vérifier ce qui s'est passé. Résolu quand la voiture a un pays."]]

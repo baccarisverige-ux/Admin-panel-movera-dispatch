@@ -9,6 +9,7 @@ import { useRecords, useSlice } from "../api/hooks";
 import { useSession } from "../auth/SessionContext";
 import { emptyDriverOpsBook, driverOps, vehicleOps, type DriverOpsBook } from "../drivers/ops";
 import { vehicleBlock } from "../drivers/gate";
+import { CarNoCountryError, carHasNoCountry } from "../vehicles/CarNoCountryError";
 import { EXPIRY_WARNING_DAYS, overallHealth, type DocHealth } from "../fleet/documents";
 import { useMarketScope } from "../markets/useMarketScope";
 import { Cards } from "../reports/ui";
@@ -207,7 +208,8 @@ export function FleetPage() {
           head={[tr("Plate"), tr("Car"), tr("Driver"), tr("Fleet"), tr("State"), tr("Categories"), tr("Fits"), tr("Year"), tr("Papers"), tr("Rule check")]}
           rowIds={shown.map((row) => row.record.id)}
           rows={shown.map((row) => [
-            row.record.plate ?? row.record.id,
+            // v0.18.161 (owner "Show as errors and must check what happen"): a car with no country is a red error.
+            carHasNoCountry(row.record) ? <span key="plate">{row.record.plate ?? row.record.id} <CarNoCountryError record={row.record} compact /></span> : row.record.plate ?? row.record.id,
             `${row.record.make ?? ""} ${row.record.model ?? ""}`.trim() || "—",
             row.driver ? row.driver.name : tr("Unassigned"),
             fleetName(row.record.fleetId || "") || tr("Independent"),
