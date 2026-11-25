@@ -3,4 +3,6 @@ export const svC66VehiclesByFleet = {
   "{0} car": "{0} bil",
   "{0} driver": "{0} förare",
   "Drivers with their own car": "Förare med egen bil",
+  "(loaded so far)": "(hittills laddade)",
+  "Fleet groups and counts cover the cars loaded so far. Load more to see every car.": "Flottgrupper och antal gäller bilarna som laddats hittills. Ladda fler för att se alla bilar.",
 } as const;

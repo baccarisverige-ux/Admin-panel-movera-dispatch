@@ -101,7 +101,7 @@ test("R6 fleet partner list is isolated to its fleet id", async ({ page }) => {
   await session(page, "fredrik");
   await page.goto("/vehicles");
   await expect(page.getByText(/Fleet partner scope: F1/)).toBeVisible();
-  const rows = page.locator("tbody tr");
+  const rows = page.locator("tbody tr:not(.dt-group)");
   const count = await rows.count();
   expect(count).toBeGreaterThan(0);
   for (let index = 0; index < count; index += 1) {

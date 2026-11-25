@@ -3,4 +3,6 @@ export const enC66VehiclesByFleet = {
   "{0} car": "{0} car",
   "{0} driver": "{0} driver",
   "Drivers with their own car": "Drivers with their own car",
+  "(loaded so far)": "(loaded so far)",
+  "Fleet groups and counts cover the cars loaded so far. Load more to see every car.": "Fleet groups and counts cover the cars loaded so far. Load more to see every car.",
 } as const;

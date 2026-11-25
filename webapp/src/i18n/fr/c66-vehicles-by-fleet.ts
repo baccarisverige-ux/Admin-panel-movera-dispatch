@@ -3,4 +3,6 @@ export const frC66VehiclesByFleet = {
   "{0} car": "{0} voiture",
   "{0} driver": "{0} chauffeur",
   "Drivers with their own car": "Chauffeurs avec leur propre voiture",
+  "(loaded so far)": "(chargées pour l’instant)",
+  "Fleet groups and counts cover the cars loaded so far. Load more to see every car.": "Les groupes et les nombres par flotte portent sur les voitures déjà chargées. Chargez la suite pour voir toutes les voitures.",
 } as const;
