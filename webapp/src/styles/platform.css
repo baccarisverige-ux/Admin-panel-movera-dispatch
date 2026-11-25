@@ -137,7 +137,7 @@
 .errors-pill.fixed { background: #e5f5e5; color: var(--status-good-text); }
 .errors-empty { padding: 16px 0; }
 .errors-note { margin-top: 12px; font-size: 12px; }
-/* v0.18.157 crash catcher: the other kinds and a group's reports. */
+/* v0.18.158 crash catcher: the other kinds and a group's reports. */
 .errors-kind.native_crash, .errors-kind.dart_error { background: #fdecec; color: #9b2020; }
 .errors-kind.freeze { background: #fdf0e6; color: #9a4a10; }
 .errors-actions { display: inline-flex; gap: 6px; flex-wrap: wrap; }

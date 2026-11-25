@@ -60,7 +60,7 @@ export const SCREEN_ONLY_COMMANDS: ReadonlySet<string> = new Set([
   "admin.pricing.addCategory", "admin.pricing.cancelCategory", "admin.pricing.copyZones", "admin.pricing.discard", "admin.pricing.edit", "admin.pricing.schedule", "admin.pricing.tab", "admin.pricing.testRide", "admin.pricing.zone",
   "admin.promo.view",
   "admin.reports.download", "admin.reports.view",
-  "admin.review.view",
+  "admin.review.driverReview", "admin.review.view",
   "admin.rideCheck.view",
   "admin.rider.tab",
   "admin.riders.export", "admin.riders.flyer", "admin.riders.select", "admin.riders.view",

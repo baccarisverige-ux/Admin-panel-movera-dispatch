@@ -107,6 +107,7 @@ export function defaultZone(zone: Pick<MarketZone, "id" | "kind">): ZoneDispatch
     shareTrip: { on: CONFIG_DEFAULTS.shareTripOn },
     crashReports: { rider: CONFIG_DEFAULTS.crashReportsOn, driver: CONFIG_DEFAULTS.crashReportsOn },
     liveLocation: { share: CONFIG_DEFAULTS.liveLocationShare, adjustPickupMeters: CONFIG_DEFAULTS.adjustPickupMeters },
+    driverProfile: { on: CONFIG_DEFAULTS.driverProfileOn, reviews: CONFIG_DEFAULTS.driverReviewsOn },
     oneStream: { on: CONFIG_DEFAULTS.driverOneStream },
     oneStreamFallback: { ...CONFIG_DEFAULTS.driverOneStreamFallback },
     airport: { on: airport, order: "fifo", maxQueueMin: 120, queueAreas: [] },

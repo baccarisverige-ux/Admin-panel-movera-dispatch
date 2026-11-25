@@ -4,7 +4,7 @@ import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { createDemoErrors, errorReportsPath, kindLabelKey, type ErrorGroup, type ErrorReport, type ErrorReportList } from "./errors";
 
 /**
- * Contract v0.18.157 (contract.json#crashCatcher.admin.reports; owner 2026-11-24 "Add to admin all kind of crash"): the
+ * Contract v0.18.158 (contract.json#crashCatcher.admin.reports; owner 2026-11-24 "Add to admin all kind of crash"): the
  * detail of one crash group, its latest kept reports: native reason, device, OS, build, screen, stack and the last events
  * before the crash. Live: GET /admin/errors/{id}/reports; the demo build answers the same shape from example data.
  */

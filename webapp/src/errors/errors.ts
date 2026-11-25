@@ -7,7 +7,7 @@ import type { MessageKey } from "../i18n/en.ts";
 export type ErrorApp = "driver" | "rider" | "server";
 export type ErrorPlatform = "android" | "ios" | "web" | "server";
 export type ErrorStatus = "open" | "fixed";
-/** v0.18.157 (contract.json#crashCatcher.kinds): dart_error, native_crash and freeze next to the v0.16.0 crash and error. */
+/** v0.18.158 (contract.json#crashCatcher.kinds): dart_error, native_crash and freeze next to the v0.16.0 crash and error. */
 export type ErrorKind = "crash" | "error" | "dart_error" | "native_crash" | "freeze";
 
 export type ErrorGroup = {
@@ -30,10 +30,10 @@ export type ErrorGroupPage = { items: ErrorGroup[]; nextCursor: string | null };
 
 export type ErrorFilters = { app?: ErrorApp; platform?: ErrorPlatform; version?: string; status?: ErrorStatus; kind?: ErrorKind };
 
-/** v0.18.157 (contract.json#crashCatcher.breadcrumbs): one of the last events before the crash. */
+/** v0.18.158 (contract.json#crashCatcher.breadcrumbs): one of the last events before the crash. */
 export type CrashBreadcrumb = { at: string; type: "route" | "lifecycle" | "platform" | "network" | "log"; message: string };
 
-/** v0.18.157 (contract.json#crashCatcher.admin.reports): one kept report of a group. */
+/** v0.18.158 (contract.json#crashCatcher.admin.reports): one kept report of a group. */
 export type ErrorReport = {
   at: string;
   kind: ErrorKind;
@@ -64,7 +64,7 @@ export function kindLabelKey(kind: ErrorKind): MessageKey {
   return ({ crash: "Crash", error: "Error", dart_error: "App error (Dart)", native_crash: "Native crash", freeze: "Freeze" } as const satisfies Record<ErrorKind, MessageKey>)[kind];
 }
 
-/** v0.18.157: GET /admin/errors/{errorId}/reports, the latest 20 kept reports. */
+/** v0.18.158: GET /admin/errors/{errorId}/reports, the latest 20 kept reports. */
 export function errorReportsPath(id: string): string {
   return `/admin/errors/${encodeURIComponent(id)}/reports?limit=20`;
 }
@@ -124,7 +124,7 @@ export function createDemoErrors(now = Date.now()) {
     list(filters: ErrorFilters): ErrorGroupPage {
       return { items: sortNewest(groups.filter((item) => matches(item, filters))).map((item) => ({ ...item })), nextCursor: null };
     },
-    /** v0.18.157: the demo's kept reports of one group (a native crash shows its reason and breadcrumbs). */
+    /** v0.18.158: the demo's kept reports of one group (a native crash shows its reason and breadcrumbs). */
     reports(id: string): ErrorReportList {
       const group = groups.find((item) => item.id === id);
       if (!group) throw new Error(`No error group ${id}.`);

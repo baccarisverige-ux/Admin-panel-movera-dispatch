@@ -86,7 +86,7 @@ export const KINDS: KindDef[] = [
   { id: "rider_cancels", group: "riders", label: "Rider cancels a lot", help: "Cancel rate in %.", mode: "limits", direction: "up", unit: "%", limits: { info: 30, important: 50, critical: null }, path: "/riders" },
   { id: "ticket_open", group: "riders", label: "Support ticket waiting", help: "", mode: "fixed", level: "info", path: "/support" },
   { id: "system_health", group: "system", label: "App, map or payments down or slow", help: "Down is Critical, slow is Important.", mode: "fixed", level: "critical", path: "/system" },
-  // v0.18.157 (owner 2026-11-24 "Add to admin all kind of crash"; contract.json#crashCatcher.alert): found by the server.
+  // v0.18.158 (owner 2026-11-24 "Add to admin all kind of crash"; contract.json#crashCatcher.alert): found by the server.
   { id: "app_crash", group: "system", label: "New crash in the rider or driver app", help: "Reports of a new crash type in the last 24 h (app errors, native crashes, freezes). Important from 1 means a new crash type alerts at once. Solved when it is marked fixed in Crashes & errors.", mode: "limits", direction: "up", unit: "reports", limits: { info: null, important: 1, critical: 20 }, path: "/errors" },
 ];
 

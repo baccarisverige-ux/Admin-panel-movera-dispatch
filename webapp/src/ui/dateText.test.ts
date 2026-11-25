@@ -23,3 +23,35 @@ test("typed dates become ISO; impossible days are refused", () => {
   assert.equal(parseDateText("2026-13-01", "sv"), null);
   assert.equal(parseDateText("  ", "sv"), "");
 });
+
+/**
+ * Doc-dates bug (owner 2026-11-24: "admin can't write the dates of issue and expiry"): the date box opens the phone's
+ * number pad (inputmode numeric), which has no "/" "-" or "." key, so the admin could only type digits; those never
+ * became a date and the box was emptied when he left it. Digits only, and a space or dot as separator, now work.
+ */
+test("doc dates: digits only (as typed on a phone's number pad) become the day", () => {
+  assert.equal(parseDateText("05112026", "en"), "2026-11-05");
+  assert.equal(parseDateText("05112026", "fr"), "2026-11-05");
+  assert.equal(parseDateText("20261105", "sv"), "2026-11-05");
+  assert.equal(parseDateText("20261105", "en"), "2026-11-05", "year first is read as year first in every language");
+  assert.equal(parseDateText("31022026", "en"), null);
+  assert.equal(parseDateText("0511202", "en"), null, "not yet a whole date");
+});
+
+test("doc dates: a dot, space or slash between the parts works in Swedish too (year first)", () => {
+  assert.equal(parseDateText("2026.11.05", "sv"), "2026-11-05");
+  assert.equal(parseDateText("2026 11 05", "sv"), "2026-11-05");
+  assert.equal(parseDateText("2026/11/5", "sv"), "2026-11-05");
+  assert.equal(parseDateText("5 11 2026", "en"), "2026-11-05");
+});
+
+test("doc dates: 'today' is the country's own day (Stockholm 00:30 is still yesterday in UTC)", async () => {
+  const { dayIn } = await import("./dateText.ts");
+  const at = Date.parse("2026-11-23T23:30:00Z");
+  assert.equal(dayIn(at, "Europe/Stockholm"), "2026-11-24");
+  assert.equal(dayIn(at, "Africa/Tunis"), "2026-11-24");
+  assert.equal(dayIn(Date.parse("2026-11-24T22:59:00Z"), "Europe/Stockholm"), "2026-11-24");
+  assert.equal(dayIn(Date.parse("2026-07-01T22:30:00Z"), "Europe/Stockholm"), "2026-07-02", "summer time (UTC+2)");
+});
+
+/* The box keeping bad text, Confirm waiting and the calendar under the finger are rendered checks: e2e/live-doc-dates-phone.spec.ts. */

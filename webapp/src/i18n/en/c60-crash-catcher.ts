@@ -1,4 +1,4 @@
-/** English dictionary, area c60-crash-catcher: crash catcher (contract v0.18.157 contract.json#crashCatcher, owner 2026-11-24 "Add to admin all kind of crash"): Crashes & errors kinds and reports, Dispatch › Safety › Crash reports, the app_crash alert. Add new keys at the end of this file. Merged in ../en.ts in this order. */
+/** English dictionary, area c60-crash-catcher: crash catcher (contract v0.18.158 contract.json#crashCatcher, owner 2026-11-24 "Add to admin all kind of crash"): Crashes & errors kinds and reports, Dispatch › Safety › Crash reports, the app_crash alert. Add new keys at the end of this file. Merged in ../en.ts in this order. */
 export const enC60CrashCatcher = {
   "Crash reports": "Crash reports",
   "The apps send every crash to Crashes & errors: app errors, native crashes (sent at the next start) and freezes, with the last screens before it. No phone number, e-mail, name or address is sent.": "The apps send every crash to Crashes & errors: app errors, native crashes (sent at the next start) and freezes, with the last screens before it. No phone number, e-mail, name or address is sent.",

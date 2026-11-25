@@ -200,7 +200,7 @@ function shareTrip(zone: ZoneDispatch): { on: boolean } {
   return { on: typeof zone.shareTrip?.on === "boolean" ? zone.shareTrip.on : CONFIG_DEFAULTS.shareTripOn };
 }
 
-/** v0.18.157 (contract.json#crashCatcher.setting): whether this app sends crash reports in the zone (missing = on). */
+/** v0.18.158 (contract.json#crashCatcher.setting): whether this app sends crash reports in the zone (missing = on). */
 export function crashReportsOf(zone: ZoneDispatch, app: "rider" | "driver"): { on: boolean } {
   const own = zone.crashReports?.[app];
   return { on: typeof own === "boolean" ? own : CONFIG_DEFAULTS.crashReportsOn };
@@ -358,6 +358,8 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     },
     shareTrip: shareTrip(base.zone),
     liveLocation: liveLocationOf(base.zone),
+    // v0.18.155 (contract.json#driverProfile.setting): the zone's Dispatch › Safety switches.
+    driverProfile: { on: base.zone.driverProfile?.on ?? CONFIG_DEFAULTS.driverProfileOn, reviews: base.zone.driverProfile?.reviews ?? CONFIG_DEFAULTS.driverReviewsOn },
     crashReports: crashReportsOf(base.zone, "rider"),
     paymentMethods: paymentMethods(base, state, zoneId),
     // v0.18.33 (fix job 5, owner Q6): Settings › Payment methods "Use wallet first" (default on); the rider's per-ride switch starts on.

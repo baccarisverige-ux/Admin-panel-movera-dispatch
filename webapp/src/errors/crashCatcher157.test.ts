@@ -13,7 +13,7 @@ import { fr } from "../i18n/fr.ts";
 import { createDemoErrors, ERROR_KINDS, errorReportsPath, errorsPath, kindLabelKey, type ErrorKind } from "./errors.ts";
 
 /**
- * Contract v0.18.157 (contract.json#crashCatcher; owner 2026-11-24 "Add to admin all kind of crash"): the Crashes &
+ * Contract v0.18.158 (contract.json#crashCatcher; owner 2026-11-24 "Add to admin all kind of crash"): the Crashes &
  * errors page filters by kind and opens a group's kept reports (stack, breadcrumbs, device); Dispatch › Safety has one
  * crash reports switch per app (crashReports.on in both app documents, default on); Alerts has the app_crash kind.
  * Rule 36: fails on main — no kind filter, no reports read, no crashReports, no app_crash kind.

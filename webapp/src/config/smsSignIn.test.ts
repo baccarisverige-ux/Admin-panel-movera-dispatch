@@ -74,7 +74,7 @@ test("a save for several scopes with a ZONE shown never changes the Standard's c
   const onStandard: CountrySettings = { ...standard, smsSignIn: { enabled: false, dailyCap: 300 } };
   const fromStandard = zoneValuesForSave(onStandard, ["Z002", "standard-SE"], (id) => own[id]!, "standard-SE");
   assert.deepEqual(fromStandard["standard-SE"]!.smsSignIn, { enabled: false, dailyCap: 300 });
-  assert.deepEqual([...COUNTRY_WIDE_FIELDS], ["smsSignIn", "emergencyNumbers", "sosContactsSms"]);
+  assert.deepEqual([...COUNTRY_WIDE_FIELDS], ["smsSignIn", "smsSignInOther", "emergencyNumbers", "sosContactsSms"]);
   assert.match(src("../pricing/CountryExtrasPanel.tsx"), /zoneValuesForSave\(shown, targets, \(id\) => zoneSettingsOf\(zoneBook, country, id\), zoneId\)/);
 });
 

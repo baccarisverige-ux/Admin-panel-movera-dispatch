@@ -23,7 +23,7 @@ import {
   type ErrorStatus,
 } from "../errors/errors";
 
-/** v0.18.157: a group's reports load only when its detail is opened (own chunk). */
+/** v0.18.158: a group's reports load only when its detail is opened (own chunk). */
 const ErrorReports = lazy(() => import("../errors/ErrorReports").then((module) => ({ default: module.ErrorReports })));
 
 /** The demo build's groups: one store per tab, so "Mark fixed" stays until a reload, like the live list would. */
