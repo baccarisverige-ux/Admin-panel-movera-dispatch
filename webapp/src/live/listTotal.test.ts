@@ -19,8 +19,8 @@ type Query = { loaded?: number; total?: number; hasMore: boolean };
 const queryOf = (name: string) => listQueryOf(name as never) as unknown as Query;
 
 const driver = (n: number) => ({ driverId: `D${n}`, firstName: `Driver${n}`, lastName: "X", accountStatus: n % 2 ? "active" : "pending", zoneIds: [n % 3 ? "Z001" : "Z002"], documents: [] });
-const vehicle = (n: number) => ({ vehicleId: `V${n}`, plate: `ABC${n}`, status: "approved", year: 2020, seats: 4, make: "Volvo", model: "V60", categoryIds: [], documents: [], driverId: `D${n}` });
-const fleet = (n: number) => ({ fleetId: `F${n}`, name: `Fleet ${n}`, status: "approved", ownerDriverId: `D${n}` });
+const vehicle = (n: number) => ({ vehicleId: `V${n}`, plate: `ABC${n}`, status: "approved", year: 2020, seats: 4, make: "Volvo", model: "V60", categoryIds: [], documents: [], driverId: `D${n}`, zoneId: "Z001" });
+const fleet = (n: number) => ({ fleetId: `F${n}`, name: `Fleet ${n}`, status: "approved", ownerDriverId: `D${n}`, zoneId: "Z001" });
 const trip = (n: number) => ({ tripId: `T${n}`, riderId: `R${n}`, zoneId: "Z001", status: "completed", flagged: n % 4 === 0, fare: { amountMinor: 10000, currency: "SEK" }, createdAt: "2026-11-12T10:00:00Z", version: 1 });
 
 /** A server: 120 drivers (+ vehicles / fleets / trips); `total` on the first page unless told otherwise. */

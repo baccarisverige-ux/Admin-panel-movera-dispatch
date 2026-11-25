@@ -100,3 +100,22 @@ test("v0.18.161: an older server (400 unknown_filter) → read without the filte
   assert.ok(!again[0]!.includes("zoneId="), "no filter after the first unknown_filter");
   resetLists();
 });
+
+test("v0.18.161 review S1: a server before v0.18.161 ignores the filter and sends no zoneId → the old zoneless pass, no count", async () => {
+  resetLists();
+  const rows = [car(1, undefined, undefined), { ...car(2, undefined, undefined), driverId: "D9" }];
+  const client = {
+    baseUrl: "https://api.example.test",
+    state: () => ({ accessToken: "a" }),
+    admin: () => ({ adminId: "adm_1", role: "super", scope: { zones: "all" } }),
+    subscribe: () => () => undefined,
+    // The old server: unknown keys ignored, every row of the scope, a whole-scope total.
+    json: async (path: string) => (path.startsWith("/admin/vehicles") ? { items: rows, nextCursor: null, total: 99 } : path.startsWith("/admin/drivers") ? { items: [sweDriver], nextCursor: null } : { items: [], nextCursor: null }),
+    post: async () => ({}), put: async () => ({}), del: async () => ({}),
+  } as unknown as LiveClient;
+  const cars = await createLiveAdminApi(client).list("vehicles", ["Z001"]);
+  // V1: the old guess (its driver's first zone Z001); V2: no driver known, no zone → kept by the old zoneless pass.
+  assert.deepEqual(cars.map((row) => row.id).sort(), ["V1", "V2"]);
+  assert.equal((listQueryOf("vehicles" as never) as { total?: number }).total, undefined, "the whole-scope count is never shown");
+  resetLists();
+});

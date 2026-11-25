@@ -20,7 +20,7 @@ type Query = { loaded?: number; total?: number; hasMore: boolean };
 const queryOf = (name: string) => listQueryOf(name as never) as unknown as Query;
 
 const driver = (n: number) => ({ driverId: `D${n}`, firstName: `Driver${n}`, lastName: "X", accountStatus: n % 2 ? "active" : "pending", zoneIds: ["Z001"], documents: [] });
-const vehicle = (n: number) => ({ vehicleId: `V${n}`, plate: `ABC${n}`, status: "approved", year: 2020, seats: 4, make: "Volvo", model: "V60", categoryIds: [], documents: [], driverId: `D${n}` });
+const vehicle = (n: number) => ({ vehicleId: `V${n}`, plate: `ABC${n}`, status: "approved", year: 2020, seats: 4, make: "Volvo", model: "V60", categoryIds: [], documents: [], driverId: `D${n}`, zoneId: "Z001" });
 const trip = (n: number, status = "completed") => ({ tripId: `T${n}`, riderId: `R${n}`, zoneId: "Z001", status, fare: { amountMinor: 10000, currency: "SEK" }, createdAt: "2026-11-12T10:00:00Z", version: 1 });
 
 /** A server of v0.18.83 (old: true = before, it answers total with 400 unknown_filter). */

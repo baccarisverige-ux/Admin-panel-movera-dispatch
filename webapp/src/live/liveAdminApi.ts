@@ -25,6 +25,7 @@ import { radarRepeatOf, toolRefusal, type RadarZoneSend } from "./dispatchTools.
 import { rememberSendTarget, sendTarget, setActiveRadarSend } from "../dispatch/radarSends.ts";
 import type { ApprovalRow, AuditRow, DemoRecord, LiveTripFacts, ZoneScope } from "../api/seed.ts";
 import type { LiveClient } from "./session.ts";
+import { setListQuery } from "./liveLists.ts";
 import { LIST_PAGE, PAGE_LIMIT, all, paged, readUncounted, type ListCounting } from "./listPages.ts";
 export { LIST_PAGE };
 import { DUE_PAYOUTS_LIST, LIVE_PAGE, createListReaders } from "./listReaders.ts";
@@ -527,20 +528,33 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
   /**
    * v0.18.161 (contract.json#adminListFilters.carZones; owner 2026-11-25 "Yes, fix it"): GET /admin/vehicles and GET
    * /admin/fleets take the top bar's zoneId / zoneIds / country and count under it (the old note: the count was kept
-   * only for All zones, REMINDERS 60). An older server that answers 400 unknown_filter is read without the filter for
-   * the rest of the session, its count is not kept, and list() filters the rows here by the same rule.
+   * only for All zones, REMINDERS 60). An older server (before v0.18.161) ignores these keys and sends rows without
+   * zoneId (review S1: the admin goes live before the server): then the rows are the whole scope, the count is not kept,
+   * and list() filters them here with the old zoneless pass (its zones are the old guess). A 400 unknown_filter is
+   * handled the same way (read without the filter for the rest of the session).
    */
-  const carZoneFilter: { unsupported?: boolean } = {};
-  async function scoped<T>(name: "vehicles" | "fleets", path: string, filter: ZoneFilter, counting: ListCounting): Promise<T[]> {
-    if (carZoneFilter.unsupported || !filter.params.length) return paged<T>(client, name, path, NO_FILTER, undefined, filter.params.length ? "none" : counting);
-    try {
-      return await paged<T>(client, name, path, filter, undefined, counting);
-    } catch (error) {
-      if (!(error instanceof ApiError && error.status === 400 && error.reason === "unknown_filter")) throw error;
-      carZoneFilter.unsupported = true;
-      return paged<T>(client, name, path, NO_FILTER, undefined, "none");
+  const carZoneFilter: { unsupported?: boolean; oldRows?: Set<string> } = { oldRows: new Set() };
+  async function scoped<T extends { zoneId?: string | null }>(name: "vehicles" | "fleets", path: string, filter: ZoneFilter, counting: ListCounting): Promise<T[]> {
+    let rows: T[];
+    if (carZoneFilter.unsupported || !filter.params.length) rows = await paged<T>(client, name, path, NO_FILTER, undefined, filter.params.length ? "none" : counting);
+    else {
+      try {
+        rows = await paged<T>(client, name, path, filter, undefined, counting);
+      } catch (error) {
+        if (!(error instanceof ApiError && error.status === 400 && error.reason === "unknown_filter")) throw error;
+        carZoneFilter.unsupported = true;
+        rows = await paged<T>(client, name, path, NO_FILTER, undefined, "none");
+      }
     }
+    const old = rows.some((row) => row.zoneId === undefined);
+    if (old) carZoneFilter.oldRows!.add(name);
+    else carZoneFilter.oldRows!.delete(name);
+    // An older server's count under a zone pick is the whole scope: never shown.
+    if (old && filter.params.length) setListQuery(name, { total: undefined });
+    return rows;
   }
+  /** Whether the last read of this list came from a server before v0.18.161 (rows without zoneId). */
+  const oldCarRows = (name: string) => carZoneFilter.oldRows!.has(name === "fleetOwners" ? "fleets" : name);
 
   async function readFleets(counting: ListCounting = "keep", filter: ZoneFilter = NO_FILTER): Promise<Fleet[]> {
     return scoped<Fleet>("fleets", "/admin/fleets", filter, counting);
@@ -649,7 +663,7 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
     const zones = filter.zones;
     // A row without a zone (a rider, a refund without its trip) is the server's answer for those zones. v0.18.161
     // (adminListFilters.carZones): not a car or a fleet: one with no zone is in no zone, left out once a filter is given.
-    const zoneless = !ZONED_LISTS.has(name);
+    const zoneless = !ZONED_LISTS.has(name) || oldCarRows(name);
     const rows = zones ? read.filter((row) => (zoneless && !row.zoneId) || (row.zoneId !== "" && zones.has(row.zoneId))) : read;
     remember(rows);
     return rows;
