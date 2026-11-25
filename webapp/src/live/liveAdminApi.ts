@@ -6,6 +6,7 @@ import { emptyReservationBook, type ReservationBook } from "../reservations/book
  * starting value, so the page looks as in the demo with a "Not connected yet" marker (src/live/connection.ts).
  * Commands the server has (driver status, vehicle review, full refund) go to it; any other command is refused.
  */
+import { setDriverCountry } from "./driverCountry.ts";
 import { reservationCall, type ServerReservation } from "./reservations.ts";
 import { catalogFor } from "../data/catalog.ts";
 import { CURRENCY, TIME_ZONE } from "../domain/contract.ts";
@@ -963,6 +964,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (next?.driverId) drivers.set(next.driverId, next);
       return done("Saved.");
     }
+    // v0.18.162 (contract.json#driverCountryFirst.adminSet): live/driverCountry.ts.
+    if (input.action === "admin.driver.country") { const next = await setDriverCountry(client, input, explained); if (next?.driverId) drivers.set(next.driverId, next); return done("Saved."); }
     if (input.action === "admin.driver.bankReview") {
       const decision = input.after === "approved" || input.after === "rejected" ? input.after : null;
       if (!decision) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });

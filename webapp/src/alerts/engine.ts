@@ -20,6 +20,7 @@ export type KindId =
   | "system_health"
   | "app_crash"
   | "car_no_country"
+  | "driver_no_country"
   | "rule";
 
 export const LEVELS: { id: Level; label: string }[] = [
@@ -91,6 +92,8 @@ export const KINDS: KindDef[] = [
   { id: "app_crash", group: "system", label: "New crash in the rider or driver app", help: "Reports of a new crash type in the last 24 h (app errors, native crashes, freezes). Important from 1 means a new crash type alerts at once. Solved when it is marked fixed in Crashes & errors.", mode: "limits", direction: "up", unit: "reports", limits: { info: null, important: 1, critical: 20 }, path: "/errors" },
   // v0.18.161 (owner 2026-11-25 "Show as errors and must check what happen"; contract alertDesk kind car_no_country): found by the server.
   { id: "car_no_country", group: "system", label: "Car with no country", help: "A car whose country is unknown (no fleet, no driver or a driver with no country). Someone must check what happened. Solved when the car has a country.", mode: "fixed", level: "important", path: "/vehicles" },
+  // v0.18.162 (owner 2026-11-25 "Yes"; contract alertDesk kind driver_no_country): found by the server.
+  { id: "driver_no_country", group: "system", label: "Driver with no country", help: "A driver with data but no country (not shown under any country). Set his country on the driver page. Solved when he has a country.", mode: "fixed", level: "important", path: "/drivers" },
 ];
 
 export function kindDef(id: KindId): KindDef | undefined {
@@ -330,6 +333,8 @@ function foundPath(alert: FoundAlert): string | undefined {
   if (ref.payoutId) return `/payouts/${ref.payoutId}`;
   // v0.18.161: a car with no country opens its car page.
   if (ref.vehicleId && alert.kind === "car_no_country") return `/vehicles/${ref.vehicleId}`;
+  // v0.18.162: a driver with no country opens his page (the Country field).
+  if (ref.driverId && alert.kind === "driver_no_country") return `/drivers/${ref.driverId}`;
   if (ref.driverId && kindDef(alert.kind)?.group === "drivers") return `/drivers/${ref.driverId}`;
   if (ref.riderId && alert.kind === "rider_cancels") return `/riders/${ref.riderId}`;
   return undefined;

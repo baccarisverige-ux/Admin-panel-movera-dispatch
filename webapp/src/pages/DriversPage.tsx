@@ -1,4 +1,5 @@
 import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
+import { DriverNoCountryError } from "../live/LiveDriverCountry";
 import { useCommandHidden } from "../live/useCommandHidden";
 import { statusLabel } from "../domain/labels";
 import { LiveListBar } from "../live/LiveListBar";
@@ -239,7 +240,8 @@ export function DriversPage() {
           <OnlinePill key={`${driver.id}-online`} presence={online} />,
           fleet ? fleet.name : tr("Independent"),
           driver.status,
-          zoneById(driver.zoneId)?.name ?? driver.zoneId,
+          // v0.18.162 (driverCountryFirst.noCountryError): a live driver with no country is a red error with Set country.
+          driver.live && driver.liveAccount && !driver.liveAccount.country ? <DriverNoCountryError key={`${driver.id}-nc`} driverId={driver.id} compact /> : zoneById(driver.zoneId)?.name ?? driver.zoneId,
           car ? `${car.make ?? ""} ${car.model ?? ""} · ${car.plate ?? car.id}`.trim() : tr("No vehicle"),
           cats.join(", ") || tr("None"),
           <DocSummary key={`${driver.id}-docs`} counts={docCounts} total={total} />,

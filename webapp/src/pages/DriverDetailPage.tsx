@@ -5,6 +5,7 @@ import { INCIDENTS_OF_DRIVER_LIST } from "../live/incidents";
 import { LiveDriverPreferences } from "../live/LiveProfileData";
 import { LivePayoutHold } from "../live/LivePayoutHold";
 import { LiveSessions } from "../live/LiveSessions";
+import { LiveDriverCountry } from "../live/LiveDriverCountry";
 import { LiveUnlockSignIn } from "../live/LiveUnlockSignIn";
 import { LiveBlockedPairs } from "../live/LiveBlockedPairs";
 import { useDriverPerformance } from "../live/useDriverPerformance";
@@ -385,6 +386,8 @@ export function DriverDetailPage() {
         </dl>
       </section>
 
+      {/* v0.18.162 (owner 2026-11-25 "Yes"): the Country field, the only place to change it; red error with none. */}
+      {liveData ? <LiveDriverCountry driverId={driver.id} country={driver.liveAccount?.country} /> : null}
       {refused ? <ActivationRefused details={refused} country={driver?.liveAccount?.country} /> : null}
       {notice || store.message ? <p className="fd-notice" role="status">{trSentences(notice)} {trSentences(store.message)}</p> : null}
       {liveData ? null : driver.status === "active" && health.invalid ? (
