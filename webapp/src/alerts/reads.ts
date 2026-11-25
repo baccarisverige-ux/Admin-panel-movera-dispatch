@@ -149,6 +149,7 @@ export const LIVE_KIND_SOURCE: Record<KindId, "server" | { gap: string }> = {
   system_health: "server",
   app_crash: "server",
   car_no_country: "server",
+  driver_no_country: "server",
   rule: "server",
   rider_fraud: { gap: "The server has no fraud signal yet (detector.ts riderCauses); the panel showed none on live either." },
 };

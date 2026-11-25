@@ -9610,4 +9610,17 @@
 ["No owner","Aucun propriétaire"],
 ["Car with no country: {0}","Voiture sans pays : {0}"],
 ["Car with no country","Voiture sans pays"],
-["A car whose country is unknown (no fleet, no driver or a driver with no country). Someone must check what happened. Solved when the car has a country.","Une voiture dont le pays est inconnu (pas de flotte, pas de chauffeur ou un chauffeur sans pays). Quelqu'un doit vérifier ce qui s'est passé. Résolu quand la voiture a un pays."]]
+["A car whose country is unknown (no fleet, no driver or a driver with no country). Someone must check what happened. Solved when the car has a country.","Une voiture dont le pays est inconnu (pas de flotte, pas de chauffeur ou un chauffeur sans pays). Quelqu'un doit vérifier ce qui s'est passé. Résolu quand la voiture a un pays."],
+["Error: this driver has no country. Check what happened.","Erreur : ce chauffeur n'a pas de pays. Vérifiez ce qui s'est passé."],
+["Set country","Définir le pays"],
+["The driver is seen in the admin only under this country. Only this field changes it; the reason is kept in the audit.","Le chauffeur n'apparaît dans l'admin que sous ce pays. Seul ce champ le modifie ; le motif est gardé dans le journal."],
+["New country","Nouveau pays"],
+["No country","Aucun pays"],
+["Change the country to {0}","Changer le pays en {0}"],
+["Country saved.","Pays enregistré."],
+["Save country","Enregistrer le pays"],
+["Choose a country.","Choisissez un pays."],
+["Driver with no country","Chauffeur sans pays"],
+["A driver with data but no country (not shown under any country). Set his country on the driver page. Solved when he has a country.","Un chauffeur avec des données mais sans pays (il n'apparaît sous aucun pays). Définissez son pays sur sa page. Résolu quand il a un pays."],
+["Change driver country","Changer le pays du chauffeur"],
+["Driver has no country: {0}","Chauffeur sans pays : {0}"]]

@@ -963,6 +963,17 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       if (next?.driverId) drivers.set(next.driverId, next);
       return done("Saved.");
     }
+    // v0.18.162 (contract.json#driverCountryFirst.adminSet): POST /admin/drivers/{id}/country with the reason (audit).
+    if (input.action === "admin.driver.country") {
+      const country = String(((input.value ?? {}) as { country?: unknown }).country ?? "");
+      const reason = (input.reason ?? "").trim();
+      if (!/^[A-Z]{2}$/.test(country)) throw new ApiError(400, tr("Choose a country."), { code: "invalid_request", retryable: false });
+      if (!reason) throw new ApiError(400, tr("Write a reason."), { code: "invalid_request", reason: "reason_required", retryable: false });
+      const driver = await client.json<Driver>(`/admin/drivers/${encodeURIComponent(input.targetId)}`);
+      const next = await client.post<Driver>(`/admin/drivers/${encodeURIComponent(driver.driverId)}/country`, { expectedVersion: driver.version, country, reason: reason.slice(0, 500) }).catch(explained);
+      if (next?.driverId) drivers.set(next.driverId, next);
+      return done("Saved.");
+    }
     if (input.action === "admin.driver.bankReview") {
       const decision = input.after === "approved" || input.after === "rejected" ? input.after : null;
       if (!decision) throw new ApiError(400, NOT_CONNECTED, { code: "invalid_request", retryable: false });

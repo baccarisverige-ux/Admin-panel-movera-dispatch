@@ -87,6 +87,7 @@ import { svC58SmsOther } from "./sv/c58-sms-other.ts";
 import { svC60CrashCatcher } from "./sv/c60-crash-catcher.ts";
 import { svC61FleetNeedsCar } from "./sv/c61-fleet-needs-car.ts";
 import { svC62CarZones } from "./sv/c62-car-zones.ts";
+import { svC63DriverCountry } from "./sv/c63-driver-country.ts";
 
 /** Swedish. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./sv/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -179,4 +180,5 @@ export const sv: Record<MessageKey, string> = {
   ...svC60CrashCatcher,
   ...svC61FleetNeedsCar,
   ...svC62CarZones,
+  ...svC63DriverCountry,
 };
