@@ -13,4 +13,5 @@ export const enC63DriverCountry = {
   "A driver with data but no country (not shown under any country). Set his country on the driver page. Solved when he has a country.": "A driver with data but no country (not shown under any country). Set his country on the driver page. Solved when he has a country.",
   "Change driver country": "Change driver country",
   "Driver has no country: {0}": "Driver has no country: {0}",
+  "The driver is set offline. His cars that break the new country's car rules go back to review.": "The driver is set offline. His cars that break the new country's car rules go back to review.",
 } as const;

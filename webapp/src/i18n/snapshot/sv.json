@@ -9623,4 +9623,5 @@
 ["Driver with no country","Förare utan land"],
 ["A driver with data but no country (not shown under any country). Set his country on the driver page. Solved when he has a country.","En förare med uppgifter men utan land (syns inte under något land). Ange landet på förarsidan. Löst när föraren har ett land."],
 ["Change driver country","Ändra förarens land"],
-["Driver has no country: {0}","Förare utan land: {0}"]]
+["Driver has no country: {0}","Förare utan land: {0}"],
+["The driver is set offline. His cars that break the new country's car rules go back to review.","Föraren sätts offline. Bilar som bryter mot det nya landets bilregler går tillbaka till granskning."]]
