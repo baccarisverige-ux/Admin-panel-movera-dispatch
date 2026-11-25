@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { AlertTriangle, Globe } from "lucide-react";
 import contract from "../../../contracts/contract.json" with { type: "json" };
@@ -13,7 +13,8 @@ import { useLiveSession } from "./LiveSessionContext";
  * keeps the admin's own-country scope, the fleet rules and re-checks the cars. A driver with no country is a red error
  * with a "Set country" link to this field.
  */
-export const DRIVER_COUNTRIES = Object.keys((contract as { driverOnboarding: { countries: Record<string, { open: boolean }> } }).driverOnboarding.countries);
+/** The countries a driver can be moved to: those with a city (the server answers 400 country_not_open for the others). */
+export const DRIVER_COUNTRIES = Object.entries((contract as { driverOnboarding: { countries: Record<string, { open: boolean; cities: unknown[] }> } }).driverOnboarding.countries).filter(([, c]) => c.cities.length > 0).map(([code]) => code);
 const NAMES: Record<string, string> = { SE: "Sweden", FR: "France", TN: "Tunisia" };
 export const countryName = (code: string) => trx(NAMES[code] ?? code) ?? code;
 
@@ -34,6 +35,8 @@ export function LiveDriverCountry({ driverId, country }: { driverId: string; cou
   const [pick, setPick] = useState("");
   const [notice, setNotice] = useState("");
   const allowed = can("drivers.activate");
+  // "Set country" from the driver list opens the page at this field.
+  useEffect(() => { if (window.location.hash === "#driver-country") document.getElementById("driver-country")?.scrollIntoView({ block: "center" }); }, []);
   return (
     <section className="fd-box" id="driver-country" data-testid="driver-country">
       <h3><Globe size={15} aria-hidden="true" /> {tr("Country")}</h3>
@@ -61,6 +64,7 @@ export function LiveDriverCountry({ driverId, country }: { driverId: string; cou
             after={pick}
             value={{ country: pick }}
             summary={tr("Change the country to {0}", [pick ? countryName(pick) : "-"])}
+            details={[tr("The driver is set offline. His cars that break the new country's car rules go back to review.")]}
             disabled={!pick || !allowed}
             onDone={() => { setNotice(tr("Country saved.")); setEditing(false); setPick(""); }}
             onError={(error) => setNotice(error instanceof Error ? error.message : "")}
