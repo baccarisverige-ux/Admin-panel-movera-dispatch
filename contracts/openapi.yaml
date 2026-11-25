@@ -28893,7 +28893,15 @@ components:
               type: integer
               minimum: 0
               description: 'How far the rider may move the pickup after accept; further = cancel and rebook. v0.18.7: default
-                200, range 0–2000 (contract.json#pickupWaiting.pickupMove); the server checks it on PATCH /trips/{tripId}.'
+                200, range 0–2000 (contract.json#pickupWaiting.pickupMove); the server checks it on PATCH /trips/{tripId}.
+                v0.18.160: default 300 (was 200; the rider moves the pickup up to 300 m for free); v0.18.160 (owner 2026-11-23,
+                Rules decisions/session-2026-11-06.md "2026-11-23 OWNER DECISION": the rider can adjust the pickup up to 300
+                m for free, same price): the default is 300 m (was 200 from v0.18.7, 500 before); the range stays 0–2000 and
+                the admin can still set any zone. Server migration 0133 moves every published rider and driver document (and
+                draft) still on 200 to 300, as the next version with a history row; a zone the admin set to another value
+                keeps it. A trip already booked keeps the value of its booking time (bookingSnapshot, TripTerms.maxPickupMoveMeters);
+                only trips booked after the change get 300. In the note above, 200 is the old default (Rule 21: kept word
+                for word).'
             samePointWarnMeters:
               type: integer
               minimum: 0
@@ -29170,7 +29178,15 @@ components:
               type: integer
               minimum: 0
               description: 'Pickup move limit after accept; the driver is notified of a move. v0.18.7: default 200, range
-                0–2000 (contract.json#pickupWaiting.pickupMove); the server checks it on PATCH /trips/{tripId}.'
+                0–2000 (contract.json#pickupWaiting.pickupMove); the server checks it on PATCH /trips/{tripId}. v0.18.160:
+                default 300 (was 200; the rider moves the pickup up to 300 m for free); v0.18.160 (owner 2026-11-23, Rules
+                decisions/session-2026-11-06.md "2026-11-23 OWNER DECISION": the rider can adjust the pickup up to 300 m for
+                free, same price): the default is 300 m (was 200 from v0.18.7, 500 before); the range stays 0–2000 and the
+                admin can still set any zone. Server migration 0133 moves every published rider and driver document (and draft)
+                still on 200 to 300, as the next version with a history row; a zone the admin set to another value keeps it.
+                A trip already booked keeps the value of its booking time (bookingSnapshot, TripTerms.maxPickupMoveMeters);
+                only trips booked after the change get 300. In the note above, 200 is the old default (Rule 21: kept word
+                for word).'
             samePointWarnMeters:
               type: integer
               minimum: 0

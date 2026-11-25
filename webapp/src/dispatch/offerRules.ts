@@ -57,6 +57,7 @@ export const RIDER_RATING_DEFAULT: boolean = contract.configDefaults.offerCardRi
  * Status item 4 + note check (owner "200 m default, admin can change"): how far the rider may move the pickup after
  * booking. DriverAppConfig.booking.maxPickupMoveMeters per zone or country standard; the server refuses a bigger move
  * (400 pickup_move_too_far). Default 200 (was 500), range 0–2000 (contract.json#pickupWaiting.pickupMove).
+ * v0.18.160 (owner 2026-11-23, free pickup move): the default is 300 m now (was 200); the range is unchanged.
  */
 const PICKUP_MOVE = contract.pickupWaiting.pickupMove;
 export const PICKUP_MOVE_DEFAULT: number = PICKUP_MOVE.default;

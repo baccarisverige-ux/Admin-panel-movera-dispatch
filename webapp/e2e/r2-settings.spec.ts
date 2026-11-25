@@ -129,14 +129,14 @@ test("Q39/Q40/Q44/Q46: max stops, pickup move after accept, no-show share and mi
   await expect(stops.getByLabel("Max stops")).toHaveValue("3");
   await stops.getByLabel("Max stops").fill("4");
   const move = page.getByRole("region", { name: "Pickup move after accept" });
-  await expect(move.getByLabel("Pickup move limit")).toHaveValue("200");
-  await move.getByLabel("Pickup move limit").fill("300");
+  await expect(move.getByLabel("Pickup move limit")).toHaveValue("300"); // v0.18.160 default 300 m
+  await move.getByLabel("Pickup move limit").fill("400");
   const wait = page.getByRole("region", { name: "Waiting at pickup" });
   await wait.getByLabel("Driver's share of the no-show fee").fill("70");
   const bar = page.getByRole("region", { name: "Publish" });
   await bar.getByRole("button", { name: "See changes" }).click();
   const list = page.getByRole("list", { name: "Changes not live yet" });
-  await expect(list).toContainText("Pickup move after accept (m): 200 → 300");
+  await expect(list).toContainText("Pickup move after accept (m): 300 → 400");
   await expect(list).toContainText("Driver's share of the no-show fee: 80% → 70%");
   await bar.getByRole("button", { name: "Publish now" }).click();
   await dialog(page).getByRole("button", { name: "Confirm" }).click();
@@ -156,13 +156,13 @@ test("Q39/Q40/Q44/Q46: max stops, pickup move after accept, no-show share and mi
   const missed = (config: Record<string, unknown>) => (config.offers as { autoOffline: { missedExclusive: number } }).autoOffline.missedExclusive;
   await expect.poll(async () => missed(await appConfig(page, "Driver")), { timeout: 15_000 }).toBe(5);
   const driver = await appConfig(page, "Driver");
-  expect(driver.booking).toEqual({ maxStops: 4, maxPickupMoveMeters: 300, samePointWarnMeters: 100 });
+  expect(driver.booking).toEqual({ maxStops: 4, maxPickupMoveMeters: 400, samePointWarnMeters: 100 });
   expect(missed(driver)).toBe(5);
   const waiting = driver.waiting as { driverSharePct: number; driverShareWaitPct: number; byCategory: Record<string, { freeWaitMin: number; noShowAfterMin: number }> };
   expect([waiting.driverSharePct, waiting.driverShareWaitPct]).toEqual([70, 100]);
   expect(waiting.byCategory.xl).toMatchObject({ freeWaitMin: 3, noShowAfterMin: 3 });
   const rider = await appConfig(page, "Rider");
-  expect((rider.booking as { maxStops: number; maxPickupMoveMeters: number })).toMatchObject({ maxStops: 4, maxPickupMoveMeters: 300 });
+  expect((rider.booking as { maxStops: number; maxPickupMoveMeters: number })).toMatchObject({ maxStops: 4, maxPickupMoveMeters: 400 });
 });
 
 test("Round 2: All features finds the new settings and opens their sections", async ({ page }) => {

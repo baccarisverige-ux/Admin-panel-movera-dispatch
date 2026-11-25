@@ -86,7 +86,7 @@ export function rulesOfDispatch(doc: Doc | null, driver: Doc | null, fallback: Z
   const fence = driver?.["waiting"] as { autoArriveMeters?: unknown; leaveMeters?: unknown } | undefined;
   const pair = validAutoArrive(fence?.autoArriveMeters ?? AUTO_ARRIVE_DEFAULT_METERS, fence?.leaveMeters ?? LEAVE_DEFAULT_METERS);
   if (fence && (fence.autoArriveMeters !== undefined || fence.leaveMeters !== undefined)) zone.pickupWait = { ...zone.pickupWait, ...(pair ?? { autoArriveMeters: AUTO_ARRIVE_DEFAULT_METERS, leaveMeters: LEAVE_DEFAULT_METERS }) };
-  // v0.18.7 (G5 item 4): the pickup move limit the server checks (booking.maxPickupMoveMeters, 0–2000; migration 0041 moved 500 to 200).
+  // v0.18.7 (G5 item 4): the pickup move limit the server checks (booking.maxPickupMoveMeters, 0–2000; migration 0041 moved 500 to 200, migration 0133 moves 200 to 300 in v0.18.160).
   const move = validPickupMove((driver?.["booking"] as { maxPickupMoveMeters?: unknown } | undefined)?.maxPickupMoveMeters);
   if (move !== null) zone.pickupMove = { maxMeters: move };
   // v0.18.30 (owner Q9): "Shortest ride (m)" as the zone's drivers and the server get it (booking.samePointWarnMeters, 0–1000).
