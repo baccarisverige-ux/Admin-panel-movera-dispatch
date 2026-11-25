@@ -75,12 +75,10 @@ function categories(base: number): CategoryRule[] {
     { category: "pet", on: true, minYear: base, minSeats: 4, fuels: [...ALL] },
   ];
 }
-/** v0.18.164: the FR insurance upload guide (Uber FR wording; waits for the owner's OK), the same as contract.json defaults.FR.guides.insurance. */
+/** v0.18.164: the FR insurance upload guide (owner's one short line; details go in the reject note), the same as contract.json defaults.FR.guides.insurance. */
 const FR_INSURANCE_GUIDE: Guide = {
   checklist: [
-    { fr: "L’attestation d’assurance (RC Circulation) du véhicule, avec la plaque et la mention « transport de personnes à titre onéreux ». Une assurance auto classique ne suffit pas, et ce n’est pas la RC Pro.", en: "The car’s insurance certificate (RC Circulation), showing the plate and the words “transport de personnes à titre onéreux” (paid passenger transport). A normal car insurance is not enough, and this is not the RC Pro.", sv: "Bilens försäkringsintyg (RC Circulation) med registreringsnumret och texten ”transport de personnes à titre onéreux” (betald persontransport). En vanlig bilförsäkring räcker inte, och det är inte RC Pro." },
-    { en: "The plate number", sv: "Registreringsnumret", fr: "Le numéro d’immatriculation" },
-    { en: "The valid-until date", sv: "Giltig till-datumet", fr: "La date de fin de validité" },
+    { fr: 'Envoyez l\'assurance de la voiture. Elle doit montrer la plaque et dire "transport de personnes à titre onéreux". Une assurance normale ne suffit pas.', en: 'Send the car\'s insurance. It must show the plate and say "transport de personnes à titre onéreux". A normal insurance is not enough.', sv: 'Skicka bilens försäkring. Den måste visa registreringsnumret och texten "transport de personnes à titre onéreux". En vanlig försäkring räcker inte.' },
   ],
   tips: [],
 };

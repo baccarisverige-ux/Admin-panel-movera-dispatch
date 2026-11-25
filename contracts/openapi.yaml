@@ -10901,10 +10901,11 @@ paths:
       summary: Turn-by-turn route for driver navigation (OSRM v5 pass-through)
       description: 'Same path syntax and query as OSRM /route/v1/driving. No route → 200 {code: "NoRoute", routes: []}. About
         30 per minute per driver (429). Auth and rate errors use Error. v0.18.163 (contract.json#liveTraffic): GET /routes/driving
-        (the driver app''s route line on its map) is answered from Google (the same computeRoutes call, live traffic) in the
-        same OSRM-shaped JSON the driver app reads (code Ok, routes[0].distance / duration / geometry.coordinates; legs empty,
-        so no turn-by-turn steps); Google not answering = 503 routing_unavailable (never a straight line). These calls come
-        on top of the ~2 per trip: one per route line the driver app asks (its own rate limit applies).'
+        (the driver app''s route line on its map) never calls Google: on the driver''s active trip it answers the stored Google
+        route of the current leg (trips.eta_route, else the booked quote route to the drop-off), in the same OSRM-shaped JSON
+        the driver app reads (code Ok, routes[0].distance / duration / geometry.coordinates; legs empty, so no turn-by-turn
+        steps); with no trip or no stored route, the straight line through the asked points. Only the ETA tick asks Google
+        again, under the off-route / late rule (recall), so a trip stays at about 2 calls.'
       tags:
       - Maps
       x-actor:
@@ -34805,9 +34806,10 @@ components:
             at most 300 characters) is the upload guide of that document type in this country (a contract type or the country''s
             own custom type; any other key is 400 invalid_document). The driver app shows the admin''s lines; a type with
             no guide (or an empty list) falls back to the app''s built-in text; the drawing stays Movera''s. Served to the
-            app in DocumentTypeInfo.guide. v0.18.164: default FR insurance guide (the car''s RC Circulation certificate shows
-            the plate and the words "transport de personnes à titre onéreux"; a normal car insurance is not enough; not the
-            RC Pro; based on Uber FR); WORDING WAITS FOR THE OWNER''S OK.'
+            app in DocumentTypeInfo.guide. v0.18.164: default FR insurance guide (owner 2026-11-25 "Simple test si admin reject
+            can add comment to show him instead": one short line, the plate and "transport de personnes à titre onéreux",
+            a normal insurance is not enough; details go in the admin''s reject note, shown to the driver as reviewNote);
+            fr wording by the owner; en/sv to confirm.'
           additionalProperties:
             $ref: '#/components/schemas/DocumentGuide'
         validMonths:
@@ -35089,19 +35091,12 @@ components:
           guides:
             insurance:
               checklist:
-              - fr: L’attestation d’assurance (RC Circulation) du véhicule, avec la plaque et la mention « transport de personnes
-                  à titre onéreux ». Une assurance auto classique ne suffit pas, et ce n’est pas la RC Pro.
-                en: The car’s insurance certificate (RC Circulation), showing the plate and the words “transport de personnes
-                  à titre onéreux” (paid passenger transport). A normal car insurance is not enough, and this is not the RC
-                  Pro.
-                sv: Bilens försäkringsintyg (RC Circulation) med registreringsnumret och texten ”transport de personnes à
-                  titre onéreux” (betald persontransport). En vanlig bilförsäkring räcker inte, och det är inte RC Pro.
-              - en: The plate number
-                sv: Registreringsnumret
-                fr: Le numéro d’immatriculation
-              - en: The valid-until date
-                sv: Giltig till-datumet
-                fr: La date de fin de validité
+              - fr: Envoyez l'assurance de la voiture. Elle doit montrer la plaque et dire "transport de personnes à titre
+                  onéreux". Une assurance normale ne suffit pas.
+                en: Send the car's insurance. It must show the plate and say "transport de personnes à titre onéreux". A normal
+                  insurance is not enough.
+                sv: Skicka bilens försäkring. Den måste visa registreringsnumret och texten "transport de personnes à titre
+                  onéreux". En vanlig försäkring räcker inte.
               tips: []
           emailVerifiedForApproval: false
           fleetNeedsCarForApproval: true
@@ -35215,9 +35210,9 @@ components:
         most 300 characters) is the upload guide of that document type in this country (a contract type or the country''s
         own custom type; any other key is 400 invalid_document). The driver app shows the admin''s lines; a type with no guide
         (or an empty list) falls back to the app''s built-in text; the drawing stays Movera''s. Served to the app in DocumentTypeInfo.guide.
-        v0.18.164: default FR insurance guide (the car''s RC Circulation certificate shows the plate and the words "transport
-        de personnes à titre onéreux"; a normal car insurance is not enough; not the RC Pro; based on Uber FR); WORDING WAITS
-        FOR THE OWNER''S OK.'
+        v0.18.164: default FR insurance guide (owner 2026-11-25 "Simple test si admin reject can add comment to show him instead":
+        one short line, the plate and "transport de personnes à titre onéreux", a normal insurance is not enough; details
+        go in the admin''s reject note, shown to the driver as reviewNote); fr wording by the owner; en/sv to confirm.'
       properties:
         checklist:
           type: array
