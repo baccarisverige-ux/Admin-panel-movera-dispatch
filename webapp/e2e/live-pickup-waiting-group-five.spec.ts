@@ -79,7 +79,7 @@ test("Q2 + item 4: the zone's cancel-after-arrived switch and pickup move limit 
   await expect(box).toHaveAttribute("min", "0");
   await expect(box).toHaveAttribute("max", "2000");
   await expect(box).toHaveAttribute("step", "10");
-  await expect(move).toContainText("Usual value 200 m");
+  await expect(move).toContainText("Usual value 300 m"); // v0.18.160
   await box.fill("2500");
   await expect(box).toHaveAttribute("aria-invalid", "true");
   await box.fill("300");
