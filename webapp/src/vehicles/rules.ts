@@ -30,7 +30,8 @@ export function fuelLabel(id: string): string {
 export const CATEGORY_LABELS: Record<CategoryId, string> = { economy: "Movera", comfort: "Comfort", premium: "Premium", priority: "Priority", xl: "Movera XL", electric: "Electric", pet: "Pet" };
 
 export type CatRule = { category: CategoryId; on: boolean; minYear: number; minSeats: number; fuels: Fuel[] };
-export type CountryRules = { categories: CatRule[]; warnDays: number; autoHold: boolean; photosNeeded: boolean };
+/** v0.18.164 (vehicleRules.maxAge): maxAgeYears rolling, hybridElectricExempt; missing = no age rule. */
+export type CountryRules = { categories: CatRule[]; warnDays: number; autoHold: boolean; photosNeeded: boolean; maxAgeYears?: number; hybridElectricExempt?: boolean };
 
 export type PhotoSide = "front" | "back" | "side" | "inside";
 export const PHOTO_SIDES: { id: PhotoSide; label: string }[] = [
@@ -91,7 +92,15 @@ export function categoryProblem(car: CarFacts, rule: CatRule): string | null {
   return null;
 }
 
+/** v0.18.164: the car is older than the country's rolling age (hybrid and electric exempt when the toggle is on). */
+export function tooOldForAge(car: Pick<CarFacts, "year" | "fuel">, rules: Pick<CountryRules, "maxAgeYears" | "hybridElectricExempt">, now: Date = new Date()): boolean {
+  if (rules.maxAgeYears === undefined) return false;
+  if (rules.hybridElectricExempt === true && (car.fuel === "hybrid" || car.fuel === "electric")) return false;
+  return car.year < now.getUTCFullYear() - rules.maxAgeYears;
+}
+
 export function fits(car: CarFacts, rules: CountryRules): CategoryId[] {
+  if (tooOldForAge(car, rules)) return [];
   return rules.categories.filter((rule) => !categoryProblem(car, rule)).map((rule) => rule.category);
 }
 
@@ -215,7 +224,7 @@ export function withVehicleSettings(rules: VehicleRules, book: SettingsBook): Ve
   for (const item of MARKETS) {
     const doc = book.countries[item.id]?.document;
     if (!doc) continue;
-    countries[item.id] = { ...countries[item.id], warnDays: doc.vehicles.warnDays, autoHold: doc.vehicles.autoHold, photosNeeded: doc.vehicles.photosNeeded, categories: countries[item.id].categories.map((rule) => ({ ...rule, ...(doc.vehicles.categories.find((row) => row.category === rule.category) ?? {}) }) as CatRule) };
+    countries[item.id] = { ...countries[item.id], warnDays: doc.vehicles.warnDays, autoHold: doc.vehicles.autoHold, photosNeeded: doc.vehicles.photosNeeded, maxAgeYears: doc.vehicles.maxAgeYears, hybridElectricExempt: doc.vehicles.hybridElectricExempt, categories: countries[item.id].categories.map((rule) => ({ ...rule, ...(doc.vehicles.categories.find((row) => row.category === rule.category) ?? {}) }) as CatRule) };
   }
   return { ...rules, countries };
 }

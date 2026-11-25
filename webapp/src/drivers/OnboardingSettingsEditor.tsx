@@ -180,6 +180,13 @@ export function OnboardingSettingsEditor({ country, part, cars = [], liveFitCoun
           </>
         ) : (
           <>
+            {/* v0.18.164 (contract.json#driverOnboarding.vehicleRules.maxAge, owner 2026-11-25 FR "Moins de 6 ans"): per country; missing = off. */}
+            <Card title={tr("Car age")} icon={<CalendarClock size={18} />} tone="blue" help={tr("Rolling: the oldest model year moves up every 1 January. Existing approved cars stay approved; they show the problem in red.")}>
+              <Row label={tr("Maximum car age")} help={current.vehicles.maxAgeYears !== undefined ? tr("Model year {0} or newer this year.", [new Date().getUTCFullYear() - current.vehicles.maxAgeYears]) : tr("Off: only the oldest year of each category applies.")} on={current.vehicles.maxAgeYears !== undefined} onToggle={(on) => patch({ vehicles: { ...current.vehicles, maxAgeYears: on ? (current.vehicles.maxAgeYears ?? 6) : undefined } })}>
+                {current.vehicles.maxAgeYears !== undefined ? <Num label={tr("Maximum car age")} value={current.vehicles.maxAgeYears} unit="years" min={LIMITS.maxAgeYears[0]} max={LIMITS.maxAgeYears[1]} onChange={(value) => patch({ vehicles: { ...current.vehicles, maxAgeYears: Math.round(value) } })} /> : null}
+              </Row>
+              {current.vehicles.maxAgeYears !== undefined ? <Row label={tr("Hybrid and electric cars are exempt from the age limit")} help={tr("The oldest year of each category still applies to them.")} on={current.vehicles.hybridElectricExempt === true} onToggle={(on) => patch({ vehicles: { ...current.vehicles, hybridElectricExempt: on } })} /> : null}
+            </Card>
             <Card title={tr("Which car fits which category")} icon={<CarFront size={18} />} tone="blue" help={tr("The driver app offers only the categories a car fits, and the server refuses the others.")}>
               {current.vehicles.categories.map((rule) => {
                 const label = trx(CATEGORY_LABELS[rule.category as keyof typeof CATEGORY_LABELS] ?? rule.category);

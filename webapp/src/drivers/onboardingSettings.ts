@@ -33,7 +33,8 @@ export type SettingsDoc = {
   steps: Array<{ id: StepId; on: boolean; days: number }>;
   signUpReminders: { on: boolean; everyDays: number; stuckAfterDays: number };
   expiry: { warnDays: number[]; blockAtExpiry: boolean };
-  vehicles: { categories: CategoryRule[]; warnDays: number; autoHold: boolean; photosNeeded: boolean };
+  /** v0.18.164 (vehicleRules.maxAge): maxAgeYears = the oldest car in years, rolling (missing = no age rule); hybridElectricExempt = hybrid and electric cars are exempt. */
+  vehicles: { categories: CategoryRule[]; warnDays: number; autoHold: boolean; photosNeeded: boolean; maxAgeYears?: number; hybridElectricExempt?: boolean };
   customTypes?: CustomType[];
   texts?: Record<string, { name?: LocalText; help?: LocalText }>;
   /** v0.18.3 (R8): the upload guide per type in this country; an empty list falls back to the app's own text. */
@@ -55,7 +56,7 @@ export type SettingsBook = { draftRev: number; countries: Record<MarketId, Count
 
 export const STEP_IDS: readonly StepId[] = ["signup", "documents", "checks", "training", "ready"];
 export const PHOTO_TYPES = ["vehicle_photo_front", "vehicle_photo_back", "vehicle_photo_side", "vehicle_photo_inside"] as const;
-export const LIMITS = { stepDays: [1, 60], remindEveryDays: [1, 30], stuckAfterDays: [2, 90], warnDays: [1, 90], vehicleWarnDays: [1, 120], minYear: [1990, 2030], minSeats: [1, 9], validMonths: [1, 120] } as const;
+export const LIMITS = { stepDays: [1, 60], remindEveryDays: [1, 30], stuckAfterDays: [2, 90], warnDays: [1, 90], vehicleWarnDays: [1, 120], minYear: [1990, 2030], minSeats: [1, 9], validMonths: [1, 120], maxAgeYears: [1, 30] } as const;
 export const CUSTOM_ID = /^custom_[a-z0-9]{10}$/;
 export const DRAFT_REF = "draft:";
 /** The country is open for sign-ups (contract.json#driverOnboarding.countries): Tunisia is shown but closed. */
@@ -74,6 +75,13 @@ function categories(base: number): CategoryRule[] {
     { category: "pet", on: true, minYear: base, minSeats: 4, fuels: [...ALL] },
   ];
 }
+/** v0.18.164: the FR insurance upload guide (owner's one short line; details go in the reject note), the same as contract.json defaults.FR.guides.insurance. */
+const FR_INSURANCE_GUIDE: Guide = {
+  checklist: [
+    { fr: 'Envoyez l\'assurance de la voiture. Elle doit montrer la plaque et dire "transport de personnes à titre onéreux". Une assurance normale ne suffit pas.', en: 'Send the car\'s insurance. It must show the plate and say "transport de personnes à titre onéreux". A normal insurance is not enough.', sv: 'Skicka bilens försäkring. Den måste visa registreringsnumret och texten "transport de personnes à titre onéreux". En vanlig försäkring räcker inte.' },
+  ],
+  tips: [],
+};
 const STEPS = (): SettingsDoc["steps"] => [
   { id: "signup", on: true, days: 3 },
   { id: "documents", on: true, days: 7 },
@@ -92,10 +100,13 @@ export function contractDefaults(): Record<MarketId, Omit<SettingsDoc, "version"
       ...common(2015),
     },
     FR: {
-      documents: { driver: ["terms", "info_session", "vtc_card", "driving_license", "national_id", "profile_photo"], fleet: ["company_registration", "vtc_register_certificate", "rc_pro_insurance", "urssaf_certificate", "national_id", "bank_statement"], vehicle: ["vehicle_registration", "insurance", "vtc_sticker"] },
+      documents: { driver: ["terms", "info_session", "vtc_card", "driving_license", "national_id", "profile_photo"], fleet: ["company_registration", "vtc_register_certificate", "rc_pro_insurance", "bank_statement"], vehicle: ["vehicle_registration", "insurance", "vtc_sticker"] },
       expiringTypes: ["driving_license", "national_id", "vtc_card", "vehicle_registration", "insurance", "rc_pro_insurance", "urssaf_certificate", "vtc_sticker", "vtc_register_certificate"],
       ...common(2016),
-      validMonths: { urssaf_certificate: 6 },
+      // v0.18.164 (owner 2026-11-25 "Moins de 6 ans"): at most 6 years old, rolling; hybrid and electric exempt. The category years still apply.
+      vehicles: { categories: categories(2016), warnDays: 30, autoHold: true, photosNeeded: true, maxAgeYears: 6, hybridElectricExempt: true },
+      guides: { insurance: FR_INSURANCE_GUIDE },
+      validMonths: { urssaf_certificate: 6, vtc_register_certificate: 60 },
     },
     TN: { documents: { driver: [], fleet: [], vehicle: [] }, expiringTypes: [], ...common(2012) },
   };
@@ -148,9 +159,10 @@ export function localName(text: LocalText, language: string): string {
 
 /** Contract types the admin can still add to a list: the right owner, not listed yet (the car photos come with photosNeeded). */
 export function addableTypes(doc: SettingsDoc, scope: Scope): string[] {
-  const owner = scope === "vehicle" ? "vehicle" : "driver";
+  // v0.18.164 (documents.ownerFleet): person and company lists both take driver and fleet types, as before.
+  const owners: readonly string[] = scope === "vehicle" ? ["vehicle"] : ["driver", "fleet"];
   return Object.entries(DOCUMENT_TYPES)
-    .filter(([type, info]) => info.owner === owner && !doc.documents[scope].includes(type) && !(PHOTO_TYPES as readonly string[]).includes(type))
+    .filter(([type, info]) => owners.includes(info.owner) && !doc.documents[scope].includes(type) && !(PHOTO_TYPES as readonly string[]).includes(type))
     .map(([type]) => type);
 }
 
@@ -225,6 +237,7 @@ export function settingsProblem(doc: SettingsDoc): string | null {
   const warn = doc.expiry.warnDays;
   if (!warn.length || warn.length > 3 || warn.some((day) => !within(day, LIMITS.warnDays))) return "Document warnings: 1 to 90 days before expiry.";
   if (warn.some((day, index) => index > 0 && day >= warn[index - 1]!)) return "Document warnings: each warning must come after the one before (fewer days).";
+  if (doc.vehicles.maxAgeYears !== undefined && !within(doc.vehicles.maxAgeYears, LIMITS.maxAgeYears)) return "Car age: 1 to 30 years.";
   for (const rule of doc.vehicles.categories) {
     if (!within(rule.minYear, LIMITS.minYear)) return "Car year: 1990 to 2030.";
     if (!within(rule.minSeats, LIMITS.minSeats)) return "Seats: 1 to 9.";

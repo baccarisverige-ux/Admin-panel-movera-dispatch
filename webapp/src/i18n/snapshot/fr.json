@@ -9632,4 +9632,14 @@
 ["Behind the planned arrival by more than","En retard sur l'arrivée prévue de plus de"],
 ["About 2 Google calls per trip: the price, then the drive to the pickup. If Google does not answer, trip times are estimated and admins get an alert.","Environ 2 appels à Google par course : le prix, puis le trajet jusqu'à la prise en charge. Si Google ne répond pas, les durées sont estimées et les admins reçoivent une alerte."],
 ["Live traffic is not available: trip times are estimated (straight line)","Le trafic en temps réel n'est pas disponible : les durées sont estimées à vol d'oiseau"],
-["Check that the Routes API is enabled for the server's Google Maps key, and its billing","Vérifiez que l'API Routes est activée pour la clé Google Maps du serveur, ainsi que la facturation"]]
+["Check that the Routes API is enabled for the server's Google Maps key, and its billing","Vérifiez que l'API Routes est activée pour la clé Google Maps du serveur, ainsi que la facturation"],
+["Car age","Âge du véhicule"],
+["Rolling: the oldest model year moves up every 1 January. Existing approved cars stay approved; they show the problem in red.","Glissant : l’année la plus ancienne avance chaque 1er janvier. Les véhicules déjà approuvés restent approuvés ; le problème s’affiche en rouge."],
+["Maximum car age","Âge maximum du véhicule"],
+["Model year {0} or newer this year.","Modèle {0} ou plus récent cette année."],
+["Off: only the oldest year of each category applies.","Désactivé : seule l’année la plus ancienne de chaque catégorie s’applique."],
+["Hybrid and electric cars are exempt from the age limit","Les véhicules hybrides et électriques ne sont pas soumis à la limite d’âge"],
+["The oldest year of each category still applies to them.","L’année la plus ancienne de chaque catégorie s’applique toujours."],
+["years","ans"],
+["No file","Aucun fichier"],
+["Car age: 1 to 30 years.","Âge du véhicule : 1 à 30 ans."]]
