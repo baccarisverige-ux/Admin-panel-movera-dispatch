@@ -125,6 +125,12 @@ export function FleetPage() {
     setListQuery("vehicles", { fleetId: serverFleet || undefined, pages: 1 });
     void queryClient.invalidateQueries({ queryKey: ["records", "vehicles"] });
   }, [live, serverFleet, queryClient]);
+  // Review: the other screens reading cars (alerts, Dashboard, Dispatch) get every fleet again once this page closes.
+  useEffect(() => () => {
+    if (!listQueryOf("vehicles").fleetId) return;
+    setListQuery("vehicles", { fleetId: undefined, pages: 1 });
+    void queryClient.invalidateQueries({ queryKey: ["records", "vehicles"] });
+  }, [queryClient]);
   // The Flotte choices stay those of the unfiltered list while one fleet is asked from the server.
   const allChoices = useRef<ReturnType<typeof fleetGroups>>([]);
   const loadedChoices = fleetGroups(rows.map(carOf), fleets.data ?? []);
