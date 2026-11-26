@@ -1,5 +1,6 @@
-import { useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
-import { listQueryOf, subscribeLists } from "../live/liveLists";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { listQueryOf, setListQuery, subscribeLists } from "../live/liveLists";
 import { LiveListBar } from "../live/LiveListBar";
 import { isLiveData } from "../live/realData";
 import { vehicleRuleFitCounts } from "../live/realOnly";
@@ -21,7 +22,7 @@ import { DataTable } from "../ui/DataTable";
 import { tr, trn, trx } from "../i18n";
 import { categoryName } from "../riders/profile";
 import { COUNTRY_LABEL } from "../i18n/countries";
-import { OWN_CAR, fleetGroups, fleetKeyOf, inFleet } from "../vehicles/byFleet";
+import { OWN_CAR, fleetGroups, fleetKeyOf, inFleet, showsLoadedSoFar } from "../vehicles/byFleet";
 import { LIVE_CAR_STATES, liveCarState, liveCarStateLabel, type LiveCarState } from "../vehicles/liveState";
 
 const VIEWS = [
@@ -115,9 +116,28 @@ export function FleetPage() {
   const fleetFilter = params.get("fleet") ?? "";
   const shown = (live ? rows.filter((row) => !liveView || row.state === liveView) : rows.filter((row) => inView(row, view))).filter((row) => inFleet(carOf(row), fleetFilter));
   const groupsShown = fleetGroups(shown.map(carOf), fleets.data ?? []);
-  const fleetChoices = fleetGroups(rows.map(carOf), fleets.data ?? []);
+  // Follow-up 2026-11-26: live, one fleet is asked from the server (?fleetId=), so every car of it shows, not only
+  // the loaded pages. "Own car" stays a filter on the loaded cars (the server has no "no fleet" filter).
+  const serverFleet = live && fleetFilter && fleetFilter !== OWN_CAR ? fleetFilter : "";
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!live || (listQueryOf("vehicles").fleetId ?? "") === serverFleet) return;
+    setListQuery("vehicles", { fleetId: serverFleet || undefined, pages: 1 });
+    void queryClient.invalidateQueries({ queryKey: ["records", "vehicles"] });
+  }, [live, serverFleet, queryClient]);
+  // Review: the other screens reading cars (alerts, Dashboard, Dispatch) get every fleet again once this page closes.
+  useEffect(() => () => {
+    if (!listQueryOf("vehicles").fleetId) return;
+    setListQuery("vehicles", { fleetId: undefined, pages: 1 });
+    void queryClient.invalidateQueries({ queryKey: ["records", "vehicles"] });
+  }, [queryClient]);
+  // The Flotte choices stay those of the unfiltered list while one fleet is asked from the server.
+  const allChoices = useRef<ReturnType<typeof fleetGroups>>([]);
+  const loadedChoices = fleetGroups(rows.map(carOf), fleets.data ?? []);
+  if (!serverFleet) allChoices.current = loadedChoices;
+  const fleetChoices = serverFleet && allChoices.current.length ? allChoices.current : loadedChoices;
   // Review 2026-11-25: live cars load in pages; while the server has more, the counts cover the loaded cars only.
-  const moreOnServer = live && vehiclesMore;
+  const moreOnServer = showsLoadedSoFar(live, vehiclesMore);
   const byFleet = {
     of: (index: number) => { const row = shown[index]; return row ? fleetKeyOf(carOf(row)) : OWN_CAR; },
     order: groupsShown.map((group) => group.key),

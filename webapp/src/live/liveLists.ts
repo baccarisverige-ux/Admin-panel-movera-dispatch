@@ -7,7 +7,8 @@
 export type LiveListName = "drivers" | "fleets" | "vehicles" | "trips" | "riders" | "payments" | "incidents";
 // L78-A (v0.18.78 adminListFilters.total): `loaded` = server rows read so far, `total` = the first page's count
 // (absent = not counted); the list shows "{loaded} of {total}".
-export type LiveListQuery = { q: string; status: string; pages: number; hasMore: boolean; flagged?: boolean; loaded?: number; total?: number };
+// Follow-up 2026-11-26 (vehicles by fleet): `fleetId` = the Vehicles list's server filter (GET /admin/vehicles?fleetId=).
+export type LiveListQuery = { q: string; status: string; pages: number; hasMore: boolean; flagged?: boolean; fleetId?: string; loaded?: number; total?: number };
 
 const EMPTY: LiveListQuery = { q: "", status: "", pages: 1, hasMore: false };
 const state = new Map<LiveListName, LiveListQuery>();
@@ -30,9 +31,9 @@ export function setListQuery(name: LiveListName, patch: Partial<LiveListQuery>):
   listeners.forEach((listener) => listener());
 }
 
-/** Do two list queries ask the server the same (search, status, flagged)? */
+/** Do two list queries ask the server the same (search, status, flagged, fleet)? */
 export function sameListFilter(a: LiveListQuery, b: LiveListQuery): boolean {
-  return a.q === b.q && a.status === b.status && Boolean(a.flagged) === Boolean(b.flagged);
+  return a.q === b.q && a.status === b.status && Boolean(a.flagged) === Boolean(b.flagged) && (a.fleetId ?? "") === (b.fleetId ?? "");
 }
 
 export function subscribeLists(listener: () => void): () => void {
