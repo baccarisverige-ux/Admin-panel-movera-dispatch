@@ -14,7 +14,7 @@ export const LIVE_COMMANDS: ReadonlySet<string> = new Set([
   "admin.reservation.assign", "admin.reservation.cancel", "admin.reservation.savePolicy", "admin.reservation.contact", "admin.reservation.dispatchNow", "admin.reservation.noShow", "admin.reservation.offer", "admin.reservation.raise", "admin.reservation.unassign",
   "admin.config.copyAppToZones", "admin.config.publish", "admin.config.publishAppDraft", "admin.config.save", "admin.config.saveCountry", "admin.config.useStandard",
   "admin.dispatch.control", "admin.dispatch.event", "admin.dispatch.group", "admin.dispatch.preset", "admin.dispatch.publish", "admin.dispatch.radarRule", "admin.dispatch.radarZone", "admin.dispatch.saveDraft", "admin.dispatch.undo",
-  "admin.driver.activate", "admin.driver.bankReview", "admin.driver.category", "admin.driver.country", "admin.driver.onHold", "admin.driver.payoutHold", "admin.driver.reactivate", "admin.driver.signOut", "admin.driver.suspend",
+  "admin.driver.activate", "admin.driver.bankReview", "admin.driver.category", "admin.driver.country", "admin.driver.address", "admin.driver.onHold", "admin.driver.payoutHold", "admin.driver.reactivate", "admin.driver.signOut", "admin.driver.suspend",
   "admin.fleetOwner.activate", "admin.fleetOwner.onHold",
   "admin.growthOps.moderate",
   "admin.incident.level", "admin.incident.report", "admin.incident.settings",

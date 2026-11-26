@@ -189,7 +189,8 @@ const ENTRIES: Entry[] = [
     built: wireDocument(defaultDoc("SE")) as unknown as Doc,
     kept: ["documentTypes"],
     // v0.18.164 (vehicleRules.maxAge): the editor writes them when the admin turns the car age on (FR by default; SE has none).
-    ownedWhenSet: ["vehicles.maxAgeYears", "vehicles.hybridElectricExempt"],
+    // v0.18.166 (signupV2): the editor writes them when the admin changes a sign-up field or a Recto verso switch.
+    ownedWhenSet: ["vehicles.maxAgeYears", "vehicles.hybridElectricExempt", "signUpFields", "signUpFields.dateOfBirth", "signUpFields.personalNumber", "signUpFields.taxiLicenseNumber", "signUpFields.language", "signUpFields.address", "twoSidedTypes"],
     save: merge,
   },
 ];

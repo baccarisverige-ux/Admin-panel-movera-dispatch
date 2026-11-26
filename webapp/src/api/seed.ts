@@ -207,6 +207,10 @@ export type LiveAccountFacts = {
   termsAcceptedAt?: string;
   /** v0.18.54 §76: Driver.dateOfBirth, YYYY-MM-DD or the year only when masked. */
   dateOfBirth?: string;
+  /** v0.18.166 (contract.json#signupV2): the sign-up details (live only). */
+  address?: { street: string; postalCode: string; city: string };
+  personalNumber?: string;
+  taxiLicenseNumber?: string;
 };
 
 export type LiveDriverFacts = {
