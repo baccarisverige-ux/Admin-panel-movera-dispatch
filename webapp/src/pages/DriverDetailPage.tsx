@@ -63,6 +63,7 @@ import { formatMoney, market as marketById, marketOfZone, zoneById } from "../ma
 import { CommandButton } from "../ui/CommandButton";
 import { SensitiveValue } from "../ui/SensitiveValue";
 import { MaskedText, RevealSensitive } from "../live/LiveReveal";
+import { LiveDriverSignUp } from "../live/LiveDriverSignUp";
 import { dateOfBirthText, type Revealed } from "../live/masking";
 import { TabPanel, Tabs } from "../ui/Tabs";
 import { tr, trn, uiLocale, trx, trSentences } from "../i18n";
@@ -388,6 +389,7 @@ export function DriverDetailPage() {
 
       {/* v0.18.162 (owner 2026-11-25 "Yes"): the Country field, the only place to change it; red error with none. */}
       {liveData ? <LiveDriverCountry driverId={driver.id} country={driver.liveAccount?.country} /> : null}
+      {liveData ? <LiveDriverSignUp driverId={driver.id} address={driver.liveAccount?.address} personalNumber={driver.liveAccount?.personalNumber} taxiLicenseNumber={driver.liveAccount?.taxiLicenseNumber} /> : null}
       {refused ? <ActivationRefused details={refused} country={driver?.liveAccount?.country} /> : null}
       {notice || store.message ? <p className="fd-notice" role="status">{trSentences(notice)} {trSentences(store.message)}</p> : null}
       {liveData ? null : driver.status === "active" && health.invalid ? (

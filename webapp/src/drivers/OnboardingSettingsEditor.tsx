@@ -13,6 +13,10 @@ import { CATEGORY_LABELS, FUELS, rulesImpact, type CarFacts, type CountryRules }
 import {
   LIMITS,
   ONBOARDING_SETTINGS_KEY,
+  SIGNUP_FIELDS,
+  signUpFieldsOf,
+  twoSidedOf,
+  type SignUpField,
   OPEN,
   SCOPES,
   STEP_IDS,
@@ -60,6 +64,8 @@ type Form = { name: LocalText; help: LocalText; kind: "file" | "admin_check"; ex
  */
 /** cars: the country's cars, so each category shows how many fit with the changes ("N cars fit (now M)"). */
 /** liveFitCounts (live, L-a round 2): per category the cars whose server Vehicle.fitCategories list it; then the count does not change with unsaved edits. */
+const SIGNUP_FIELD_LABEL: Record<SignUpField, MessageKey> = { dateOfBirth: "Date of birth", personalNumber: "Personal identity number", taxiLicenseNumber: "Taxi licence number", language: "Language", address: "Home address" };
+
 export function OnboardingSettingsEditor({ country, part, cars = [], liveFitCounts = null }: { country: MarketId; part: "onboarding" | "vehicles"; cars?: readonly CarFacts[]; liveFitCounts?: Readonly<Record<string, number>> | null }) {
   const { agent } = useSession();
   const slice = useSlice(ONBOARDING_SETTINGS_KEY, emptySettingsBook());
@@ -117,6 +123,10 @@ export function OnboardingSettingsEditor({ country, part, cars = [], liveFitCoun
                             </small>
                           </span>
                           <span className="ob-type-actions">
+                            {/* v0.18.166 (contract.json#signupV2.twoSided): photographed recto + verso in the driver app. */}
+                            {scope !== "vehicle" && (info?.kind === "file" || info?.kind === undefined) && type !== "profile_photo" ? (
+                              <Check label={tr("Recto verso")} on={twoSidedOf(current).includes(type)} onChange={(on) => { const list2 = twoSidedOf(current); patch({ twoSidedTypes: on ? [...list2.filter((t) => t !== type), type] : list2.filter((t) => t !== type) }); }} />
+                            ) : null}
                             <button data-command="admin.onboarding.editTypes" type="button" className="dash-btn small ghost" aria-label={tr("Edit {0}", [name])} onClick={() => setEditing({ mode: "edit", scope, type })}><Pencil size={13} aria-hidden="true" />{" "}{tr("Edit")}</button>
                             <button data-command="admin.onboarding.editTypes" type="button" className="dash-btn small danger-ghost" aria-label={tr("Remove {0}", [name])} disabled={locked} title={locked ? tr("The driving licence is always needed.") : undefined} onClick={() => set(removeFromList(current, scope, type))}><Trash2 size={13} aria-hidden="true" />{" "}{tr("Remove")}</button>
                           </span>
@@ -172,6 +182,19 @@ export function OnboardingSettingsEditor({ country, part, cars = [], liveFitCoun
             <Card title={tr("E-mail before approval")} icon={<MailCheck size={18} />} tone="purple">
               <Row label={tr("Driver needs a verified e-mail before approval")} help={tr("On: Movera cannot approve a new driver until their e-mail is verified (drivers who were active before are not checked).")} on={current.emailVerifiedForApproval === true} onToggle={(on) => (on ? setAskEmailCheck(true) : patch({ emailVerifiedForApproval: false }))} />
               <p className="fd-banner amber" data-testid="email-check-warning">{tr("Until Movera's own e-mail domain is added in the e-mail service, codes reach only the test address. Turning this on now stops new drivers from being approved.")}</p>
+            </Card>
+            {/* v0.18.166 (contract.json#signupV2.signUpFields, owner 2026-11-26): what "Vos informations" shows and requires. */}
+            <Card title={tr("Sign-up fields")} icon={<ListOrdered size={18} />} tone="green" help={tr("What the driver fills on “Your details” after the SMS code. Name, e-mail and phone are always asked.")}>
+              {SIGNUP_FIELDS.map((field) => {
+                const fields = signUpFieldsOf(current);
+                const sw = fields[field];
+                const set1 = (next: { on: boolean; required: boolean }) => patch({ signUpFields: { ...fields, [field]: next } });
+                return (
+                  <Row key={field} label={tr(SIGNUP_FIELD_LABEL[field])} on={sw.on} onToggle={(on) => set1({ on, required: on ? sw.required : false })}>
+                    {sw.on ? <Check label={tr("Required")} on={sw.required} onChange={(required) => set1({ on: true, required })} /> : null}
+                  </Row>
+                );
+              })}
             </Card>
             {/* v0.18.159 (contract.json#fleetNeedsCar.setting, owner 2026-11-24): default on; missing = on. */}
             <Card title={tr("Fleet approval")} icon={<CarFront size={18} />} tone="blue">

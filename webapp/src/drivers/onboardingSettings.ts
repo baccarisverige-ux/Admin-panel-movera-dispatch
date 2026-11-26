@@ -45,7 +45,34 @@ export type SettingsDoc = {
   emailVerifiedForApproval?: boolean;
   /** v0.18.159 (contract.json#fleetNeedsCar.setting, owner 2026-11-24): a fleet needs at least 1 car before approval; missing = true. */
   fleetNeedsCarForApproval?: boolean;
+  /** v0.18.166 (contract.json#signupV2.signUpFields): which sign-up fields the driver app shows and requires; missing = SIGNUP_FIELD_DEFAULTS. */
+  signUpFields?: Partial<Record<SignUpField, FieldSwitch>>;
+  /** v0.18.166 (signupV2.twoSided): document types photographed recto + verso; missing = TWO_SIDED_DEFAULTS. */
+  twoSidedTypes?: string[];
 };
+
+export type SignUpField = "dateOfBirth" | "personalNumber" | "taxiLicenseNumber" | "language" | "address";
+export type FieldSwitch = { on: boolean; required: boolean };
+export const SIGNUP_FIELDS: readonly SignUpField[] = ["dateOfBirth", "personalNumber", "taxiLicenseNumber", "language", "address"];
+const OFF: FieldSwitch = { on: false, required: false };
+const REQ: FieldSwitch = { on: true, required: true };
+/** contract.json#signupV2.signUpFields.defaults (onboardingSettings.test.ts checks they are equal). */
+export const SIGNUP_FIELD_DEFAULTS: Record<string, Record<SignUpField, FieldSwitch>> = {
+  SE: { dateOfBirth: OFF, personalNumber: REQ, taxiLicenseNumber: { on: true, required: false }, language: REQ, address: REQ },
+  FR: { dateOfBirth: REQ, personalNumber: OFF, taxiLicenseNumber: OFF, language: REQ, address: REQ },
+};
+/** contract.json#signupV2.twoSided.defaults. */
+export const TWO_SIDED_DEFAULTS: Record<string, string[]> = { SE: ["national_id", "driving_license", "taxi_driver_license"], FR: ["national_id", "driving_license", "vtc_card"] };
+
+/** v0.18.166: the country's sign-up fields, the saved switches over the defaults. */
+export function signUpFieldsOf(doc: Pick<SettingsDoc, "country" | "signUpFields">): Record<SignUpField, FieldSwitch> {
+  const base = SIGNUP_FIELD_DEFAULTS[doc.country] ?? { dateOfBirth: REQ, personalNumber: OFF, taxiLicenseNumber: OFF, language: REQ, address: REQ };
+  return Object.fromEntries(SIGNUP_FIELDS.map((f) => [f, doc.signUpFields?.[f] ?? base[f]])) as Record<SignUpField, FieldSwitch>;
+}
+/** v0.18.166: the types taken recto + verso in the country. */
+export function twoSidedOf(doc: Pick<SettingsDoc, "country" | "twoSidedTypes">): string[] {
+  return doc.twoSidedTypes ?? TWO_SIDED_DEFAULTS[doc.country] ?? [];
+}
 
 export type Guide = { checklist: LocalText[]; tips: LocalText[] };
 export const GUIDE_LIMITS = { lines: 10, lineChars: 300 } as const;

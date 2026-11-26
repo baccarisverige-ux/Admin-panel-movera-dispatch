@@ -7,6 +7,7 @@ import { emptyReservationBook, type ReservationBook } from "../reservations/book
  * Commands the server has (driver status, vehicle review, full refund) go to it; any other command is refused.
  */
 import { setDriverCountry } from "./driverCountry.ts";
+import { setDriverAddress } from "./driverAddress.ts";
 import { reservationCall, type ServerReservation } from "./reservations.ts";
 import { catalogFor } from "../data/catalog.ts";
 import { CURRENCY, TIME_ZONE } from "../domain/contract.ts";
@@ -113,6 +114,10 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
       ...(driver.createdAt ? { createdAt: driver.createdAt } : {}),
       ...(driver.termsAcceptedAt ? { termsAcceptedAt: driver.termsAcceptedAt } : {}),
       ...(driver.dateOfBirth ? { dateOfBirth: driver.dateOfBirth } : {}),
+      // v0.18.166 (contract.json#signupV2): the sign-up details.
+      ...(driver.address ? { address: driver.address } : {}),
+      ...(driver.personalNumber ? { personalNumber: driver.personalNumber } : {}),
+      ...(driver.taxiLicenseNumber ? { taxiLicenseNumber: driver.taxiLicenseNumber } : {}),
     },
     liveDriver: {
       payoutHold: driver.payoutHold ? { reason: driver.payoutHold.reason, at: driver.payoutHold.at } : null,
@@ -965,6 +970,8 @@ export function createLiveAdminApi(client: LiveClient): AdminApi {
       return done("Saved.");
     }
     // v0.18.162 (contract.json#driverCountryFirst.adminSet): live/driverCountry.ts.
+    // v0.18.166 (contract.json#signupV2.address.adminEdit): live/driverAddress.ts.
+    if (input.action === "admin.driver.address") { const next = await setDriverAddress(client, input, explained); if (next?.driverId) drivers.set(next.driverId, next); return done("Saved."); }
     if (input.action === "admin.driver.country") { const next = await setDriverCountry(client, input, explained); if (next?.driverId) drivers.set(next.driverId, next); return done("Saved."); }
     if (input.action === "admin.driver.bankReview") {
       const decision = input.after === "approved" || input.after === "rejected" ? input.after : null;

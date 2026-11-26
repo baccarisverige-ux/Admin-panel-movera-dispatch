@@ -87,6 +87,12 @@ export type Driver = {
   email?: string;
   /** v0.18.76 G30: when the current e-mail was proven (code or Apple / Google); absent = Not verified. Never masked. */
   emailVerifiedAt?: string;
+  /** v0.18.166 (signupV2): Swedish personnummer; "1985••••-••••" when masked for this admin. */
+  personalNumber?: string;
+  /** v0.18.166: the number on the Taxiförarlegitimation. */
+  taxiLicenseNumber?: string;
+  /** v0.18.166 (owner 2026-11-26 "Oui, ajouter l'adresse"): home address; the street masked ("S•••") for an admin without drivers.viewSensitive. */
+  address?: { street: string; postalCode: string; city: string };
   country?: string;
   cityId?: string;
   language?: string;
