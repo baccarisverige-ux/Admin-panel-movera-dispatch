@@ -92,6 +92,7 @@ import { frC64LiveTraffic } from "./fr/c64-live-traffic.ts";
 import { frC65FrDocuments } from "./fr/c65-fr-documents.ts";
 import { frC66VehiclesByFleet } from "./fr/c66-vehicles-by-fleet.ts";
 import { frC67SignupV2 } from "./fr/c67-signup-v2.ts";
+import { frC68SmsProviders } from "./fr/c68-sms-providers.ts";
 
 /** French. Same keys as en.ts (the compiler checks it); placeholders like {0} are kept, a plural ending may be left out. */
 /** Split by area (base job, rule 25) into ./fr/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -189,4 +190,5 @@ export const fr: Record<MessageKey, string> = {
   ...frC65FrDocuments,
   ...frC66VehiclesByFleet,
   ...frC67SignupV2,
+  ...frC68SmsProviders,
 };

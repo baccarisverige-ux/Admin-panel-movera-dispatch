@@ -1,11 +1,11 @@
-# Movera API v0.18.166 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.168 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.166
+  version: 0.18.168
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.166 in this folder; this file must agree with them.
+    v0.18.168 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.166
+  version: 0.18.168
   source: contract.json
 paths:
   /auth/otp/request:
@@ -148,7 +148,11 @@ paths:
         is a server dependency). A number is refused ONLY when it is clearly not valid or certainly a landline: (a) not strict
         E.164 ^\+[1-9][0-9]{7,14}$ (8 to 15 digits) is refused; (b) a number that matches a fixedLines pattern of its calling
         code (ranges that are landline for certain) is refused. An unknown number type or a country not served is never a
-        reason to refuse. An SMS to a landline the server cannot recognise is simply not delivered (it still counts on dailyCap).'
+        reason to refuse. An SMS to a landline the server cannot recognise is simply not delivered (it still counts on dailyCap).
+        v0.18.168 (contract.json#smsProviders): One try per company, in the order: when the first company did not take the
+        SMS (a time-out, a broken connection, a refusal, an error answer, a wrong key), the same SMS goes once to the next
+        company that has keys. When a company took it, no other company is asked (never two SMS for one code). A company in
+        the order without keys is skipped. When none took it, the answer is the same as before (smsSignIn.delivery: 503 sms_not_sent).'
       tags:
       - Auth
       x-actor:
@@ -23562,6 +23566,18 @@ components:
           description: 'v0.18.163 (contract.json#liveTraffic): Every route says where it came from: google (live traffic)
             or estimate (straight line x roadFactor at pickupKmh); osrm stays a known value for older stored quotes only (the
             server no longer asks OSRM). quotes.route_source keeps it (migration 0138 adds google). Absent from an older server.'
+        routePolyline:
+          type: string
+          minLength: 1
+          description: 'v0.18.167 (contract.json#googleRouteLine): Quote.routePolyline: the Google encoded polyline (precision
+            5, the Routes API encodedPolyline) of the route this price used, pickup through every stop to the drop-off. Sent
+            only when Quote.routeSource is google; absent when it is estimate or osrm and from an older server. Every quote
+            of one QuoteList carries the same line (one call for all categories). No extra Google call: it is the polyline
+            the quote''s call already stored. POST /routes is unchanged (the straight-line estimate, provider estimate); the
+            app does not ask it for a line the quote already gave. Select ride and the search screen (Finding drivers) draw
+            the decoded Quote.routePolyline as the trip line and hide the "Approximate route" badge. Without it (estimate,
+            an older server, an empty or broken line) they keep the straight line through the stops and the badge (fallback).
+            The waiting-for-driver and on-trip maps are unchanged.'
     RouteQuote:
       type: object
       description: 'Price for a route change after request; apply with PATCH /trips/{tripId}. Priced from the booking (owner
@@ -27288,6 +27304,29 @@ components:
               maximum: 100000
               default: 200
               description: Sign-in SMS per 24 hours for this country before new codes are refused (sms_daily_limit).
+            providerOrder:
+              type: array
+              items:
+                type: string
+                enum:
+                - infobip
+                - 46elks
+              minItems: 1
+              maxItems: 2
+              uniqueItems: true
+              default:
+              - infobip
+              - 46elks
+              description: 'v0.18.168 (contract.json#smsProviders): CountryRules.smsSignIn.providerOrder (country standard)
+                and CountryRules.smsSignInOtherCountries.providerOrder (home country standard, super admins, the numbers of
+                every other country): 1 or 2 different values of providers, first tried first. Missing or wrong = defaultOrder.
+                Another value, a repeat, an empty list or more than 2: 400 invalid_request, reason invalid_document. Admin
+                › Pricing › Tips & limits per country, on the cards "Real SMS sign-in codes" and "SMS sign-in, other countries",
+                field "SMS company order" with an i text. One try per company, in the order: when the first company did not
+                take the SMS (a time-out, a broken connection, a refusal, an error answer, a wrong key), the same SMS goes
+                once to the next company that has keys. When a company took it, no other company is asked (never two SMS for
+                one code). A company in the order without keys is skipped. When none took it, the answer is the same as before
+                (smsSignIn.delivery: 503 sms_not_sent).'
           additionalProperties: false
         accountDeletion:
           $ref: '#/components/schemas/AccountDeletionSetting'
@@ -27556,6 +27595,29 @@ components:
                 - '+995'
                 - '+996'
                 - '+998'
+            providerOrder:
+              type: array
+              items:
+                type: string
+                enum:
+                - infobip
+                - 46elks
+              minItems: 1
+              maxItems: 2
+              uniqueItems: true
+              default:
+              - infobip
+              - 46elks
+              description: 'v0.18.168 (contract.json#smsProviders): CountryRules.smsSignIn.providerOrder (country standard)
+                and CountryRules.smsSignInOtherCountries.providerOrder (home country standard, super admins, the numbers of
+                every other country): 1 or 2 different values of providers, first tried first. Missing or wrong = defaultOrder.
+                Another value, a repeat, an empty list or more than 2: 400 invalid_request, reason invalid_document. Admin
+                › Pricing › Tips & limits per country, on the cards "Real SMS sign-in codes" and "SMS sign-in, other countries",
+                field "SMS company order" with an i text. One try per company, in the order: when the first company did not
+                take the SMS (a time-out, a broken connection, a refusal, an error answer, a wrong key), the same SMS goes
+                once to the next company that has keys. When a company took it, no other company is asked (never two SMS for
+                one code). A company in the order without keys is skipped. When none took it, the answer is the same as before
+                (smsSignIn.delivery: 503 sms_not_sent).'
           additionalProperties: false
       x-server-only: true
     FeeRule:

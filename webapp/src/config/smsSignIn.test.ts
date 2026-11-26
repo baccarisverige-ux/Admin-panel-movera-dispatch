@@ -21,28 +21,28 @@ const src = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8
 const C = JSON.parse(src("../../../contracts/contract.json")) as { smsSignIn: { dailyCapRange: [number, number]; alert: { titles: { near: string; reached: string }; detail: string } }; configDefaults: { smsSignIn: { enabled: boolean; dailyCap: number } } };
 
 test("default OFF with the contract's daily limit and range; only an exact true is on", () => {
-  assert.deepEqual(SMS_SIGN_IN_DEFAULT, { enabled: C.configDefaults.smsSignIn.enabled, dailyCap: C.configDefaults.smsSignIn.dailyCap });
+  assert.deepEqual(SMS_SIGN_IN_DEFAULT, { enabled: C.configDefaults.smsSignIn.enabled, dailyCap: C.configDefaults.smsSignIn.dailyCap, providerOrder: ["infobip", "46elks"] });
   assert.equal(SMS_SIGN_IN_DEFAULT.enabled, false);
   assert.deepEqual([SMS_DAILY_CAP.min, SMS_DAILY_CAP.max], C.smsSignIn.dailyCapRange);
-  for (const country of ["SE", "FR", "TN"] as const) assert.deepEqual(defaultCountrySettings(country).smsSignIn, { enabled: false, dailyCap: 200 });
-  assert.deepEqual(smsSignInOf(undefined), { enabled: false, dailyCap: 200 });
-  assert.deepEqual(smsSignInOf({ enabled: "true", dailyCap: 5 }), { enabled: false, dailyCap: 200 });
-  assert.deepEqual(smsSignInOf({ enabled: 1, dailyCap: 100_001 }), { enabled: false, dailyCap: 200 });
-  assert.deepEqual(smsSignInOf({ enabled: true, dailyCap: 350 }), { enabled: true, dailyCap: 350 });
-  assert.deepEqual(completeCountrySettings("FR", { smsSignIn: { enabled: true, dailyCap: 50 } }).smsSignIn, { enabled: true, dailyCap: 50 });
+  for (const country of ["SE", "FR", "TN"] as const) assert.deepEqual(defaultCountrySettings(country).smsSignIn, { enabled: false, dailyCap: 200, providerOrder: ["infobip", "46elks"] });
+  assert.deepEqual(smsSignInOf(undefined), { enabled: false, dailyCap: 200, providerOrder: ["infobip", "46elks"] });
+  assert.deepEqual(smsSignInOf({ enabled: "true", dailyCap: 5 }), { enabled: false, dailyCap: 200, providerOrder: ["infobip", "46elks"] });
+  assert.deepEqual(smsSignInOf({ enabled: 1, dailyCap: 100_001 }), { enabled: false, dailyCap: 200, providerOrder: ["infobip", "46elks"] });
+  assert.deepEqual(smsSignInOf({ enabled: true, dailyCap: 350 }), { enabled: true, dailyCap: 350, providerOrder: ["infobip", "46elks"] });
+  assert.deepEqual(completeCountrySettings("FR", { smsSignIn: { enabled: true, dailyCap: 50 } }).smsSignIn, { enabled: true, dailyCap: 50, providerOrder: ["infobip", "46elks"] });
   assert.ok((PRICING_FIELDS as readonly string[]).includes("smsSignIn"));
 });
 
 test("a change is one line each in the save dialog (from → to); a daily limit outside 10-100 000 stops the save", () => {
   const before = defaultCountrySettings("SE");
   assert.deepEqual(countrySettingsLines("SE", before, before), []);
-  assert.deepEqual(smsSignInLines({ enabled: false, dailyCap: 200 }, { enabled: true, dailyCap: 500 }), ["Real SMS sign-in codes: off → on", "Sign-in SMS per day: 200 → 500"]);
-  assert.equal(countrySettingsLines("SE", before, { ...before, smsSignIn: { enabled: true, dailyCap: 200 } }).length, 1);
+  assert.deepEqual(smsSignInLines({ enabled: false, dailyCap: 200, providerOrder: ["infobip", "46elks"] }, { enabled: true, dailyCap: 500, providerOrder: ["infobip", "46elks"] }), ["Real SMS sign-in codes: off → on", "Sign-in SMS per day: 200 → 500"]);
+  assert.equal(countrySettingsLines("SE", before, { ...before, smsSignIn: { enabled: true, dailyCap: 200, providerOrder: ["infobip", "46elks"] } }).length, 1);
   assert.deepEqual(countrySettingsIssues("SE", before), []);
   for (const dailyCap of [9, 100_001, 20.5, Number.NaN]) {
-    assert.equal(countrySettingsIssues("SE", { ...before, smsSignIn: { enabled: true, dailyCap } }).length, 1, String(dailyCap));
+    assert.equal(countrySettingsIssues("SE", { ...before, smsSignIn: { enabled: true, dailyCap, providerOrder: ["infobip", "46elks"] } }).length, 1, String(dailyCap));
   }
-  for (const dailyCap of [10, 200, 100_000]) assert.deepEqual(countrySettingsIssues("SE", { ...before, smsSignIn: { enabled: true, dailyCap } }), []);
+  for (const dailyCap of [10, 200, 100_000]) assert.deepEqual(countrySettingsIssues("SE", { ...before, smsSignIn: { enabled: true, dailyCap, providerOrder: ["infobip", "46elks"] } }), []);
 });
 
 test("saved on the country standard only: the document carries it when given, never otherwise, and never copies a stored one", () => {
@@ -59,39 +59,39 @@ test("saved on the country standard only: the document carries it when given, ne
 test("a save for several scopes with a ZONE shown never changes the Standard's country-wide values (SMS switch, emergency numbers, SOS SMS)", () => {
   const base = defaultCountrySettings("SE");
   const customNumbers = [{ kind: "police" as const, number: "114 14", label: { sv: "Polis", fr: "Police", en: "Police" } }];
-  const standard: CountrySettings = { ...base, smsSignIn: { enabled: true, dailyCap: 5000 }, emergencyNumbers: customNumbers, sosContactsSms: false };
+  const standard: CountrySettings = { ...base, smsSignIn: { enabled: true, dailyCap: 5000, providerOrder: ["infobip", "46elks"] }, emergencyNumbers: customNumbers, sosContactsSms: false };
   const zone: CountrySettings = { ...base };
   const own: Record<string, CountrySettings> = { "standard-SE": standard, Z002: zone };
   // The admin looks at zone Z002, both scopes are chosen at the top, and one tip changes.
   const shown: CountrySettings = { ...zone, tips: [{ id: "tip-1", amount: 40, enabled: true }] };
   const saved = zoneValuesForSave(shown, ["Z002", "standard-SE"], (id) => own[id]!, "Z002");
-  assert.deepEqual(saved["standard-SE"]!.smsSignIn, { enabled: true, dailyCap: 5000 }, "the Standard's SMS switch and limit stay");
+  assert.deepEqual(saved["standard-SE"]!.smsSignIn, { enabled: true, dailyCap: 5000, providerOrder: ["infobip", "46elks"] }, "the Standard's SMS switch and limit stay");
   assert.deepEqual(saved["standard-SE"]!.emergencyNumbers, customNumbers, "the Standard's emergency numbers stay");
   assert.equal(saved["standard-SE"]!.sosContactsSms, false, "the Standard's SOS SMS switch stays");
   assert.equal(saved["standard-SE"]!.tips[0]!.amount, 40, "the edited field still goes to every chosen scope");
   assert.equal(saved.Z002!.tips[0]!.amount, 40);
   // With the Standard shown, what the admin set on the card is what the Standard gets.
-  const onStandard: CountrySettings = { ...standard, smsSignIn: { enabled: false, dailyCap: 300 } };
+  const onStandard: CountrySettings = { ...standard, smsSignIn: { enabled: false, dailyCap: 300, providerOrder: ["infobip", "46elks"] } };
   const fromStandard = zoneValuesForSave(onStandard, ["Z002", "standard-SE"], (id) => own[id]!, "standard-SE");
-  assert.deepEqual(fromStandard["standard-SE"]!.smsSignIn, { enabled: false, dailyCap: 300 });
+  assert.deepEqual(fromStandard["standard-SE"]!.smsSignIn, { enabled: false, dailyCap: 300, providerOrder: ["infobip", "46elks"] });
   assert.deepEqual([...COUNTRY_WIDE_FIELDS], ["smsSignIn", "smsSignInOther", "emergencyNumbers", "sosContactsSms"]);
   assert.match(src("../pricing/CountryExtrasPanel.tsx"), /zoneValuesForSave\(shown, targets, \(id\) => zoneSettingsOf\(zoneBook, country, id\), zoneId\)/);
 });
 
 test("a draft started on a zone never carries the zone's country-wide values to the Standard when the shown scope is switched", () => {
   const base = defaultCountrySettings("SE");
-  const standard: CountrySettings = { ...base, smsSignIn: { enabled: true, dailyCap: 5000 }, sosContactsSms: false };
+  const standard: CountrySettings = { ...base, smsSignIn: { enabled: true, dailyCap: 5000, providerOrder: ["infobip", "46elks"] }, sosContactsSms: false };
   // Zone Z002 shown, a tip edited: the draft holds the zone's country-wide values (the defaults: off / 200).
   const draft: CountrySettings = { ...base, tips: [{ id: "tip-1", amount: 40, enabled: true }] };
   assert.equal(draftForShownScope(draft, "Z002", "Z002", base), draft, "same scope: the draft as it is");
   // The admin picks the Standard at the top (same chosen zones, so the panel and its draft stay).
   const shown = draftForShownScope(draft, "Z002", "standard-SE", standard);
-  assert.deepEqual(shown.smsSignIn, { enabled: true, dailyCap: 5000 }, "the Standard's switch and limit, not the zone's defaults");
+  assert.deepEqual(shown.smsSignIn, { enabled: true, dailyCap: 5000, providerOrder: ["infobip", "46elks"] }, "the Standard's switch and limit, not the zone's defaults");
   assert.equal(shown.sosContactsSms, false);
   assert.equal(shown.tips[0]!.amount, 40, "the other edits stay in the draft");
   assert.deepEqual(countrySettingsLines("SE", standard, shown).filter((line) => /SMS/.test(line)), [], "no SMS line in the save dialog");
   // The other way: an SMS edit made on the Standard is not shown as a zone's own when a zone is picked.
-  const onStandard: CountrySettings = { ...standard, smsSignIn: { enabled: false, dailyCap: 300 } };
+  const onStandard: CountrySettings = { ...standard, smsSignIn: { enabled: false, dailyCap: 300, providerOrder: ["infobip", "46elks"] } };
   assert.deepEqual(draftForShownScope(onStandard, "standard-SE", "Z002", base).smsSignIn, base.smsSignIn);
   const panel = src("../pricing/CountryExtrasPanel.tsx");
   assert.match(panel, /const shown = draft \? draftForShownScope\(draft, draftScope, zoneId, saved\) : saved;/);
@@ -113,7 +113,7 @@ test("the card is on Tips & limits, editable on the Standard only, with the two 
   const card = src("../pricing/SmsSignInCard.tsx");
   assert.match(card, /data-testid="sms-sign-in-on"/);
   assert.match(card, /const editable = canEdit && onStandard;/);
-  assert.equal((card.match(/disabled=\{!editable\}/g) ?? []).length, 2, "the switch and the number are both locked off the Standard");
+  assert.equal((card.match(/disabled=\{!editable\}/g) ?? []).length, 3, "the switch, the number and the SMS company order (v0.18.168) are locked off the Standard");
   assert.match(card, /SettingInfo id="tips\.smsSignIn\.enabled"/);
   assert.match(card, /info="tips\.smsSignIn\.dailyCap"/);
   const panel = src("../pricing/CountryExtrasPanel.tsx");

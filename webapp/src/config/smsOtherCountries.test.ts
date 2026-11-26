@@ -12,21 +12,21 @@ const src = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8
 const C = JSON.parse(src("../../../contracts/contract.json")) as { smsSignIn: { otherCountries: { homeCountry: string; admin: { texts: Record<string, Record<string, string>> } } }; configDefaults: { smsSignInOtherCountries: { enabled: boolean; dailyCap: number } } };
 
 test("defaults and reading follow the contract (on, 50; only an exact boolean counts)", () => {
-  const defaults: Record<string, unknown> = { ...C.configDefaults.smsSignInOtherCountries };
+  const defaults: Record<string, unknown> = { ...C.configDefaults.smsSignInOtherCountries, providerOrder: ["infobip", "46elks"] };
   delete defaults["note"];
   assert.deepEqual(SMS_OTHER_DEFAULT, defaults);
   assert.equal(SMS_OTHER_HOME, C.smsSignIn.otherCountries.homeCountry);
-  assert.deepEqual(smsOtherOf(undefined), { enabled: true, dailyCap: 50, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: [] });
-  assert.deepEqual(smsOtherOf({ enabled: false, dailyCap: 120, blockedCallingCodes: ["+882"] }), { enabled: false, dailyCap: 120, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: ["+882"] });
+  assert.deepEqual(smsOtherOf(undefined), { enabled: true, dailyCap: 50, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: [], providerOrder: ["infobip", "46elks"] });
+  assert.deepEqual(smsOtherOf({ enabled: false, dailyCap: 120, blockedCallingCodes: ["+882"], providerOrder: ["infobip", "46elks"] }), { enabled: false, dailyCap: 120, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: ["+882"], providerOrder: ["infobip", "46elks"] });
   assert.deepEqual(parseCallingCodes("+882, +883 +882"), ["+882", "+883"]);
-  assert.deepEqual(smsOtherOf({ enabled: "no", dailyCap: 5, perMinuteCap: 0 }), { enabled: true, dailyCap: 50, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: [] });
-  assert.equal(smsOtherIssues({ enabled: true, dailyCap: 9, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: [] }).length, 1);
-  assert.deepEqual(smsOtherIssues({ enabled: true, dailyCap: 50, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: [] }), []);
-  assert.deepEqual(smsOtherLines({ enabled: true, dailyCap: 50, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: [] }, { enabled: false, dailyCap: 80, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: ["+882"] }), ["SMS sign-in for other countries: on → off", "Other countries sign-in SMS per day: 50 → 80", "Blocked calling codes: — → +882"]);
+  assert.deepEqual(smsOtherOf({ enabled: "no", dailyCap: 5, perMinuteCap: 0 }), { enabled: true, dailyCap: 50, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: [], providerOrder: ["infobip", "46elks"] });
+  assert.equal(smsOtherIssues({ enabled: true, dailyCap: 9, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: [], providerOrder: ["infobip", "46elks"] }).length, 1);
+  assert.deepEqual(smsOtherIssues({ enabled: true, dailyCap: 50, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: [], providerOrder: ["infobip", "46elks"] }), []);
+  assert.deepEqual(smsOtherLines({ enabled: true, dailyCap: 50, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: [], providerOrder: ["infobip", "46elks"] }, { enabled: false, dailyCap: 80, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: ["+882"], providerOrder: ["infobip", "46elks"] }), ["SMS sign-in for other countries: on → off", "Other countries sign-in SMS per day: 50 → 80", "Blocked calling codes: — → +882"]);
 });
 
 test("saved as smsSignInOtherCountries on a Standard only", () => {
-  const input = { tips: [], raiseSteps: [], driverBonus: { defaultLimit: 0, hardMax: 0 }, smsSignInOther: { enabled: false, dailyCap: 70, perCodeDailyCap: 5, perMinuteCap: 20, blockedCallingCodes: ["+882"] } };
+  const input = { tips: [], raiseSteps: [], driverBonus: { defaultLimit: 0, hardMax: 0 }, smsSignInOther: { enabled: false, dailyCap: 70, perCodeDailyCap: 5, perMinuteCap: 20, blockedCallingCodes: ["+882"], providerOrder: ["infobip", "46elks"] } };
   assert.deepEqual(countryRulesOf("SE", "SEK", input, null, { standard: true })["smsSignInOtherCountries"], { enabled: false, dailyCap: 70, perCodeDailyCap: 5, perMinuteCap: 20, blockedCallingCodes: ["+882"] });
   assert.equal("smsSignInOtherCountries" in countryRulesOf("SE", "SEK", input, null, { standard: false }), false);
 });

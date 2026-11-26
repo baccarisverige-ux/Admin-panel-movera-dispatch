@@ -146,6 +146,8 @@ const ENTRIES: Entry[] = [
   {
     schema: "CountryRules",
     built: countryRulesOf("SE", "SEK", countryInput, null),
+    // v0.18.168 (contract.json#smsProviders): providerOrder is written only when the admin picks a non-default order.
+    ownedWhenSet: ["smsSignIn.providerOrder", "smsSignInOtherCountries.providerOrder"],
     // v0.18.134 accountDeletion: written by Riders › Account deletion requests only (live/accountDeletion.ts); kept by the Tips & limits save.
     kept: ["payoutMode", "payoutSchedule", "calls.adminCallRoles", "calls.phoneProvider", "accountDeletion", "accountDeletion.eraseEnabled", "accountDeletion.eraseAfterDays", "smsSignInOtherCountries", "smsSignInOtherCountries.enabled", "smsSignInOtherCountries.dailyCap", "smsSignInOtherCountries.perCodeDailyCap", "smsSignInOtherCountries.perMinuteCap", "smsSignInOtherCountries.blockedCallingCodes"],
     save: (stored) => countryRulesOf("SE", "SEK", countryInput, stored),

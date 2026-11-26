@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.166",
+  "version": "0.18.168",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -12106,5 +12106,44 @@
       "required": "signUpFields.address (defaults SE and FR: on, required). Missing when required: 400 invalid_request reason field_required with details [address]; a field out of range: 400 invalid_request reason invalid_address.",
       "adminEdit": "POST /admin/drivers/{driverId}/address { expectedVersion, address, reason } (drivers.activate, own-country scope as the country change; 409 version_mismatch with the Driver). Audit action driver.address, target the driver, detail { reason } (no address text in the audit). Returns the Driver. The admin driver page shows the address under Details with an Edit button."
     }
+  },
+  "googleRouteLine": {
+    "since": "0.18.167",
+    "note": "v0.18.167 (the rider map draws the real Google route; owner 2026-11-26 \"Oui, corriger\" after the rider map showed a straight line with \"Approximate route\"; owner rule about 2 Google calls per trip, the cheapest; Rule 0; X-Api-Version stays `0.5`; additive, optional; no migration; follows v0.18.166): the quote already holds the Google route its one call returned (contract.json#liveTraffic.calls.quote, quotes.route_polyline); the server now sends it with the quote and the rider app draws it. No new Google call.",
+    "quote": "Quote.routePolyline: the Google encoded polyline (precision 5, the Routes API encodedPolyline) of the route this price used, pickup through every stop to the drop-off. Sent only when Quote.routeSource is google; absent when it is estimate or osrm and from an older server. Every quote of one QuoteList carries the same line (one call for all categories).",
+    "calls": "No extra Google call: it is the polyline the quote's call already stored. POST /routes is unchanged (the straight-line estimate, provider estimate); the app does not ask it for a line the quote already gave.",
+    "rider": "Select ride and the search screen (Finding drivers) draw the decoded Quote.routePolyline as the trip line and hide the \"Approximate route\" badge. Without it (estimate, an older server, an empty or broken line) they keep the straight line through the stops and the badge (fallback). The waiting-for-driver and on-trip maps are unchanged.",
+    "driver": "Driver app: no change. GET /routes/driving already answers the stored Google route of his active trip (contract.json#liveTraffic.navigation).",
+    "admin": "Admin: not affected (no new setting; live traffic stays Admin > Dispatch > Rides > Live traffic (Google), contract.json#liveTraffic.setting)."
+  },
+  "smsProviders": {
+    "since": "0.18.168",
+    "note": "v0.18.168 (SMS company Infobip, 46elks as backup; owner 2026-11-26 \"Am going to change company sms to infobip\", then \"Infobip + 46elks en secours (Recommandé)\"; Rule 0; X-Api-Version stays `0.5`; additive, optional; no migration; follows v0.18.167): the sign-in code SMS (contract.json#smsSignIn) and the SOS contacts SMS (contract.json#sosContactsSms.send) go out through Infobip first and through 46elks only when Infobip did not take the SMS. The order can be changed per country by an admin for the sign-in codes; the SOS contacts SMS use defaultOrder.",
+    "providers": [
+      "infobip",
+      "46elks"
+    ],
+    "defaultOrder": [
+      "infobip",
+      "46elks"
+    ],
+    "serverKeys": {
+      "infobip": [
+        "INFOBIP_BASE_URL",
+        "INFOBIP_API_KEY"
+      ],
+      "46elks": [
+        "ELKS_API_USERNAME",
+        "ELKS_API_PASSWORD"
+      ]
+    },
+    "serverKeysNote": "Names of the server's environment variables only (values are set by the owner on the server host, never in a repository). INFOBIP_BASE_URL is the account's own API address (like xxxxx.api.infobip.com, https assumed); INFOBIP_API_KEY is sent as `Authorization: App <key>`. A company whose keys are not all set is skipped; only one company set = that company alone; none set = no SMS sender (smsSignIn.active as before). SMS_SENDER_NAME (smsSignIn.sender rules) is the sender name for both companies.",
+    "infobip": "POST {INFOBIP_BASE_URL}/sms/2/text/advanced, JSON { messages: [ { destinations: [ { to } ], from, text } ] }, the number without its +. Accepted: a 2xx answer whose message status group is not REJECTED (the messageId is kept as the provider reference). Same time limit as 46elks.",
+    "setting": "CountryRules.smsSignIn.providerOrder (country standard) and CountryRules.smsSignInOtherCountries.providerOrder (home country standard, super admins, the numbers of every other country): 1 or 2 different values of providers, first tried first. Missing or wrong = defaultOrder. Another value, a repeat, an empty list or more than 2: 400 invalid_request, reason invalid_document. Admin › Pricing › Tips & limits per country, on the cards \"Real SMS sign-in codes\" and \"SMS sign-in, other countries\", field \"SMS company order\" with an i text.",
+    "fallback": "One try per company, in the order: when the first company did not take the SMS (a time-out, a broken connection, a refusal, an error answer, a wrong key), the same SMS goes once to the next company that has keys. When a company took it, no other company is asked (never two SMS for one code). A company in the order without keys is skipped. When none took it, the answer is the same as before (smsSignIn.delivery: 503 sms_not_sent).",
+    "logs": "sms_outbox.provider is the company that took the SMS (infobip or 46elks), or the last one tried when none did. The log line says which company was used and whether a backup was needed, never the number, the text or the code.",
+    "driver": "Driver app: no change (the sign-in screen and its answers are the same).",
+    "rider": "Rider app: no change (the sign-in screen and its answers are the same).",
+    "admin": "Admin › Pricing › Tips & limits per country: \"SMS company order\" on both SMS cards (Infobip then 46elks by default, or the other way, or one alone), with an i text."
   }
 }
