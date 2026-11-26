@@ -60,7 +60,7 @@ export async function paged<T>(client: LiveClient, name: LiveListName, path: str
   const items: T[] = [];
   let cursor: string | null = null;
   let total: number | undefined;
-  const countKey = JSON.stringify([query.q, query.status, Boolean(name === "trips" && query.flagged), filter.params]);
+  const countKey = JSON.stringify([query.q, query.status, Boolean(name === "trips" && query.flagged), filter.params, name === "vehicles" ? query.fleetId ?? "" : ""]);
   const count = counting === "page" && takeListCount(name, countKey);
   try {
     for (let index = 0; index < query.pages; index += 1) {
@@ -69,6 +69,8 @@ export async function paged<T>(client: LiveClient, name: LiveListName, path: str
       if (query.status) params.set(STATUS_PARAM[name], query.status);
       // v0.18.9 (G7): the Trips list "Flagged only" filter (GET /admin/trips?flagged=true).
       if (name === "trips" && query.flagged) params.set("flagged", "true");
+      // Follow-up 2026-11-26: the Vehicles Flotte filter on the server (GET /admin/vehicles?fleetId=).
+      if (name === "vehicles" && query.fleetId) params.set("fleetId", query.fleetId);
       if (cursor) params.set("cursor", cursor);
       for (const [key, value] of filter.params) params.set(key, value);
       const url = `${path}?${params.toString()}`;

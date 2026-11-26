@@ -9,6 +9,7 @@ import { toCsv } from "../reports/csv";
 import { StatusDot } from "./kit";
 import { CommandButton } from "./CommandButton";
 import { useSession } from "../auth/SessionContext";
+import { inGroupOrder } from "../vehicles/byFleet";
 import { tr, trn, trx } from "../i18n";
 
 /** A cell drawn as `node` (a button, a link…) that still searches, sorts and exports as `text`. */
@@ -123,8 +124,7 @@ export function DataTable({ head, rows, rowIds, className, state = "ready", onRe
   const tableRows = table.getRowModel().rows;
   const sorted = useMemo(() => {
     if (!groups) return tableRows;
-    const rank = (row: (typeof tableRows)[number]) => { const at = groups.order.indexOf(groups.of(row.original.sourceIndex)); return at < 0 ? groups.order.length : at; };
-    return tableRows.map((row, index) => ({ row, index })).sort((a, b) => rank(a.row) - rank(b.row) || a.index - b.index).map((item) => item.row);
+    return inGroupOrder(tableRows, (row) => groups.of(row.original.sourceIndex), groups.order);
   }, [groups, tableRows]);
   const pageCount = Math.max(1, Math.ceil(sorted.length / 25));
   const safePage = Math.min(page, pageCount - 1);

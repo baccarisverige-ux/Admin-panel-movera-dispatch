@@ -34,3 +34,18 @@ export function fleetGroups(rows: readonly FleetCarRow[], fleets: readonly Fleet
 
 /** The Flotte filter: "" = all fleets, OWN_CAR = cars without a fleet, else one fleet id. */
 export const inFleet = (row: FleetCarRow, filter: string): boolean => !filter || fleetKeyOf(row) === filter;
+
+/**
+ * Review 2026-11-25: live cars load in pages; while the server has more, group counts cover the loaded cars only and
+ * say "(loaded so far)". The demo (all cars in the browser) never says it.
+ */
+export const showsLoadedSoFar = (live: boolean, serverHasMore: boolean): boolean => live && serverHasMore;
+
+/**
+ * The table rows in group order (owner 2026-11-25): groups in `order` (unknown groups last), and inside each group the
+ * rows keep the order they came in (the column sort), so a column sort sorts inside each group.
+ */
+export function inGroupOrder<T>(rows: readonly T[], groupOf: (row: T) => string, order: readonly string[]): T[] {
+  const rank = (row: T) => { const at = order.indexOf(groupOf(row)); return at < 0 ? order.length : at; };
+  return rows.map((row, index) => ({ row, index })).sort((a, b) => rank(a.row) - rank(b.row) || a.index - b.index).map((item) => item.row);
+}
