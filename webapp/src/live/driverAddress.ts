@@ -27,3 +27,12 @@ export async function setDriverAddress(client: LiveClient, input: CommandInput, 
   const driver = await client.json<Driver>(`/admin/drivers/${encodeURIComponent(input.targetId)}`);
   return client.post<Driver>(`/admin/drivers/${encodeURIComponent(driver.driverId)}/address`, { expectedVersion: driver.version, address, reason: reason.slice(0, 500) }).catch(explained);
 }
+
+/** v0.18.166 (contract.json#signupV2): the sign-up details of a Driver for the driver page (only those the server sent). */
+export function signUpDetailsOf(driver: Pick<Driver, "address" | "personalNumber" | "taxiLicenseNumber">): Partial<Pick<Driver, "address" | "personalNumber" | "taxiLicenseNumber">> {
+  return {
+    ...(driver.address ? { address: driver.address } : {}),
+    ...(driver.personalNumber ? { personalNumber: driver.personalNumber } : {}),
+    ...(driver.taxiLicenseNumber ? { taxiLicenseNumber: driver.taxiLicenseNumber } : {}),
+  };
+}

@@ -4,6 +4,9 @@ import { tr } from "../i18n/index.ts";
 import type { LiveClient } from "./session.ts";
 import type { Driver } from "./types.ts";
 
+// v0.18.166 (signupV2.address.adminEdit): the address change, next to the country change (liveAdminApi.ts stays under Rule 25).
+export { setDriverAddress, signUpDetailsOf } from "./driverAddress.ts";
+
 /**
  * v0.18.162 (contract.json#driverCountryFirst.adminSet; owner 2026-11-25 "Yes"): admin.driver.country reads the
  * driver's version and sends POST /admin/drivers/{id}/country { expectedVersion, country, reason } (the reason is kept
