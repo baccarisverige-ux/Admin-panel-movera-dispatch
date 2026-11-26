@@ -383,9 +383,9 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
   ),
   "tips.smsSignIn.providerOrder": t(
     "Which SMS company sends this country's sign-in codes first. If the first one does not take the SMS (it is down, too slow, refuses it or its key is wrong), the same SMS goes once through the second one. When the first one took it, the second is never asked, so a person never gets two codes.",
-    `${STANDARD_ONLY} Rider and driver apps. A company works only when its keys are set on the server (Infobip: address and key; 46elks: username and password); a company without keys is skipped. The SOS contacts SMS always use Infobip, then 46elks.`,
-    "Infobip, then 46elks; 46elks, then Infobip; Infobip only; 46elks only.",
-    "Infobip, then 46elks (backup).",
+    `${STANDARD_ONLY} Rider and driver apps. A company works only when its keys are set on the server (Infobip: address and key; 46elks: username and password); a company without keys is skipped. The SOS contacts SMS always use 46elks, then Infobip.`,
+    "46elks, then Infobip; Infobip, then 46elks; 46elks only; Infobip only.",
+    "46elks, then Infobip (backup).",
     "Infobip, then 46elks: Sara asks for a code, Infobip is down, 46elks sends the code a few seconds later.",
     "Infobip only: when Infobip is down nobody of this country gets a code; Infobip, then 46elks: the codes still go out through 46elks.",
   ),
@@ -408,8 +408,8 @@ export const TIPS_INFO: Readonly<Record<string, SettingInfoText>> = {
   "tips.smsOther.providerOrder": t(
     "Which SMS company sends the sign-in codes to numbers of other countries first. If it does not take the SMS, the same SMS goes once through the second one; when it took it, the second is never asked.",
     `Sweden Standard only, super admins only. Rider app only. A company works only when its keys are set on the server; a company without keys is skipped.`,
-    "Infobip, then 46elks; 46elks, then Infobip; Infobip only; 46elks only.",
-    "Infobip, then 46elks (backup).",
+    "46elks, then Infobip; Infobip, then 46elks; 46elks only; Infobip only.",
+    "46elks, then Infobip (backup).",
     "Infobip, then 46elks: a German visitor asks for a code, Infobip refuses it, 46elks sends it.",
     "46elks only: Infobip is never used for foreign numbers; Infobip, then 46elks: 46elks is used only when Infobip fails.",
   ),

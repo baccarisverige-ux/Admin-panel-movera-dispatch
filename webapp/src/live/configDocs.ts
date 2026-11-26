@@ -417,8 +417,8 @@ export function sameDocument(a: Doc, b: Doc): boolean {
 
 /* ---------------------------------------------------------------- country rules */
 
-/** v0.18.168 (contract.json#smsProviders.setting): providerOrder is written only when it is not the default (Infobip then 46elks). */
-const orderPart = (order: string[] | undefined): { providerOrder?: string[] } => (order !== undefined && order.join(",") !== "infobip,46elks" ? { providerOrder: [...order] } : {});
+/** v0.18.168 (contract.json#smsProviders.setting): providerOrder is written only when it is not the default (46elks then Infobip). */
+const orderPart = (order: string[] | undefined): { providerOrder?: string[] } => (order !== undefined && order.join(",") !== "46elks,infobip" ? { providerOrder: [...order] } : {});
 export type CountryRulesInput = { tips: number[]; raiseSteps: number[]; driverBonus: { defaultLimit: number; hardMax: number }; driverPayChangeMax?: number; personLimits?: { savedPlacesPerPerson: number; emergencyContactsPerPerson: number }; onTripMinDonePct?: number; chainLateFreeCancelMin?: number; walletCreditMax?: number; bonusCampaignMax?: number; maxRiderDebt?: number; driverOwesLimit?: { enabled: boolean; max: number | null }; driverPayRequest?: { enabled: boolean; dayOfMonth: number; payLink: string; minAmount: number | null }; calls?: { on: boolean; mode: "in_app" | "phone"; callWindowAfterTripMin: number; ringSeconds: number; maxCallMin: number; connectTimeoutSeconds?: number }; dontMatchAgain?: { on: boolean; atStars: number }; chat?: ChatSettings; emergencyNumbers?: Array<{ kind: string; number: string; label: { sv: string; fr: string; en: string } }>; sosContactsSms?: boolean; smsSignIn?: { enabled: boolean; dailyCap: number; providerOrder?: string[] }; smsSignInOther?: { enabled: boolean; dailyCap: number; perCodeDailyCap: number; perMinuteCap: number; blockedCallingCodes: string[]; providerOrder?: string[] }; riderFeeStripe?: boolean };
 
 /**

@@ -7,7 +7,7 @@ type Props = { info: string; testId: string; value: SmsCompany[]; saved: SmsComp
 /**
  * Contract v0.18.168 (contract.json#smsProviders.admin; owner 2026-11-26 "Infobip + 46elks en secours (Recommandé)"):
  * "SMS company order" on both SMS sign-in cards. The server tries the first company; only when it does not take the
- * SMS does the second send it. Default Infobip, then 46elks.
+ * SMS does the second send it. Default 46elks, then Infobip (owner 2026-11-26 "Keep 46elks working primary until we fix Infobip").
  */
 export function SmsProviderOrderField({ info, testId, value, saved, disabled, onChange }: Props) {
   const changed = orderKey(value) !== orderKey(saved);

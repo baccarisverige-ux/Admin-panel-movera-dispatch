@@ -149,10 +149,13 @@ paths:
         E.164 ^\+[1-9][0-9]{7,14}$ (8 to 15 digits) is refused; (b) a number that matches a fixedLines pattern of its calling
         code (ranges that are landline for certain) is refused. An unknown number type or a country not served is never a
         reason to refuse. An SMS to a landline the server cannot recognise is simply not delivered (it still counts on dailyCap).
-        v0.18.168 (contract.json#smsProviders): One try per company, in the order: when the first company did not take the
-        SMS (a time-out, a broken connection, a refusal, an error answer, a wrong key), the same SMS goes once to the next
-        company that has keys. When a company took it, no other company is asked (never two SMS for one code). A company in
-        the order without keys is skipped. When none took it, the answer is the same as before (smsSignIn.delivery: 503 sms_not_sent).'
+        v0.18.168 (contract.json#smsProviders): One try per company, in the order. The next company that has keys gets the
+        same SMS once only when the first SURELY did not take it: an error answer (4xx, 5xx, a wrong key), a 2xx whose message
+        is REJECTED, or no connection at all (the name did not resolve, the connection was refused). A time-out or a connection
+        cut after the request was sent may mean the SMS went out: no other company is asked (never two SMS for one code) and
+        the answer is as before (smsSignIn.delivery: 503 sms_not_sent). When a company took it, no other company is asked.
+        A company in the order without keys is skipped; when no company of the order has keys, a company that has keys sends
+        it (an order never leaves a country without codes). When none took it: 503 sms_not_sent as before.'
       tags:
       - Auth
       x-actor:
@@ -27315,18 +27318,21 @@ components:
               maxItems: 2
               uniqueItems: true
               default:
-              - infobip
               - 46elks
+              - infobip
               description: 'v0.18.168 (contract.json#smsProviders): CountryRules.smsSignIn.providerOrder (country standard)
                 and CountryRules.smsSignInOtherCountries.providerOrder (home country standard, super admins, the numbers of
                 every other country): 1 or 2 different values of providers, first tried first. Missing or wrong = defaultOrder.
                 Another value, a repeat, an empty list or more than 2: 400 invalid_request, reason invalid_document. Admin
                 › Pricing › Tips & limits per country, on the cards "Real SMS sign-in codes" and "SMS sign-in, other countries",
-                field "SMS company order" with an i text. One try per company, in the order: when the first company did not
-                take the SMS (a time-out, a broken connection, a refusal, an error answer, a wrong key), the same SMS goes
-                once to the next company that has keys. When a company took it, no other company is asked (never two SMS for
-                one code). A company in the order without keys is skipped. When none took it, the answer is the same as before
-                (smsSignIn.delivery: 503 sms_not_sent).'
+                field "SMS company order" with an i text. One try per company, in the order. The next company that has keys
+                gets the same SMS once only when the first SURELY did not take it: an error answer (4xx, 5xx, a wrong key),
+                a 2xx whose message is REJECTED, or no connection at all (the name did not resolve, the connection was refused).
+                A time-out or a connection cut after the request was sent may mean the SMS went out: no other company is asked
+                (never two SMS for one code) and the answer is as before (smsSignIn.delivery: 503 sms_not_sent). When a company
+                took it, no other company is asked. A company in the order without keys is skipped; when no company of the
+                order has keys, a company that has keys sends it (an order never leaves a country without codes). When none
+                took it: 503 sms_not_sent as before.'
           additionalProperties: false
         accountDeletion:
           $ref: '#/components/schemas/AccountDeletionSetting'
@@ -27606,18 +27612,21 @@ components:
               maxItems: 2
               uniqueItems: true
               default:
-              - infobip
               - 46elks
+              - infobip
               description: 'v0.18.168 (contract.json#smsProviders): CountryRules.smsSignIn.providerOrder (country standard)
                 and CountryRules.smsSignInOtherCountries.providerOrder (home country standard, super admins, the numbers of
                 every other country): 1 or 2 different values of providers, first tried first. Missing or wrong = defaultOrder.
                 Another value, a repeat, an empty list or more than 2: 400 invalid_request, reason invalid_document. Admin
                 › Pricing › Tips & limits per country, on the cards "Real SMS sign-in codes" and "SMS sign-in, other countries",
-                field "SMS company order" with an i text. One try per company, in the order: when the first company did not
-                take the SMS (a time-out, a broken connection, a refusal, an error answer, a wrong key), the same SMS goes
-                once to the next company that has keys. When a company took it, no other company is asked (never two SMS for
-                one code). A company in the order without keys is skipped. When none took it, the answer is the same as before
-                (smsSignIn.delivery: 503 sms_not_sent).'
+                field "SMS company order" with an i text. One try per company, in the order. The next company that has keys
+                gets the same SMS once only when the first SURELY did not take it: an error answer (4xx, 5xx, a wrong key),
+                a 2xx whose message is REJECTED, or no connection at all (the name did not resolve, the connection was refused).
+                A time-out or a connection cut after the request was sent may mean the SMS went out: no other company is asked
+                (never two SMS for one code) and the answer is as before (smsSignIn.delivery: 503 sms_not_sent). When a company
+                took it, no other company is asked. A company in the order without keys is skipped; when no company of the
+                order has keys, a company that has keys sends it (an order never leaves a country without codes). When none
+                took it: 503 sms_not_sent as before.'
           additionalProperties: false
       x-server-only: true
     FeeRule:

@@ -11,14 +11,15 @@ import { tr } from "../i18n/core.ts";
 /**
  * Contract v0.18.168 (contract.json#smsProviders; owner 2026-11-26 "Am going to change company sms to infobip", then
  * "Infobip + 46elks en secours (Recommandé)"): providerOrder, the SMS companies the server tries, first first; when the
- * first does not take the SMS the next one sends it (never two SMS for one code). Missing or wrong = Infobip then 46elks.
+ * first does not take the SMS the next one sends it (never two SMS for one code). Missing or wrong = 46elks then Infobip.
  * It is written only when it is not the default, so a server older than v0.18.168 still takes the save.
  */
 export const SMS_COMPANIES = ["infobip", "46elks"] as const;
 export type SmsCompany = (typeof SMS_COMPANIES)[number];
-export const SMS_PROVIDER_ORDER_DEFAULT: SmsCompany[] = ["infobip", "46elks"];
+/** Owner 2026-11-26 "Keep 46elks working primary until we fix Infobip": 46elks first by default. */
+export const SMS_PROVIDER_ORDER_DEFAULT: SmsCompany[] = ["46elks", "infobip"];
 /** The four choices of the "SMS company order" field. */
-export const SMS_PROVIDER_ORDERS: SmsCompany[][] = [["infobip", "46elks"], ["46elks", "infobip"], ["infobip"], ["46elks"]];
+export const SMS_PROVIDER_ORDERS: SmsCompany[][] = [["46elks", "infobip"], ["infobip", "46elks"], ["46elks"], ["infobip"]];
 const COMPANY_NAME: Record<SmsCompany, string> = { infobip: "Infobip", "46elks": "46elks" };
 export const providerOrderOk = (value: unknown): value is SmsCompany[] => Array.isArray(value) && value.length >= 1 && value.length <= 2 && new Set(value).size === value.length && value.every((v) => (SMS_COMPANIES as readonly unknown[]).includes(v));
 const orderOf = (value: unknown): SmsCompany[] => (providerOrderOk(value) ? [...value] : [...SMS_PROVIDER_ORDER_DEFAULT]);
