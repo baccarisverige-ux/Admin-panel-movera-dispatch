@@ -8,16 +8,41 @@ import { tr } from "../i18n/core.ts";
  * - It works only when the server also has the SMS company's keys (set by the owner on the server; the panel never
  *   sees them). Off: every number that is not a test number is told sign-in is not open yet, as before.
  */
-export type SmsSignIn = { enabled: boolean; dailyCap: number };
-export const SMS_SIGN_IN_DEFAULT: SmsSignIn = { enabled: false, dailyCap: 200 };
+/**
+ * Contract v0.18.168 (contract.json#smsProviders; owner 2026-11-26 "Am going to change company sms to infobip", then
+ * "Infobip + 46elks en secours (Recommandé)"): providerOrder, the SMS companies the server tries, first first; when the
+ * first does not take the SMS the next one sends it (never two SMS for one code). Missing or wrong = 46elks then Infobip.
+ * It is written only when it is not the default, so a server older than v0.18.168 still takes the save.
+ */
+export const SMS_COMPANIES = ["infobip", "46elks"] as const;
+export type SmsCompany = (typeof SMS_COMPANIES)[number];
+/** Owner 2026-11-26 "Keep 46elks working primary until we fix Infobip": 46elks first by default. */
+export const SMS_PROVIDER_ORDER_DEFAULT: SmsCompany[] = ["46elks", "infobip"];
+/** The four choices of the "SMS company order" field. */
+export const SMS_PROVIDER_ORDERS: SmsCompany[][] = [["46elks", "infobip"], ["infobip", "46elks"], ["46elks"], ["infobip"]];
+const COMPANY_NAME: Record<SmsCompany, string> = { infobip: "Infobip", "46elks": "46elks" };
+export const providerOrderOk = (value: unknown): value is SmsCompany[] => Array.isArray(value) && value.length >= 1 && value.length <= 2 && new Set(value).size === value.length && value.every((v) => (SMS_COMPANIES as readonly unknown[]).includes(v));
+const orderOf = (value: unknown): SmsCompany[] => (providerOrderOk(value) ? [...value] : [...SMS_PROVIDER_ORDER_DEFAULT]);
+export const orderKey = (order: readonly SmsCompany[]): string => order.join(",");
+export const isDefaultOrder = (order: readonly SmsCompany[]): boolean => orderKey(order) === orderKey(SMS_PROVIDER_ORDER_DEFAULT);
+/** "Infobip, then 46elks (backup)" / "46elks only". */
+export function providerOrderLabel(order: readonly SmsCompany[]): string {
+  return order.length === 1 ? tr("{0} only", [COMPANY_NAME[order[0]!]]) : tr("{0}, then {1} (backup)", [COMPANY_NAME[order[0]!], COMPANY_NAME[order[1]!]]);
+}
+function orderLines(before: readonly SmsCompany[], after: readonly SmsCompany[]): string[] {
+  return orderKey(before) === orderKey(after) ? [] : [tr("SMS company order: {0} → {1}", [providerOrderLabel(before), providerOrderLabel(after)])];
+}
+
+export type SmsSignIn = { enabled: boolean; dailyCap: number; providerOrder: SmsCompany[] };
+export const SMS_SIGN_IN_DEFAULT: SmsSignIn = { enabled: false, dailyCap: 200, providerOrder: [...SMS_PROVIDER_ORDER_DEFAULT] };
 export const SMS_DAILY_CAP = { min: 10, max: 100_000 } as const;
 
 const capOk = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value) && value >= SMS_DAILY_CAP.min && value <= SMS_DAILY_CAP.max;
 
 /** The stored block; anything missing or wrong is the default (the server reads it the same way: only true is on). */
 export function smsSignInOf(raw: unknown): SmsSignIn {
-  const value = (raw && typeof raw === "object" ? raw : {}) as { enabled?: unknown; dailyCap?: unknown };
-  return { enabled: value.enabled === true, dailyCap: capOk(value.dailyCap) ? value.dailyCap : SMS_SIGN_IN_DEFAULT.dailyCap };
+  const value = (raw && typeof raw === "object" ? raw : {}) as { enabled?: unknown; dailyCap?: unknown; providerOrder?: unknown };
+  return { enabled: value.enabled === true, dailyCap: capOk(value.dailyCap) ? value.dailyCap : SMS_SIGN_IN_DEFAULT.dailyCap, providerOrder: orderOf(value.providerOrder) };
 }
 
 /** What stops a save (the server would answer 400 invalid_document). */
@@ -30,6 +55,7 @@ export function smsSignInLines(before: SmsSignIn, after: SmsSignIn): string[] {
   const lines: string[] = [];
   if (before.enabled !== after.enabled) lines.push(tr("Real SMS sign-in codes: {0} → {1}", [tr(before.enabled ? "on" : "off"), tr(after.enabled ? "on" : "off")]));
   if (before.dailyCap !== after.dailyCap) lines.push(tr("Sign-in SMS per day: {0} → {1}", [before.dailyCap, after.dailyCap]));
+  lines.push(...orderLines(before.providerOrder, after.providerOrder));
   return lines;
 }
 
@@ -40,7 +66,7 @@ export function smsSignInLines(before: SmsSignIn, after: SmsSignIn): string[] {
  */
 export const SMS_OTHER_HOME = "SE";
 export type SmsOther = SmsSignIn & { perCodeDailyCap: number; perMinuteCap: number; blockedCallingCodes: string[] };
-export const SMS_OTHER_DEFAULT: SmsOther = { enabled: true, dailyCap: 50, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: [] };
+export const SMS_OTHER_DEFAULT: SmsOther = { enabled: true, dailyCap: 50, perCodeDailyCap: 10, perMinuteCap: 30, blockedCallingCodes: [], providerOrder: [...SMS_PROVIDER_ORDER_DEFAULT] };
 export const SMS_PER_CODE_CAP = { min: 1, max: 100_000 } as const;
 export const SMS_PER_MINUTE_CAP = { min: 1, max: 10_000 } as const;
 const between = (value: unknown, r: { min: number; max: number }): value is number => typeof value === "number" && Number.isInteger(value) && value >= r.min && value <= r.max;
@@ -57,6 +83,7 @@ export function smsOtherOf(raw: unknown): SmsOther {
     perCodeDailyCap: between(value["perCodeDailyCap"], SMS_PER_CODE_CAP) ? value["perCodeDailyCap"] : SMS_OTHER_DEFAULT.perCodeDailyCap,
     perMinuteCap: between(value["perMinuteCap"], SMS_PER_MINUTE_CAP) ? value["perMinuteCap"] : SMS_OTHER_DEFAULT.perMinuteCap,
     blockedCallingCodes: blockedOk(value["blockedCallingCodes"]) ? [...value["blockedCallingCodes"]] : [],
+    providerOrder: orderOf(value["providerOrder"]),
   };
 }
 
@@ -78,6 +105,7 @@ export function smsOtherLines(before: SmsOther, after: SmsOther): string[] {
   if (before.dailyCap !== after.dailyCap) lines.push(tr("Other countries sign-in SMS per day: {0} → {1}", [before.dailyCap, after.dailyCap]));
   if (before.perCodeDailyCap !== after.perCodeDailyCap) lines.push(tr("SMS per calling code per day: {0} → {1}", [before.perCodeDailyCap, after.perCodeDailyCap]));
   if (before.perMinuteCap !== after.perMinuteCap) lines.push(tr("Sign-in SMS per minute: {0} → {1}", [before.perMinuteCap, after.perMinuteCap]));
+  lines.push(...orderLines(before.providerOrder, after.providerOrder));
   if (before.blockedCallingCodes.join(",") !== after.blockedCallingCodes.join(",")) lines.push(tr("Blocked calling codes: {0} → {1}", [before.blockedCallingCodes.join(", ") || "—", after.blockedCallingCodes.join(", ") || "—"]));
   return lines;
 }

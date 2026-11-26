@@ -9662,4 +9662,8 @@
 ["Address saved.","Address saved."],
 ["Save address","Save address"],
 ["Fill in street, postal code and city.","Fill in street, postal code and city."],
-["Change driver address","Change driver address"]]
+["Change driver address","Change driver address"],
+["SMS company order","SMS company order"],
+["{0} only","{0} only"],
+["{0}, then {1} (backup)","{0}, then {1} (backup)"],
+["SMS company order: {0} → {1}","SMS company order: {0} → {1}"]]

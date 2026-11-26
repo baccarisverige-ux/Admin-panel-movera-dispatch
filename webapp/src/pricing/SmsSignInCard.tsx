@@ -3,6 +3,7 @@ import { SMS_DAILY_CAP, type SmsSignIn } from "../config/smsSignIn";
 import { tr, trn } from "../i18n";
 import { SettingInfo } from "../ui/SettingInfo";
 import { NumberField } from "./NumberField";
+import { SmsProviderOrderField } from "./SmsProviderOrderField";
 
 type Props = { value: SmsSignIn; saved: SmsSignIn; canEdit: boolean; onStandard: boolean; onChange: (value: SmsSignIn) => void };
 
@@ -29,6 +30,7 @@ export function SmsSignInCard({ value, saved, canEdit, onStandard, onChange }: P
       <div data-testid="sms-sign-in-cap">
         <NumberField info="tips.smsSignIn.dailyCap" label={tr("Sign-in SMS per day, at most")} value={value.dailyCap} step={1} min={SMS_DAILY_CAP.min} max={SMS_DAILY_CAP.max} disabled={!editable} changed={value.dailyCap !== saved.dailyCap} onChange={(dailyCap) => onChange({ ...value, dailyCap: Math.round(dailyCap) })} />
       </div>
+      <SmsProviderOrderField info="tips.smsSignIn.providerOrder" testId="sms-sign-in-order" value={value.providerOrder} saved={saved.providerOrder} disabled={!editable} onChange={(providerOrder) => onChange({ ...value, providerOrder })} />
     </div>
   );
 }

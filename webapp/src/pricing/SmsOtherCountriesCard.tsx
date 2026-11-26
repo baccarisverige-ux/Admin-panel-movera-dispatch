@@ -3,6 +3,7 @@ import { SMS_DAILY_CAP, SMS_PER_CODE_CAP, SMS_PER_MINUTE_CAP, parseCallingCodes,
 import { tr, trn } from "../i18n";
 import { SettingInfo } from "../ui/SettingInfo";
 import { NumberField } from "./NumberField";
+import { SmsProviderOrderField } from "./SmsProviderOrderField";
 
 type Props = { value: SmsOther; saved: SmsOther; canEdit: boolean; onChange: (value: SmsOther) => void };
 
@@ -34,6 +35,7 @@ export function SmsOtherCountriesCard({ value, saved, canEdit, onChange }: Props
       <label className="check-row" data-testid="sms-other-blocked">{tr("Blocked calling codes (for example +882)")}<SettingInfo id="tips.smsOther.blockedCallingCodes" />{" "}
         <input type="text" aria-label={tr("Blocked calling codes (for example +882)")} defaultValue={value.blockedCallingCodes.join(", ")} disabled={!canEdit} onBlur={(event) => onChange({ ...value, blockedCallingCodes: parseCallingCodes(event.target.value) })} />
       </label>
+      <SmsProviderOrderField info="tips.smsOther.providerOrder" testId="sms-other-order" value={value.providerOrder} saved={saved.providerOrder} disabled={!canEdit} onChange={(providerOrder) => onChange({ ...value, providerOrder })} />
     </div>
   );
 }
