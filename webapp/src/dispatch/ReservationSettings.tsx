@@ -75,6 +75,9 @@ export function ReservationSettings({ zone, onChange, disabled, symbol, money, c
           <Row info="dispatch.res.openBookedRidesPerRider" label={tr("Open booked rides per rider")} help={tr("Example: at 3, a rider with 3 booked rides that have not ended must cancel one before booking another. Live rides do not count.")}>
             <Num label={tr("Open booked rides per rider, at most")} before="at most" value={bw.maxOpenPerRider} unit="rides" min={1} max={50} disabled={off} onChange={(maxOpenPerRider) => setBooking({ maxOpenPerRider })} />
           </Row>
+          <Row info="dispatch.res.preferredAreasMax" label={tr("Favourite areas per driver")} help={tr("Drivers pick favourite areas in Booked rides; rides there are listed first. It never changes who sees a ride.")}>
+            <Num label={tr("Favourite areas per driver, at most")} before="at most" value={bw.preferredAreasMax} unit="areas" min={1} max={30} disabled={off} onChange={(preferredAreasMax) => setBooking({ preferredAreasMax })} />
+          </Row>
           <p className="dx-note">{tr("Card payments are taken in full when the ride is booked (card payments are still coming soon).")}</p>
         </div>
       </Card>

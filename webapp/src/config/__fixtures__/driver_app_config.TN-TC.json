@@ -914,6 +914,7 @@
     "takeBackUntilMinBeforePickup": 15,
     "noDriverStopAfterMin": 15,
     "maxOpenPerRider": 3,
+    "preferredAreasMax": 10,
     "raiseFare": true,
     "raiseMax": null
   },

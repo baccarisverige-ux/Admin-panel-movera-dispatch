@@ -461,4 +461,17 @@ export const MORE_INFO_2: Readonly<Record<string, SettingInfoText>> = {
     "No area until drawn.", "A shape around the airport terminals.",
     "3 points: a triangle; 500 points: a detailed shape, all inside the zone.",
   ),
+  // v0.18.172 (contract.json#preferredAreas.admin): Zone › Favourite areas.
+  "zones.areas.list": t("The areas of this zone that drivers can pick as favourite areas in the driver app (Booked rides, house icon).", "Zones › a zone › Outline, live server; drivers see them in the driver app; changes need the right to edit zones.", "Kommuner and districts (Sweden), communes, arrondissements, Paris and départements (France).",
+    "Every area of the official sources is on.", "A driver who picks Södermalm sees booked rides with a pickup there first.",
+    "No area chosen: the driver sees the whole zone by time; areas never change who may see a ride.",
+  ),
+  "zones.areas.active": t("Off: drivers cannot find or pick this area, and it stops counting for the order of their booked rides.", "Zones › a zone › Favourite areas, at once (no Publish); drivers see it in the driver app.", "On or off.",
+    "On.", "Off for an area nobody drives in.",
+    "Off: hidden in the driver app; a driver's saved pick is kept but has no effect.",
+  ),
+  "zones.areas.name": t("The name drivers see for this area. Empty = the official name.", "Zones › a zone › Favourite areas, at once (no Publish); drivers see it in the driver app.", "Up to 120 characters.",
+    "The official name.", "Söder instead of Södermalm.",
+    "Empty: back to the official name.",
+  ),
 };

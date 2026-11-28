@@ -71,7 +71,7 @@ export const SCREEN_ONLY_COMMANDS: ReadonlySet<string> = new Set([
   "admin.trip.view",
   "admin.vehicle.view",
   "admin.waitlist.view",
-  "admin.zone.basemap", "admin.zone.cancel", "admin.zone.changes", "admin.zone.export", "admin.zone.filter", "admin.zone.gaps", "admin.zone.import", "admin.zone.importKml", "admin.zone.layer", "admin.zone.pick", "admin.zone.priority", "admin.zone.redo", "admin.zone.removeLine", "admin.zone.search", "admin.zone.snap", "admin.zone.tab", "admin.zone.tool", "admin.zone.undo", "admin.zone.wizard",
+  "admin.zone.areas.more", "admin.zone.basemap", "admin.zone.cancel", "admin.zone.changes", "admin.zone.export", "admin.zone.filter", "admin.zone.gaps", "admin.zone.import", "admin.zone.importKml", "admin.zone.layer", "admin.zone.pick", "admin.zone.priority", "admin.zone.redo", "admin.zone.removeLine", "admin.zone.search", "admin.zone.snap", "admin.zone.tab", "admin.zone.tool", "admin.zone.undo", "admin.zone.wizard",
 ]);
 
 export type LiveClass = "server" | "screen" | "hidden";

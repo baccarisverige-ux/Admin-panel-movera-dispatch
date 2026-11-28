@@ -58,6 +58,7 @@ import { liveIssues } from "../zones/liveIssues";
 import { LiveOpenClose, LiveZoneFields } from "./LiveZoneActions";
 import { LiveQueueArea } from "../live/LiveQueueArea";
 import { DateInput } from "../ui/DateInput";
+import ZoneAreasPanel from "../zones/ZoneAreasPanel";
 
 type TabId = "shape" | "settings" | "prices" | "dispatch" | "pickups" | "airport" | "hours" | "between" | "preview" | "history";
 
@@ -329,6 +330,8 @@ export function ZoneDetailPage() {
               </div>
             </div>
             )}
+            {/* v0.18.172 (contract.json#preferredAreas.admin, c70): the areas drivers may prefer (live server). */}
+            {liveSession ? <ZoneAreasPanel zoneId={zone.id} canEdit={canEdit} /> : null}
           </div>
         ) : null}
 

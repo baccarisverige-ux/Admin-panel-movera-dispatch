@@ -25,7 +25,7 @@ const SV = sv as Record<string, string>;
 const cap = (doc: Record<string, unknown>) => (doc["reservations"] as Record<string, unknown>)["maxOpenPerRider"];
 
 test("the admin pins the contract it carries (0.18.88; B1.34 landed in 0.18.81)", () => {
-  assert.equal(C.version, "0.18.171");
+  assert.equal(C.version, "0.18.172");
   assert.equal(CONTRACT_VERSION, C.version);
 });
 
