@@ -99,7 +99,9 @@ export const RIDER_SWITCHES: FeatureSwitch[] = [
   { id: "applePay", app: "rider", label: "Apple Pay", on: true },
   { id: "scheduled", app: "rider", label: "Scheduled rides", on: true },
   { id: "wallet", app: "rider", label: "Wallet", on: true },
-  { id: "pin", app: "rider", label: "PIN", on: true },
+  // v0.18.175 (contract.json#pinPerZone.admin): kept (Rule 21), read-only; it decides nothing. The rider app follows each
+  // zone's "Rider PIN before Start" (Dispatch › Zone › Safety).
+  { id: "pin", app: "rider", label: "PIN (old — set per zone in Dispatch › Safety)", on: true },
   { id: "shareTrip", app: "rider", label: "Share trip", on: true },
   { id: "bookLater", app: "rider", label: "Book later", on: true },
 ];

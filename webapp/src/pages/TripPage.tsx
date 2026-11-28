@@ -500,6 +500,8 @@ export function TripPage() {
               <dl className="op-split-lines">
                 <div><dt>{tr("Code")}</dt><dd data-testid="trip-pin-code">{facts.pin.code ?? "—"}</dd></div>
                 <div><dt>{tr("Entered by the driver")}</dt><dd>{facts.pin.verified ? tr("Yes") : tr("Not yet")}</dd></div>
+                {/* v0.18.175 (contract.json#pinPerZone.pinSource): why this trip needs a PIN. */}
+                <div><dt>{tr("Why")}</dt><dd data-testid="trip-pin-source">{facts.pin.source === "rider" ? tr("Rider's choice") : facts.pin.source === "both" ? tr("Both") : tr("Zone")}</dd></div>
                 {facts.pin.attempts !== null ? <div><dt>{tr("Wrong tries")}</dt><dd>{facts.pin.attempts}</dd></div> : null}
                 {facts.pin.blocked ? <div><dt>{tr("State")}</dt><dd data-testid="trip-pin-blocked">{tr("Blocked after too many wrong codes")}</dd></div> : null}
               </dl>

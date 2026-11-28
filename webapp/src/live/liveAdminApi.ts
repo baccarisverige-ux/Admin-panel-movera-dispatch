@@ -277,7 +277,7 @@ export function tripFacts(trip: Trip): LiveTripFacts {
     rideCheck: trip.rideCheck ? { checkId: trip.rideCheck.checkId, trigger: trip.rideCheck.trigger, askedAt: trip.rideCheck.askedAt, answerBy: trip.rideCheck.answerBy, answers: { ...trip.rideCheck.answers }, alertedAt: trip.rideCheck.alertedAt ?? null } : null,
     routeChange: trip.routeChange ? { status: trip.routeChange.status, dropoff: trip.routeChange.dropoff, stops: trip.routeChange.stops ?? [], totalMinor: trip.routeChange.total.amountMinor, differenceMinor: trip.routeChange.difference.amountMinor, askedAt: trip.routeChange.askedAt, answerBy: trip.routeChange.answerBy, answeredBy: trip.routeChange.answeredBy ?? null, driverEarningsMinor: minorOf(trip.routeChange.driverEarnings), earningsDifferenceMinor: minorOf(trip.routeChange.earningsDifference), driverTotalMinor: minorOf(trip.routeChange.driverTotal), pickup: trip.routeChange.pickup ?? null, reason: trip.routeChange.reason ?? null } : null,
     adminFlag: trip.adminFlag ? { flagged: trip.adminFlag.flagged, reason: trip.adminFlag.reason ?? null, by: trip.adminFlag.by ?? null, at: trip.adminFlag.at ?? null } : null,
-    pin: trip.pinRequired ? { code: typeof trip.pickupPin === "string" ? trip.pickupPin : null, verified: Boolean(trip.pinVerified), attempts: typeof trip.pinAttempts === "number" ? trip.pinAttempts : null, blocked: trip.pinBlocked === true } : null,
+    pin: trip.pinRequired ? { code: typeof trip.pickupPin === "string" ? trip.pickupPin : null, verified: Boolean(trip.pinVerified), attempts: typeof trip.pinAttempts === "number" ? trip.pinAttempts : null, blocked: trip.pinBlocked === true, source: trip.pinSource === "rider" || trip.pinSource === "both" ? trip.pinSource : "zone" } : null,
     cancellation: trip.cancellation ? { actor: trip.cancellation.actor, reasonCode: trip.cancellation.reasonCode, at: trip.cancellation.at, feeMinor: minorOf(trip.cancellation.fee), feeStatus: trip.cancellation.feeStatus ?? null, feeKind: trip.cancellation.feeKind ?? null, driverShareMinor: minorOf(trip.cancellation.driverShare), note: trip.cancellation.note ?? null,
       reversal: trip.cancellation.reversal ? { at: trip.cancellation.reversal.at, by: trip.cancellation.reversal.by ?? null, reason: trip.cancellation.reversal.reason ?? null, driverShareTakenBack: Boolean(trip.cancellation.reversal.driverShareTakenBack) } : null,
       refundedToWallet: trip.cancellation.refundedToWallet === true || Boolean(trip.cancellation.refundedAt) } : null,
@@ -328,6 +328,8 @@ export function riderRecord(rider: Rider): DemoRecord {
       currency: rider.wallet?.currency ?? rider.outstanding?.currency ?? null,
       deletionRequestedAt: rider.deletionRequestedAt ?? null,
       moderation: rider.moderation ?? null,
+      // v0.18.175 (contract.json#pinPerZone.riderChoice): read-only here; the rider sets it in his app.
+      pinAlways: typeof rider.safety?.pinAlways === "boolean" ? rider.safety.pinAlways : null,
       // v0.18.7 (G5 Q3): every owed currency; an older server sends only outstanding (one currency).
       // v0.18.28 (owner Q4): every wallet balance in its own currency; an older server sends only wallet (one currency).
       walletByCurrency: Array.isArray(rider.wallets) ? rider.wallets.filter((money) => Number.isFinite(money?.amountMinor) && money.amountMinor !== 0).map((money) => ({ amountMinor: money.amountMinor, currency: money.currency })) : rider.wallet && rider.wallet.amountMinor !== 0 ? [{ amountMinor: rider.wallet.amountMinor, currency: rider.wallet.currency }] : [],

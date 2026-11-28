@@ -1,0 +1,15 @@
+{
+  "contract": "contract.json#priceChangeAsk",
+  "since": "0.18.174",
+  "note": "Booking with agreedQuoteId: agreed and fresh totals in minor units (EUR cents), what the server answers. Owner 2026-11-28: any rise asks, a drop books silently.",
+  "cases": [
+    { "name": "drop 79,30 to 79,20 books silently at the fresh price", "agreed": 7930, "fresh": 7920, "priceAccepted": null, "result": "booked", "fareMinor": 7920 },
+    { "name": "same price books", "agreed": 7930, "fresh": 7930, "priceAccepted": null, "result": "booked", "fareMinor": 7930 },
+    { "name": "rise of 1 cent asks", "agreed": 7930, "fresh": 7931, "priceAccepted": null, "result": "price_changed_ask", "fareMinor": null },
+    { "name": "rise of 1 cent accepted", "agreed": 7930, "fresh": 7931, "priceAccepted": true, "result": "booked", "fareMinor": 7931 },
+    { "name": "rise 79,30 to 81,50 asks", "agreed": 7930, "fresh": 8150, "priceAccepted": false, "result": "price_changed_ask", "fareMinor": null },
+    { "name": "rise 79,30 to 81,50 accepted", "agreed": 7930, "fresh": 8150, "priceAccepted": true, "result": "booked", "fareMinor": 8150 },
+    { "name": "agreed quote missing asks", "agreed": null, "fresh": 7920, "priceAccepted": null, "result": "price_changed_ask", "fareMinor": null },
+    { "name": "agreed quote missing, accepted", "agreed": null, "fresh": 7920, "priceAccepted": true, "result": "booked", "fareMinor": 7920 }
+  ]
+}

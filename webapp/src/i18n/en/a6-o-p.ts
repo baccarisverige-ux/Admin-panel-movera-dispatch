@@ -476,4 +476,6 @@ export const enA6OP = {
   "Put fleet owner on hold": "Put fleet owner on hold",
   "Put rider on hold": "Put rider on hold",
   "Put vehicle on hold": "Put vehicle on hold",
+  "PIN (old — set per zone in Dispatch › Safety)": "PIN (old — set per zone in Dispatch › Safety)",
+  "PIN on all rides: {0}": "PIN on all rides: {0}",
 } as const;

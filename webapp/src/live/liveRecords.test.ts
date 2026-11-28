@@ -36,7 +36,7 @@ test("v0.18.8 (G6): paid waiting minutes, the applied rule, the PIN (admin view)
     cancellation: { actor: "driver", reasonCode: "no_show", at: "2026-10-25T08:31:00Z", fee: SEK(6500), feeStatus: "refunded", feeKind: "no_show", reversal: { at: "2026-10-25T09:00:00Z", by: "A1", reason: "Rider was at the other door", driverShareTakenBack: false } } });
   const facts = (base as { liveTrip: ReturnType<typeof tripFacts> }).liveTrip;
   assert.deepEqual([facts.waiting?.paidMinutes, facts.waiting?.rules, facts.waiting?.freeWaitMin, facts.waiting?.noShowAfterMin], [3, ["airport"], 15, 20]);
-  assert.deepEqual(facts.pin, { code: "0427", verified: false, attempts: 2, blocked: false });
+  assert.deepEqual(facts.pin, { code: "0427", verified: false, attempts: 2, blocked: false, source: "zone" }); // v0.18.175: an older server sends no pinSource = zone
   assert.deepEqual(facts.cancellation?.reversal, { at: "2026-10-25T09:00:00Z", by: "A1", reason: "Rider was at the other door", driverShareTakenBack: false });
   assert.equal((base as { waitingMin?: number }).waitingMin, 3, "Trips list minutes from waiting.paidMinutes");
 });
@@ -104,7 +104,7 @@ test("a live driver carries online status, rating and position from /admin/live/
 
 test("riders, payments, refunds to pay by hand, audit and approvals map from the server", () => {
   const rider = riderRecord({ riderId: "rdr_2", firstName: "Bo", phone: "+46700000002", rating: 4.5, status: "active", version: 3, outstanding: SEK(2500), wallet: SEK(1000) });
-  assert.deepEqual(rider.liveRider, { rating: 4.5, walletMinor: 1000, outstandingMinor: 2500, currency: "SEK", deletionRequestedAt: null, moderation: null, outstandingByCurrency: [{ amountMinor: 2500, currency: "SEK" }], walletByCurrency: [{ amountMinor: 1000, currency: "SEK" }] });
+  assert.deepEqual(rider.liveRider, { rating: 4.5, walletMinor: 1000, outstandingMinor: 2500, currency: "SEK", deletionRequestedAt: null, moderation: null, outstandingByCurrency: [{ amountMinor: 2500, currency: "SEK" }], walletByCurrency: [{ amountMinor: 1000, currency: "SEK" }], pinAlways: null }); // v0.18.175: no Rider.safety from this server = null
   const payment = paymentRecord({ paymentId: "pay_trp_1", tripId: "trp_1", amount: SEK(40000), method: "cash", purpose: "trip", status: "captured", createdAt: "2026-10-25T08:30:00Z" }, "Z001");
   assert.deepEqual([payment.name, payment.tripId, payment.fareOre, payment.zoneId], ["cash", "trp_1", 40000, "Z001"]);
   const refund = refundPayoutRecord({ refundId: "rfd_1", tripId: "trp_1", amount: SEK(3000), riderId: "rdr_2", riderName: "Bo", riderPhone: "+46700000002", payoutTo: { kind: "swish" }, reason: "Late" });

@@ -1,11 +1,11 @@
-# Movera API v0.18.172 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.175 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.172
+  version: 0.18.175
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.172 in this folder; this file must agree with them.
+    v0.18.175 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.172
+  version: 0.18.175
   source: contract.json
 paths:
   /auth/otp/request:
@@ -23429,7 +23429,11 @@ components:
           $ref: '#/components/schemas/Cancellation'
         pinRequired:
           type: boolean
-          description: Driver must verify the rider PIN before `board`.
+          description: 'Driver must verify the rider PIN before `board`. v0.18.175 (contract.json#pinPerZone): At POST /trips
+            the trip stores pinRequired = zone pickupPin.required OR rider.safety.pinAlways, read at booking time in the booking
+            transaction; a later change of either never changes a booked trip. maxAttempts / lockMinutes are the zone''s (defaults
+            5 / 5 min when the zone switch is off). Everything after booking (the code, GET /trips/{tripId}/pin, 409 pin_required
+            on board / start, the admin unlock, a new PIN on a driver change) is unchanged: it keys on Trip.pinRequired.'
         searchStep:
           allOf:
           - $ref: '#/components/schemas/SearchStep'
@@ -23776,6 +23780,15 @@ components:
               minLength: 1
               description: Google encoded polyline (precision 5).
           additionalProperties: false
+        pinSource:
+          type: string
+          enum:
+          - zone
+          - rider
+          - both
+          description: 'v0.18.175 (contract.json#pinPerZone): TripProjection.pinSource: ''zone'' | ''rider'' | ''both'', only
+            when pinRequired (rider and admin views; taken out of the driver''s view and stream). Kept in booking_rules.pin.source;
+            a trip booked before v0.18.175 with pinRequired reads ''zone''.'
     DriverSilentAlert:
       type: object
       description: 'v0.7.0: documents the server''s alert of 2026-10-26: no position for 30 min with the rider on board; the
@@ -24181,6 +24194,8 @@ components:
             Money }] the owed fees she can pay in the app now (the fee''s trip zone country has riderFeeStripe on, currency
             SEK or EUR, amount = min(fee, debt) above 0), oldest first; absent when none. The publishable key comes only with
             a payment (StripeFeePayment.publishableKey).'
+        safety:
+          $ref: '#/components/schemas/RiderSafety'
     DocumentStatus:
       type: string
       enum:
@@ -29597,6 +29612,12 @@ components:
               type: boolean
             pin:
               type: boolean
+              description: 'v0.18.175 (contract.json#pinPerZone): GET /rider/config always serves features.pin = the zone''s
+                live DriverAppConfig.pickupPin.required (its own driver document, else its country Standard''s, else configDefaults.pickupPin.required
+                = false); with ?draft=1 for a preview admin the driver DRAFT when there is one. The same function as POST
+                /trips uses, so features.pin and a new trip''s zone PIN never differ. The rider document''s own features.pin
+                is ignored on read (kept as stored, Rule 21). A driver_app_config publish does not wake the rider config stream:
+                the rider app learns a new value at its next config read (a booked trip keeps its own pinRequired).'
             shareTrip:
               type: boolean
               description: 'v0.18.116 (contract.json#shareTrip): the same value as shareTrip.on (served by the server).'
@@ -32791,7 +32812,10 @@ components:
             v0.18.93 reasons: driver_away_from_pickup (409, the driver''s no-show while the waiting clock is stopped), invalid_auto_arrive_distance
             (400, contract.json#autoArrive.settings.validation). v0.18.108 reason: not_at_stop (409 invalid_transition, the
             driver''s stop tap or back tap farther than allowed from the stop; contract.json#autoArrive.stops.tap / back).
-            v0.18.109 reason: fleet_other_country (409 conflict, the driver''s country is not the fleet''s; contract.json#driverOnboarding.fleetInvitations.oneCountry).'
+            v0.18.109 reason: fleet_other_country (409 conflict, the driver''s country is not the fleet''s; contract.json#driverOnboarding.fleetInvitations.oneCountry).
+            v0.18.174 (contract.json#priceChangeAsk): price_changed_ask (409 conflict, POST /trips and POST /trips/{tripId}/reschedule
+            with agreedQuoteId): 409 conflict: the fresh price is higher than the agreed one and the rider has not accepted
+            it; ask with the fresh quote''s price, then send again with priceAccepted true.'
         details:
           type: array
           items:
@@ -33467,7 +33491,13 @@ components:
     CreateTripRequest:
       type: object
       description: 'Request a quoted trip. No expectedVersion: the trip does not exist yet; Idempotency-Key dedupes. v0.6.0:
-        babySeats, childSeats, airportPickup, airportDropoff and fixedRouteId repeat the quote''s (else 400 quote_mismatch).'
+        babySeats, childSeats, airportPickup, airportDropoff and fixedRouteId repeat the quote''s (else 400 quote_mismatch).
+        v0.18.174 (contract.json#priceChangeAsk): CreateTripRequest and RescheduleCommand take optional agreedQuoteId (the
+        quote whose price the rider last saw) and optional priceAccepted (boolean, the rider said yes to the fresh price;
+        only meaningful with agreedQuoteId). No money field is added: a body with any other field (total, price, fareMinor
+        ...) is still 400 invalid_request invalid_body. The price booked is always the fresh quote row (quoteId), never a
+        client amount. CreateTripRequest and RescheduleCommand carrying any of these fields is 400 invalid_request invalid_body
+        (the schema forbids them), so a forged price is never read.'
       required:
       - quoteId
       - categoryId
@@ -33540,6 +33570,41 @@ components:
           - $ref: '#/components/schemas/Id'
           description: 'v0.6.0: one of the zone''s fixed routes; for a route of the quoted category the fixed_route line replaces
             the ride part, otherwise the category is priced normally.'
+        agreedQuoteId:
+          allOf:
+          - $ref: '#/components/schemas/Id'
+          description: 'v0.18.174 (contract.json#priceChangeAsk): the quote whose price the rider last saw. The agreed quote
+            is read by id WITHOUT the expiry or used checks (it has normally expired by booking time, which is why the app
+            priced again); only the fresh quote must be valid. An agreed quote of another rider, or of another category /
+            kind, is 400 invalid_request quote_mismatch. A MISSING agreed quote (deleted by quote cleanup, unknown id) counts
+            as a rise: 409 price_changed_ask unless priceAccepted is true; never a silent booking on a price that cannot be
+            compared. A request WITHOUT agreedQuoteId is booked exactly as before (fresh quote, no rise check) and never gets
+            price_changed_ask. quote_mismatch keeps its meaning (route / extras do not match the quote).'
+        priceAccepted:
+          type: boolean
+          description: 'v0.18.174 (contract.json#priceChangeAsk): the rider accepted the fresh (higher) price; a yes/no only,
+            never an amount. Only meaningful with agreedQuoteId. With agreedQuoteId the server compares total_minor of the
+            fresh quote (quoteId) with the agreed quote on minor units: fresh < agreed or equal → booked at the fresh total;
+            fresh > agreed and priceAccepted is not true → 409 conflict reason price_changed_ask, nothing booked, the fresh
+            quote stays unused; fresh > agreed with priceAccepted true → booked at the fresh total.'
+      not:
+        anyOf:
+        - required:
+          - total
+        - required:
+          - totalMinor
+        - required:
+          - amount
+        - required:
+          - amountMinor
+        - required:
+          - price
+        - required:
+          - priceMinor
+        - required:
+          - fare
+        - required:
+          - fareMinor
     UpdateTripRequest:
       type: object
       description: 'Route change (needs routeQuoteId from /route-quote) and/or payment method change. v0.18.9: 2. Rider confirms:
@@ -33827,6 +33892,8 @@ components:
               type: boolean
             promotions:
               type: boolean
+        safety:
+          $ref: '#/components/schemas/RiderSafetyUpdate'
       description: 'v0.18.76 (G30): no email here. PATCH /rider/profile no longer takes email: a body with email → 400 invalid_request,
         reason email_needs_code; nothing saved, version unchanged. Change it with POST /account/email/change + verify.'
     DriverProfileUpdate:
@@ -40158,7 +40225,12 @@ components:
         POST /driver/reservations/{tripId}/keep { keep }); Yes keeps it (rider told reservation_driver_found), No or no answer
         within changeAnswerMin (default 15) puts it back on the list (transition release, push reservation_changed) and the
         ride is planned again (bookLater.plan). Later → 409 conflict, reason change_too_late. Not a scheduled trip, or not
-        before pickup → 409 not_a_reservation.'
+        before pickup → 409 not_a_reservation. v0.18.174 (contract.json#priceChangeAsk): CreateTripRequest and RescheduleCommand
+        take optional agreedQuoteId (the quote whose price the rider last saw) and optional priceAccepted (boolean, the rider
+        said yes to the fresh price; only meaningful with agreedQuoteId). No money field is added: a body with any other field
+        (total, price, fareMinor ...) is still 400 invalid_request invalid_body. The price booked is always the fresh quote
+        row (quoteId), never a client amount. CreateTripRequest and RescheduleCommand carrying any of these fields is 400
+        invalid_request invalid_body (the schema forbids them), so a forged price is never read.'
       required:
       - quoteId
       - expectedVersion
@@ -40168,6 +40240,41 @@ components:
         expectedVersion:
           type: integer
           minimum: 1
+        agreedQuoteId:
+          allOf:
+          - $ref: '#/components/schemas/Id'
+          description: 'v0.18.174 (contract.json#priceChangeAsk): the quote whose price the rider last saw. The agreed quote
+            is read by id WITHOUT the expiry or used checks (it has normally expired by booking time, which is why the app
+            priced again); only the fresh quote must be valid. An agreed quote of another rider, or of another category /
+            kind, is 400 invalid_request quote_mismatch. A MISSING agreed quote (deleted by quote cleanup, unknown id) counts
+            as a rise: 409 price_changed_ask unless priceAccepted is true; never a silent booking on a price that cannot be
+            compared. A request WITHOUT agreedQuoteId is booked exactly as before (fresh quote, no rise check) and never gets
+            price_changed_ask. quote_mismatch keeps its meaning (route / extras do not match the quote).'
+        priceAccepted:
+          type: boolean
+          description: 'v0.18.174 (contract.json#priceChangeAsk): the rider accepted the fresh (higher) price; a yes/no only,
+            never an amount. Only meaningful with agreedQuoteId. With agreedQuoteId the server compares total_minor of the
+            fresh quote (quoteId) with the agreed quote on minor units: fresh < agreed or equal → booked at the fresh total;
+            fresh > agreed and priceAccepted is not true → 409 conflict reason price_changed_ask, nothing booked, the fresh
+            quote stays unused; fresh > agreed with priceAccepted true → booked at the fresh total.'
+      not:
+        anyOf:
+        - required:
+          - total
+        - required:
+          - totalMinor
+        - required:
+          - amount
+        - required:
+          - amountMinor
+        - required:
+          - price
+        - required:
+          - priceMinor
+        - required:
+          - fare
+        - required:
+          - fareMinor
     AdminReservationCommand:
       type: object
       description: 'v0.18.17: reason is required for unassign.'
@@ -44438,4 +44545,30 @@ components:
             minLength: 1
             maxLength: 120
           - type: 'null'
+      additionalProperties: false
+    RiderSafety:
+      type: object
+      description: 'v0.18.175 (contract.json#pinPerZone): RiderProfile (Rider) gains safety { pinAlways: boolean } (always
+        sent on GET / PATCH /rider/profile and the admin rider view; default false; not masked). PATCH /rider/profile accepts
+        safety { pinAlways } with expectedVersion as today (version + 1); a non-boolean is 400 invalid_body. The change is
+        audited (admin_audit rider.safety_changed, adminId null, detail { pinAlways: { from, to } }).'
+      required:
+      - pinAlways
+      properties:
+        pinAlways:
+          type: boolean
+          description: 'v0.18.175 (contract.json#pinPerZone): the rider asks for a PIN on all his own rides (default false).'
+      additionalProperties: false
+    RiderSafetyUpdate:
+      type: object
+      description: 'v0.18.175 (contract.json#pinPerZone): RiderProfile (Rider) gains safety { pinAlways: boolean } (always
+        sent on GET / PATCH /rider/profile and the admin rider view; default false; not masked). PATCH /rider/profile accepts
+        safety { pinAlways } with expectedVersion as today (version + 1); a non-boolean is 400 invalid_body. The change is
+        audited (admin_audit rider.safety_changed, adminId null, detail { pinAlways: { from, to } }).'
+      required:
+      - pinAlways
+      properties:
+        pinAlways:
+          type: boolean
+          description: 'v0.18.175 (contract.json#pinPerZone): turn the PIN on all my rides on or off.'
       additionalProperties: false
