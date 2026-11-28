@@ -327,9 +327,7 @@ export function riderRecord(rider: Rider): DemoRecord {
       outstandingMinor: rider.outstanding ? rider.outstanding.amountMinor : null,
       currency: rider.wallet?.currency ?? rider.outstanding?.currency ?? null,
       deletionRequestedAt: rider.deletionRequestedAt ?? null,
-      moderation: rider.moderation ?? null,
-      // v0.18.175 (contract.json#pinPerZone.riderChoice): read-only here; the rider sets it in his app.
-      pinAlways: typeof rider.safety?.pinAlways === "boolean" ? rider.safety.pinAlways : null,
+      moderation: rider.moderation ?? null, pinAlways: typeof rider.safety?.pinAlways === "boolean" ? rider.safety.pinAlways : null, // v0.18.175 pinPerZone.riderChoice (read-only)
       // v0.18.7 (G5 Q3): every owed currency; an older server sends only outstanding (one currency).
       // v0.18.28 (owner Q4): every wallet balance in its own currency; an older server sends only wallet (one currency).
       walletByCurrency: Array.isArray(rider.wallets) ? rider.wallets.filter((money) => Number.isFinite(money?.amountMinor) && money.amountMinor !== 0).map((money) => ({ amountMinor: money.amountMinor, currency: money.currency })) : rider.wallet && rider.wallet.amountMinor !== 0 ? [{ amountMinor: rider.wallet.amountMinor, currency: rider.wallet.currency }] : [],
