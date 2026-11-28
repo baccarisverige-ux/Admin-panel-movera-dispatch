@@ -430,7 +430,11 @@ export type ZoneDispatch = {
    * v0.18.163 (contract.json#liveTraffic.setting, owner 2026-11-25 "Google trafic réel"): trip times with live traffic
    * (Google) for prices, offers and booked rides. Undefined = not set: the country default (on SE, FR; rules/liveTraffic.ts).
    */
-  liveTraffic?: { on: boolean; offRouteMeters: number; offRouteSeconds: number; behindMinutes: number };
+  liveTraffic?: {
+    on: boolean; offRouteMeters: number; offRouteSeconds: number; behindMinutes: number;
+    /** v0.18.171 (contract.json#googleRoadLines.setting): Google road lines on/off and at most 1..4 calls per trip, the quote included. Undefined = not set. */
+    roadLines?: { on: boolean; maxCallsPerTrip: number };
+  };
   /** v0.18.39 §63 (boss 1 for the owner): a driver who let this many offers of a trip pass is not asked again in that search (1–5, default 2). */
   reaskLimit: number;
   /** v0.18.9: drivers of these zones also get offers from search step afterStep (0 = the last step). */

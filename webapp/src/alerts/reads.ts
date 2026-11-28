@@ -153,3 +153,13 @@ export const LIVE_KIND_SOURCE: Record<KindId, "server" | { gap: string }> = {
   rule: "server",
   rider_fraud: { gap: "The server has no fraud signal yet (detector.ts riderCauses); the panel showed none on live either." },
 };
+
+/**
+ * The server's system_health alerts by id prefix (server src/alerts/detector.ts), each raised per country (<CC>).
+ * v0.18.163 live_traffic (quotes without Google); v0.18.171 google_routes_budget (contract.json#googleRoadLines.budgetAlert:
+ * warning at the road-line share, critical at the daily limit; one global budget, raised in every country's book).
+ */
+export const SYSTEM_HEALTH_SERVER_ALERTS = [
+  { prefix: "system_health:live_traffic:", since: "0.18.163" },
+  { prefix: "system_health:google_routes_budget:", since: "0.18.171" },
+] as const;

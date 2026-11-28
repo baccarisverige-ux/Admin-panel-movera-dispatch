@@ -139,7 +139,7 @@ const ENTRIES: Entry[] = [
   {
     schema: "DispatchDocument",
     built: dispatchDocumentOf(liveRules(emptyDispatchBook(), ZONE), ZONE, null),
-    ownedWhenSet: ["limits.maxPickupKm", "neighbours.afterStep", "liveTraffic", "liveTraffic.offRouteMeters", "liveTraffic.offRouteSeconds", "liveTraffic.behindMinutes"],
+    ownedWhenSet: ["limits.maxPickupKm", "neighbours.afterStep", "liveTraffic", "liveTraffic.offRouteMeters", "liveTraffic.offRouteSeconds", "liveTraffic.behindMinutes", "liveTraffic.roadLines"],
     kept: ["radar.steps", "radar.reaskAfterSeconds", "exclusive.steps", "exclusive.reaskAfterSeconds"],
     save: merge,
   },

@@ -45,6 +45,8 @@ import { CountryAppsPanel } from "../config/CountryAppsPanel";
 const RequestLimitsPanel = lazy(() => import("../config/RequestLimitsPanel"));
 // v0.18.154 P16c (contract.json#appUpdate): Minimum app version, lazy too.
 const AppUpdatePanel = lazy(() => import("../config/AppUpdatePanel"));
+// v0.18.171 (contract.json#googleRoadLines.budgetSetting): the one global Google Routes budget.
+const GoogleBudgetPanel = lazy(() => import("../config/GoogleBudgetPanel"));
 import { can } from "../auth/permissions";
 import { tr, trn, trx, trSentences } from "../i18n";
 import { LanguageQuickSwitch } from "../i18n/LanguageQuickSwitch";
@@ -219,6 +221,10 @@ function ConfigAll({ onDirty }: { onDirty?: (dirty: boolean) => void }) {
 
       <Suspense fallback={null}>
         <AppUpdatePanel editable={Boolean(agent && can(agent.role, "settings.publish"))} />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <GoogleBudgetPanel editable={Boolean(agent && can(agent.role, "settings.publish"))} />
       </Suspense>
 
       <article className="panel" data-testid="config-impact">

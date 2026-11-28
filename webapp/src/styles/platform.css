@@ -152,3 +152,8 @@
 .errors-crumbs { margin: 0; padding-left: 18px; font-size: 12px; display: grid; gap: 2px; overflow-wrap: anywhere; }
 .errors-crumb-type { font-weight: 700; }
 .errors-stack { margin: 0; max-height: 280px; overflow: auto; font-size: 11px; background: #f6f7f8; padding: 8px; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* v0.18.171 Settings › Google budget: Movera colours only (#12201C, #2FBF5B), no blue. */
+#google-budget .dash-btn.publish { background: #2FBF5B; color: #12201C; border-color: #2FBF5B; box-shadow: none; }
+#google-budget .dash-btn.publish:disabled { background: #2FBF5B; opacity: 0.45; }
+#google-budget h3 { color: #12201C; }
