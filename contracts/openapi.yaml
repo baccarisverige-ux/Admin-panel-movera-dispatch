@@ -1,11 +1,11 @@
-# Movera API v0.18.171 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.172 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.171
+  version: 0.18.172
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.171 in this folder; this file must agree with them.
+    v0.18.172 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.171
+  version: 0.18.172
   source: contract.json
 paths:
   /auth/otp/request:
@@ -3526,6 +3526,11 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+      description: 'v0.18.172 (contract.json#preferredAreas): GET /driver/reservations?scope=open: preferred first, then the
+        rest; each group by scheduledAt; a ride is preferred when its pickup lies inside one of Driver.preferredAreaIds (point
+        in polygon, holes excluded). Every item carries DriverReservation.inPreferredArea true|false. The list is the same
+        200 rides as before (visibility unchanged), only reordered. scope=accepted is not reordered (his own rides by time)
+        but its items carry inPreferredArea too.'
   /driver/config:
     get:
       operationId: getDriverConfig
@@ -21653,6 +21658,270 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /driver/areas/search:
+    get:
+      operationId: searchDriverAreas
+      summary: Search the areas of the driver's zones (areas only, never addresses)
+      description: 'v0.18.172 (contract.json#preferredAreas): GET /driver/areas/search?q=&limit= → { items: Area[] }: active
+        areas of the driver''s zones only, name starting with q first (accents and case ignored: Söder = soder, Saint-Denis
+        = saint denis), then containing q; at most limit (1..searchLimit, default searchLimit). It returns areas only, never
+        addresses. q shorter than searchMinChars answers the areas of his zones A-Z.'
+      tags:
+      - Driver · Account
+      x-actor:
+      - driver
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 80
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 20
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AreaList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /driver/areas/at:
+    post:
+      operationId: driverAreaAt
+      summary: The smallest area of the driver's zones that holds a point
+      description: 'v0.18.172 (contract.json#preferredAreas): POST /driver/areas/at { lat, lng } → { area: Area | null, containing:
+        Area[] } (a read; the point travels in the body, never in the URL, GM 2026-11-28): lat (number, -90..90) and lng (number,
+        -180..180), both required, no other key, else 400 invalid_request reason invalid_point. area = the smallest active
+        area of the driver''s zones that contains the point (smallest = lowest areaRank, then the smallest bounding box);
+        containing = every matching area, smallest first. No area: 200 with area null and containing [] (not 404). The server
+        never stores the point, never logs it at any level and never calls Google for it. The search field also takes a full
+        address. The app geocodes it with the existing address service (POST /locations/autocomplete, then /locations/geocode
+        if no position) and calls POST /driver/areas/at { lat, lng }; only the areaId is saved. Street, number and the point
+        are never stored. Address search starts at addressMinChars characters, at most one autocomplete call per debounced
+        search (addressDebounceMs).'
+      tags:
+      - Driver · Account
+      x-actor:
+      - driver
+      x-read-only: true
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AreaAtCommand'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AreaAt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /driver/preferred-areas:
+    put:
+      operationId: setDriverPreferredAreas
+      summary: Save the driver's preferred areas
+      description: 'v0.18.172 (contract.json#preferredAreas): PUT /driver/preferred-areas { areaIds: string[] } → Driver (Idempotency-Key,
+        like PUT /driver/home-area): every id must be an active area of one of his zones (else 400 invalid_request reason
+        area_not_found, details ["areaId:<id>"]); duplicates are dropped, the order is kept; more than preferredAreasMax ids
+        after that is 400 invalid_request reason too_many_areas; [] clears the list. The body holds area ids only: no address
+        text, no point. Preferred areas never widen or narrow who sees a ride: that stays bookLater.listTo (homeNear included,
+        which measures Driver.homeArea, a point). PUT /driver/home-area stays (Rule 21); from v0.18.172 the driver app''s
+        house icon opens the area picker instead of calling it.'
+      tags:
+      - Driver · Account
+      x-actor:
+      - driver
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreferredAreasCommand'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Driver'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /admin/areas:
+    get:
+      operationId: adminListAreas
+      summary: The areas of a zone (preferred areas)
+      description: 'v0.18.172 (contract.json#preferredAreas): GET /admin/areas?zoneId=&q=&cursor= (zones.read) → AdminAreaPage;
+        PATCH /admin/areas/{areaId} { active?, nameOverride? } (zones.edit, audit line) → AdminArea. A zone-scoped admin sees
+        only his zones (403 zone_out_of_scope). An inactive area is never found by the driver''s search or /driver/areas/at
+        and stops counting for the order; a driver''s saved id stays. The setting preferredAreasMax is in Dispatch > Reservations
+        (settings.edit, publish settings.publish). Texts in area c70.'
+      tags:
+      - Admin · Zones
+      x-actor:
+      - admin
+      x-permission: zones.read
+      parameters:
+      - name: zoneId
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/Id'
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 80
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAreaPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /admin/areas/{areaId}:
+    patch:
+      operationId: adminUpdateArea
+      summary: Switch an area on or off, or rename it
+      description: 'v0.18.172 (contract.json#preferredAreas): GET /admin/areas?zoneId=&q=&cursor= (zones.read) → AdminAreaPage;
+        PATCH /admin/areas/{areaId} { active?, nameOverride? } (zones.edit, audit line) → AdminArea. A zone-scoped admin sees
+        only his zones (403 zone_out_of_scope). An inactive area is never found by the driver''s search or /driver/areas/at
+        and stops counting for the order; a driver''s saved id stays. The setting preferredAreasMax is in Dispatch > Reservations
+        (settings.edit, publish settings.publish). Texts in area c70.'
+      tags:
+      - Admin · Zones
+      x-actor:
+      - admin
+      x-permission: zones.edit
+      parameters:
+      - name: areaId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Z0-9-]{3,40}$
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminAreaCommand'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminArea'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
 components:
   securitySchemes:
     bearerAuth:
@@ -24269,6 +24538,18 @@ components:
             else 400 invalid_request reason invalid_taxi_license_number. It does not replace the document taxi_driver_license.'
         address:
           $ref: '#/components/schemas/DriverAddress'
+        preferredAreaIds:
+          type: array
+          items:
+            type: string
+          description: 'v0.18.172 (contract.json#preferredAreas): Driver.preferredAreaIds (string[]) and Driver.preferredAreas
+            (Area[], names in the caller''s language) in every driver view, the admin''s GET /admin/drivers/{driverId} included.'
+        preferredAreas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Area'
+          description: 'v0.18.172 (contract.json#preferredAreas): Driver.preferredAreaIds (string[]) and Driver.preferredAreas
+            (Area[], names in the caller''s language) in every driver view, the admin''s GET /admin/drivers/{driverId} included.'
     DriverScheduledRides:
       type: object
       description: 'Owner decision 2 (v0.4.2): an admin''s reservations on/off for this one driver (CONTRACT.md §6.1). Missing
@@ -28445,7 +28726,8 @@ components:
             30 days. homeNear = drivers whose home area (Driver.homeArea, set in the driver app, PUT /driver/home-area) is
             within listHomeKm of the pickup; favourites = the rider''s favourite drivers (marked after a ride, PUT /rider/favourite-drivers/{driverId});
             nearAtTime = drivers whose last ride before the pickup ends within listAtTimeKm of it at most listAtTimeMin minutes
-            before the pickup time (their accepted booked rides; owner BL-Q4).'
+            before the pickup time (their accepted booked rides; owner BL-Q4). v0.18.172: homeNear still uses Driver.homeArea
+            (a point), not Driver.preferredAreaIds; preferred areas only order the list (contract.json#preferredAreas).'
           default: all
         listMinRating:
           type: number
@@ -28607,6 +28889,14 @@ components:
             changing the time of a booked ride (POST /trips/{tripId}/reschedule with a new scheduled quote) is never refused
             by it. Older apps without the reason show their general booking error.'
           default: 3
+        preferredAreasMax:
+          type: integer
+          minimum: 1
+          maximum: 30
+          description: 'v0.18.172 (contract.json#preferredAreas): DriverAppConfig.reservations.preferredAreasMax (admin setting
+            per zone, 1-30, default 10; plan name preferredAreas.maxPerDriver). PUT /driver/preferred-areas with more ids
+            answers 400 invalid_request reason too_many_areas.'
+          default: 10
     PickupRange:
       type: object
       description: 'One pickup-distance range (contract.json#pickupPay.ranges): the first starts at 0, each next one where
@@ -39816,6 +40106,13 @@ components:
             read never carries driverTotal (priceDisplay.offer, finish.driverMoney). The Booked rides list, its ride sheet,
             the Home booked-ride popup, the ''ride changed'' notice and the ''Keep it at the new time?'' question show ONLY
             DriverReservation.driverTotal; ''—'' without it; the app never adds, subtracts or parses amounts.'
+        inPreferredArea:
+          type: boolean
+          description: 'v0.18.172 (contract.json#preferredAreas): GET /driver/reservations?scope=open: preferred first, then
+            the rest; each group by scheduledAt; a ride is preferred when its pickup lies inside one of Driver.preferredAreaIds
+            (point in polygon, holes excluded). Every item carries DriverReservation.inPreferredArea true|false. The list
+            is the same 200 rides as before (visibility unchanged), only reordered. scope=accepted is not reordered (his own
+            rides by time) but its items carry inPreferredArea too.'
     DriverReservationPage:
       type: object
       description: v0.18.17.
@@ -43931,4 +44228,214 @@ components:
           minimum: 0
           maximum: 100000
           description: At most dailyLimit.
+      additionalProperties: false
+    Area:
+      type: object
+      description: 'v0.18.172 (contract.json#preferredAreas): Area { areaId, name, kind, kindLabel, zoneId, country, parentName?
+        }: an official (or, for Stockholm districts, derived and approximate) outline (kommun, stadsdelsomrade, arrondissement,
+        commune, departement, city Paris) in the server table areas, tied to one zone. The polygon is never sent to the apps.
+        name is the admin''s name override when set. kindLabel is the label in the caller''s language (Kommun / Område / Arrondissement
+        / Commune / Département / Ville).'
+      required:
+      - areaId
+      - name
+      - kind
+      - kindLabel
+      - zoneId
+      - country
+      properties:
+        areaId:
+          type: string
+          pattern: ^[A-Z0-9-]{3,40}$
+          description: Server id, e.g. SE-K-0181, SE-SDO-SODERMALM, FR-C-91326, FR-A-75104, FR-CITY-PARIS, FR-D-91.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: The area's name (the admin's name override when set).
+        kind:
+          type: string
+          enum:
+          - kommun
+          - stadsdelsomrade
+          - city
+          - arrondissement
+          - commune
+          - departement
+        kindLabel:
+          type: string
+          maxLength: 40
+          description: The kind in the caller's language.
+        zoneId:
+          $ref: '#/components/schemas/Id'
+        country:
+          type: string
+          pattern: ^[A-Z]{2}$
+        parentName:
+          type: string
+          maxLength: 120
+          description: The area it lies in, e.g. Stockholm for Södermalm, Essonne for a commune of 91.
+      additionalProperties: false
+    AreaList:
+      type: object
+      description: 'v0.18.172 (contract.json#preferredAreas): GET /driver/areas/search?q=&limit= → { items: Area[] }: active
+        areas of the driver''s zones only, name starting with q first (accents and case ignored: Söder = soder, Saint-Denis
+        = saint denis), then containing q; at most limit (1..searchLimit, default searchLimit). It returns areas only, never
+        addresses. q shorter than searchMinChars answers the areas of his zones A-Z.'
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Area'
+      additionalProperties: false
+    AreaAt:
+      type: object
+      description: 'v0.18.172 (contract.json#preferredAreas): POST /driver/areas/at { lat, lng } → { area: Area | null, containing:
+        Area[] } (a read; the point travels in the body, never in the URL, GM 2026-11-28): lat (number, -90..90) and lng (number,
+        -180..180), both required, no other key, else 400 invalid_request reason invalid_point. area = the smallest active
+        area of the driver''s zones that contains the point (smallest = lowest areaRank, then the smallest bounding box);
+        containing = every matching area, smallest first. No area: 200 with area null and containing [] (not 404). The server
+        never stores the point, never logs it at any level and never calls Google for it.'
+      required:
+      - area
+      - containing
+      properties:
+        area:
+          oneOf:
+          - $ref: '#/components/schemas/Area'
+          - type: 'null'
+        containing:
+          type: array
+          items:
+            $ref: '#/components/schemas/Area'
+      additionalProperties: false
+    PreferredAreasCommand:
+      type: object
+      description: 'v0.18.172 (contract.json#preferredAreas): PUT /driver/preferred-areas { areaIds: string[] } → Driver (Idempotency-Key,
+        like PUT /driver/home-area): every id must be an active area of one of his zones (else 400 invalid_request reason
+        area_not_found, details ["areaId:<id>"]); duplicates are dropped, the order is kept; more than preferredAreasMax ids
+        after that is 400 invalid_request reason too_many_areas; [] clears the list. The body holds area ids only: no address
+        text, no point.'
+      required:
+      - areaIds
+      properties:
+        areaIds:
+          type: array
+          items:
+            type: string
+            pattern: ^[A-Z0-9-]{3,40}$
+          maxItems: 30
+      additionalProperties: false
+    AreaAtCommand:
+      type: object
+      description: 'v0.18.172 (contract.json#preferredAreas): The point in the body, never in the URL (GM 2026-11-28); never
+        stored, never logged.'
+      required:
+      - lat
+      - lng
+      properties:
+        lat:
+          type: number
+          minimum: -90
+          maximum: 90
+        lng:
+          type: number
+          minimum: -180
+          maximum: 180
+      additionalProperties: false
+    AdminArea:
+      type: object
+      description: 'v0.18.172 (contract.json#preferredAreas): GET /admin/areas?zoneId=&q=&cursor= (zones.read) → AdminAreaPage;
+        PATCH /admin/areas/{areaId} { active?, nameOverride? } (zones.edit, audit line) → AdminArea. A zone-scoped admin sees
+        only his zones (403 zone_out_of_scope). An inactive area is never found by the driver''s search or /driver/areas/at
+        and stops counting for the order; a driver''s saved id stays. The setting preferredAreasMax is in Dispatch > Reservations
+        (settings.edit, publish settings.publish). Texts in area c70.'
+      required:
+      - areaId
+      - name
+      - officialName
+      - kind
+      - zoneId
+      - country
+      - derived
+      - source
+      - licence
+      - sourceYear
+      - active
+      properties:
+        areaId:
+          type: string
+        name:
+          type: string
+        officialName:
+          type: string
+        nameOverride:
+          oneOf:
+          - type: string
+            maxLength: 120
+          - type: 'null'
+        kind:
+          type: string
+          enum:
+          - kommun
+          - stadsdelsomrade
+          - city
+          - arrondissement
+          - commune
+          - departement
+        zoneId:
+          $ref: '#/components/schemas/Id'
+        country:
+          type: string
+        parentName:
+          type: string
+        derived:
+          type: boolean
+          description: true = outline built by Movera (Stockholm districts), approximate. Stockholm district outlines are
+            derived from SCB statistical areas and are approximate; they only change the order of booked rides, never who
+            may see a ride.
+        source:
+          type: string
+        licence:
+          type: string
+        sourceYear:
+          type: integer
+        active:
+          type: boolean
+        updatedAt:
+          $ref: '#/components/schemas/Timestamp'
+      additionalProperties: false
+    AdminAreaPage:
+      type: object
+      description: 'v0.18.172 (contract.json#preferredAreas): GET /admin/areas?zoneId=&q=&cursor= (zones.read) → AdminAreaPage;
+        PATCH /admin/areas/{areaId} { active?, nameOverride? } (zones.edit, audit line) → AdminArea. A zone-scoped admin sees
+        only his zones (403 zone_out_of_scope). An inactive area is never found by the driver''s search or /driver/areas/at
+        and stops counting for the order; a driver''s saved id stays. The setting preferredAreasMax is in Dispatch > Reservations
+        (settings.edit, publish settings.publish). Texts in area c70.'
+      required:
+      - items
+      - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminArea'
+        nextCursor:
+          oneOf:
+          - type: string
+          - type: 'null'
+    AdminAreaCommand:
+      type: object
+      description: 'v0.18.172 (contract.json#preferredAreas): null clears the name override.'
+      properties:
+        active:
+          type: boolean
+        nameOverride:
+          oneOf:
+          - type: string
+            minLength: 1
+            maxLength: 120
+          - type: 'null'
       additionalProperties: false

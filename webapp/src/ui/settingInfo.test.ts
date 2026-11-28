@@ -42,6 +42,7 @@ export const SETTING_FILES: Readonly<Record<string, readonly string[]>> = {
   "Drivers › Bonuses": ["drivers/BonusBuilder.tsx", "drivers/BonusQuickPopup.tsx", "drivers/BonusAreaMap.tsx", "live/LiveBonusCampaigns.tsx"],
   "Payouts settings": ["live/LivePayoutSettings.tsx", "payments/PayoutParts.tsx", "pages/PayoutsPage.tsx"],
   "Safety, alerts and support settings": ["pages/SafetyPage.tsx", "alerts/SettingsView.tsx", "support/SupportSettings.tsx"],
+  "Zones › Favourite areas": ["zones/ZoneAreasPanel.tsx"],
 };
 
 /** Areas whose "i" is not attached yet (the record lists them). The inventory test prints them; it does not fail on them. */

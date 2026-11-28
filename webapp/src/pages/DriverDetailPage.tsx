@@ -1,4 +1,5 @@
 import { ONBOARDING_SETTINGS_KEY, contractTypeOf, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
+import { NO_PREFERRED_AREAS, preferredAreasText } from "../zones/areas";
 import { isLiveData, liveDriverOf } from "../live/realData";
 import { DRIVER_BY_ID_LIST } from "../live/listNames";
 import { INCIDENTS_OF_DRIVER_LIST } from "../live/incidents";
@@ -382,6 +383,7 @@ export function DriverDetailPage() {
           <Field label={tr("Joined")}>{liveData ? (liveJoined ? dateFormat.format(Date.parse(liveJoined)) : DASH) : dateFormat.format(Date.parse(joined))}</Field>
           <Field label={tr("Last online")}>{lastOnline}</Field>
           {liveData && liveFacts?.offlineReason ? <Field label={tr("Offline reason")}><span data-offline-reason={liveFacts.offlineReason}>{offlineReasonText(liveFacts.offlineReason, { note: liveFacts.offlineNote })}{liveFacts.offlineAt ? ` · ${tr("Set offline {0}", [dateFormat.format(Date.parse(liveFacts.offlineAt))])}` : ""}</span></Field> : null}
+          {liveData ? <Field label={tr("Favourite areas")}>{trx(preferredAreasText(liveFacts?.preferredAreas) ?? NO_PREFERRED_AREAS)}</Field> : null}
           {liveData ? <Field label={tr("Home area")}>{liveFacts?.homeArea ? `${liveFacts.homeArea.label ? `${liveFacts.homeArea.label} · ` : ""}${liveFacts.homeArea.lat.toFixed(4)}, ${liveFacts.homeArea.lng.toFixed(4)}` : tr("Not set by the driver")}</Field> : null}
 
         </dl>

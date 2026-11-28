@@ -391,6 +391,8 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.zone.stopLive", label: "Stop zone now", reason: true, permission: "zones.publish" },
   { id: "admin.zone.removeLine", label: "Remove no-stop street", reason: false, permission: "zones.edit" },
   { id: "admin.zone.tab", label: "Open zone section", reason: false, permission: "zones.read" },
+  // v0.18.172 (contract.json#preferredAreas.admin): Zone › Favourite areas.
+  { id: "admin.zone.areas.more", label: "Show more areas", reason: false, permission: "zones.read" },
   { id: "admin.table.retry", label: "Retry table", reason: false, permission: "overview.read" },
   { id: "admin.table.filter", label: "Add table filter", reason: false, permission: "overview.read" },
   { id: "admin.table.clearFilter", label: "Clear table filter", reason: false, permission: "overview.read" },

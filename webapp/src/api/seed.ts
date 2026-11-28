@@ -234,6 +234,8 @@ export type LiveDriverFacts = {
   performance?: { acceptancePct: number | null; cancellationPct: number | null; rating: number | null };
   /** v0.18.17 (owner BL-Q4): the home area the driver set in the app. */
   homeArea?: { lat: number; lng: number; label?: string } | null;
+  /** v0.18.172: Driver.preferredAreas (names). */
+  preferredAreas?: { areaId: string; name: string }[];
 };
 /** v0.18.29 A2 (fix job 0) (G16 Q16-2): Rider.moderation. */
 export type LiveRiderModeration = { level: "none" | "warning" | "paused" | "banned"; reason?: string; until: string | null; setAt?: string };

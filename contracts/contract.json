@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.171",
+  "version": "0.18.172",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -3365,7 +3365,7 @@
       "cap": 3.0
     },
     "reservations": {
-      "note": "DriverAppConfig.reservations (CONTRACT.md §6). Every field is optional on read: a missing or invalid field keeps this default. Admin ride type ids map normal->normal, airport->airport, long->longTrip, premium->comfortPremium, event->event; Admin lateBackupAfterMin is offlineBackupAfterMin. v0.4.2: there is no leaveNow switch any more (Leave now always opens the trip); a leaveNow field in an older document is ignored. on is the zone switch for every driver (= features.scheduledRides); with Driver.scheduledRides (per driver) it decides who gets new reservations, CONTRACT.md §6.1. v0.18.17 (Book later, owner 2026-11-03 Q1–Q7, contract.json#bookLater): minAheadMin 15 / maxAheadDays 90 (booking window), soonBeforeMin 30 (closer = sent like a live ride at once), listTo and its numbers (who sees it in Scheduled rides), listOpenAll, noticeOn / noticeMaxDrivers / homePopup (the reservation notice), noDriverAlertMin 10, riderReminderMin 60, freeChangeBeforeMin 60; rideTypes.normal.onlineBeforeMin 30 → 60 and every reminderMin [60, 15] → [120, 15] (owner Q5). v0.18.17: maxTripKm 60 (the demo admin's 'Max Trip Distance (Reservations) 60 km', owner 'add if miss anything'). BL-Q1..Q7 (owner 2026-11-03): dispatchBeforeMin 30 (search start), maxTripKm null = no limit, listHomeKm 5, listAtTimeKm 5 / listAtTimeMin 30 (nearAtTime), changeAnswerMin 15. M6 (owner 2026-11-03): reminderMin [120] only (the 15-min reminder is dropped). v0.18.35 (job 4 take-back, owner Q2/Q-B/fix-plan Q2 2026-11-04, contract.json#bookedTakeBack): takeBackLateMin 5 (take a held booked ride back only when the driver would reach the pickup MORE than this many minutes after the pickup time), takeBackKeepIfDriveMin 10 (a driver this many minutes' drive or less from the pickup always keeps it), takeBackUntilMinBeforePickup 15 (only while the pickup is at least this many minutes away; inside it he keeps it). v0.18.81 (server B1.34, owner Q94 'A) Yes', 2026-11-13: default 3, range 1-50; contract.json#bookLater.riderCap): maxOpenPerRider 3 (a rider holds at most this many booked rides that have not ended).",
+      "note": "DriverAppConfig.reservations (CONTRACT.md §6). Every field is optional on read: a missing or invalid field keeps this default. Admin ride type ids map normal->normal, airport->airport, long->longTrip, premium->comfortPremium, event->event; Admin lateBackupAfterMin is offlineBackupAfterMin. v0.4.2: there is no leaveNow switch any more (Leave now always opens the trip); a leaveNow field in an older document is ignored. on is the zone switch for every driver (= features.scheduledRides); with Driver.scheduledRides (per driver) it decides who gets new reservations, CONTRACT.md §6.1. v0.18.17 (Book later, owner 2026-11-03 Q1–Q7, contract.json#bookLater): minAheadMin 15 / maxAheadDays 90 (booking window), soonBeforeMin 30 (closer = sent like a live ride at once), listTo and its numbers (who sees it in Scheduled rides), listOpenAll, noticeOn / noticeMaxDrivers / homePopup (the reservation notice), noDriverAlertMin 10, riderReminderMin 60, freeChangeBeforeMin 60; rideTypes.normal.onlineBeforeMin 30 → 60 and every reminderMin [60, 15] → [120, 15] (owner Q5). v0.18.17: maxTripKm 60 (the demo admin's 'Max Trip Distance (Reservations) 60 km', owner 'add if miss anything'). BL-Q1..Q7 (owner 2026-11-03): dispatchBeforeMin 30 (search start), maxTripKm null = no limit, listHomeKm 5, listAtTimeKm 5 / listAtTimeMin 30 (nearAtTime), changeAnswerMin 15. M6 (owner 2026-11-03): reminderMin [120] only (the 15-min reminder is dropped). v0.18.35 (job 4 take-back, owner Q2/Q-B/fix-plan Q2 2026-11-04, contract.json#bookedTakeBack): takeBackLateMin 5 (take a held booked ride back only when the driver would reach the pickup MORE than this many minutes after the pickup time), takeBackKeepIfDriveMin 10 (a driver this many minutes' drive or less from the pickup always keeps it), takeBackUntilMinBeforePickup 15 (only while the pickup is at least this many minutes away; inside it he keeps it). v0.18.81 (server B1.34, owner Q94 'A) Yes', 2026-11-13: default 3, range 1-50; contract.json#bookLater.riderCap): maxOpenPerRider 3 (a rider holds at most this many booked rides that have not ended). v0.18.172 (preferred areas, owner 2026-11-27/28, contract.json#preferredAreas): preferredAreasMax 10 (range 1-30), the most preferred areas one driver may keep. Preferred areas never change who sees a ride (listTo); they change only the order of GET /driver/reservations?scope=open.",
       "on": true,
       "lateWarn": true,
       "offlineBackupAfterMin": 5,
@@ -3455,7 +3455,8 @@
       "takeBackKeepIfDriveMin": 10,
       "takeBackUntilMinBeforePickup": 15,
       "noDriverStopAfterMin": 15,
-      "maxOpenPerRider": 3
+      "maxOpenPerRider": 3,
+      "preferredAreasMax": 10
     },
     "countries": {
       "SE": {
@@ -8124,7 +8125,7 @@
         "favourites",
         "nearAtTime"
       ],
-      "rules": "all = every driver of the zone; category = drivers whose active car drives the trip's category; rating = drivers rated at least listMinRating (no rating yet counts as 5); random = listGroupSize drivers picked once at booking; nearNow = drivers whose last position is within listNearKm of the pickup at booking; group = the members of driver group listGroupId (Admin › Events & groups); areaRegulars = drivers with at least listAreaTrips completed trips from the pickup zone in the last 30 days. homeNear = drivers whose home area (Driver.homeArea, set in the driver app, PUT /driver/home-area) is within listHomeKm of the pickup; favourites = the rider's favourite drivers (marked after a ride, PUT /rider/favourite-drivers/{driverId}); nearAtTime = drivers whose last ride before the pickup ends within listAtTimeKm of it at most listAtTimeMin minutes before the pickup time (their accepted booked rides; owner BL-Q4).",
+      "rules": "all = every driver of the zone; category = drivers whose active car drives the trip's category; rating = drivers rated at least listMinRating (no rating yet counts as 5); random = listGroupSize drivers picked once at booking; nearNow = drivers whose last position is within listNearKm of the pickup at booking; group = the members of driver group listGroupId (Admin › Events & groups); areaRegulars = drivers with at least listAreaTrips completed trips from the pickup zone in the last 30 days. homeNear = drivers whose home area (Driver.homeArea, set in the driver app, PUT /driver/home-area) is within listHomeKm of the pickup; favourites = the rider's favourite drivers (marked after a ride, PUT /rider/favourite-drivers/{driverId}); nearAtTime = drivers whose last ride before the pickup ends within listAtTimeKm of it at most listAtTimeMin minutes before the pickup time (their accepted booked rides; owner BL-Q4). v0.18.172: homeNear still uses Driver.homeArea (a point), not Driver.preferredAreaIds; preferred areas only order the list (contract.json#preferredAreas).",
       "always": "Every listed driver must also be active, have scheduled rides on in the zone (reservations.on) and drive the trip's category; a driver never sees a ride that clashes with one he already holds (smart gap: [scheduledAt, scheduledAt + duration + spareMin] of both rides overlap) when hideClashing is on."
     },
     "noDriver": "Q3: at scheduledAt − noDriverAlertMin a trip with no driver (requested, searching or offered) is marked TripProjection.reservation.noDriver true (the admin's Alerts and Reservations show 'Booked ride soon with no driver') and the rider gets push kind reservation_no_driver; the search goes on (it starts at once if it had not). BL-Q7: at the pickup time with still no driver, TripProjection.reservation.overdue becomes true (the admin's alert 'Booked ride: pickup time passed, no driver'); the ride never expires by itself.",
@@ -12170,5 +12171,57 @@
     "driver": "Driver app: reads OsrmRouteResponse.source; estimate draws the line as approximate (dashed, Movera grey, no blue, no new text) and is not counted as off route or as a failed re-route. While the moving car stays off route, re-routes back off 10, 20, 40, up to 60 s. Radar, reservation map and destination mode are unchanged (their estimate answers show as approximate).",
     "rider": "Rider app: Waiting for driver and the on-trip map draw legRoute from the trip reads (TripProjection.legRoute, read on every trip read even when the read is not newer) or from TripEta.legRoute on the location events, cut from the point nearest the car (more than 200 m from the line: the old path); kept in memory only (never in the saved ride); dropped on sign-out, route change, driver change, back to searching, leg switch, terminal status or a different trip; fewer than 2 points is ignored. No polling. Movera colours only (#12201C, #2FBF5B).",
     "admin": "Admin: Dispatch > Rides, Live traffic card: \"Google road lines\" on/off and \"Google calls per trip, the price included, at most\" (1..4); a \"Google Routes daily budget\" panel (dailyLimit, quotesPerDay, today's counts); the alert system_health:google_routes_budget. Texts in area c69."
+  },
+  "preferredAreas": {
+    "since": "0.18.172",
+    "note": "v0.18.172 (driver preferred areas; owner 2026-11-27 \"house icon on Bokade resor opens a picker of preferred areas; more than one; areas, not addresses\", 2026-11-28 \"Yes, both ways\" (area name or full address); Rules plan/PLAN-0.18.172-preferred-areas.md; Rule 0; X-Api-Version stays `0.5`; additive, optional; server migration 0141): a driver keeps a list Driver.preferredAreaIds (0..preferredAreasMax). It changes the ORDER of his open booked rides only, never who may see a ride. An empty list keeps today's order (the whole zone by time).",
+    "maxPerDriver": "DriverAppConfig.reservations.preferredAreasMax (admin setting per zone, 1-30, default 10; plan name preferredAreas.maxPerDriver). PUT /driver/preferred-areas with more ids answers 400 invalid_request reason too_many_areas.",
+    "searchMinChars": 1,
+    "searchLimit": 20,
+    "addressMinChars": 3,
+    "addressDebounceMs": 250,
+    "kinds": [
+      "kommun",
+      "stadsdelsomrade",
+      "city",
+      "arrondissement",
+      "commune",
+      "departement"
+    ],
+    "areaRank": {
+      "stadsdelsomrade": 1,
+      "arrondissement": 1,
+      "commune": 2,
+      "kommun": 2,
+      "city": 3,
+      "departement": 4
+    },
+    "area": "Area { areaId, name, kind, kindLabel, zoneId, country, parentName? }: an official (or, for Stockholm districts, derived and approximate) outline (kommun, stadsdelsomrade, arrondissement, commune, departement, city Paris) in the server table areas, tied to one zone. The polygon is never sent to the apps. name is the admin's name override when set. kindLabel is the label in the caller's language (Kommun / Område / Arrondissement / Commune / Département / Ville).",
+    "search": "GET /driver/areas/search?q=&limit= → { items: Area[] }: active areas of the driver's zones only, name starting with q first (accents and case ignored: Söder = soder, Saint-Denis = saint denis), then containing q; at most limit (1..searchLimit, default searchLimit). It returns areas only, never addresses. q shorter than searchMinChars answers the areas of his zones A-Z.",
+    "at": "POST /driver/areas/at { lat, lng } → { area: Area | null, containing: Area[] } (a read; the point travels in the body, never in the URL, GM 2026-11-28): lat (number, -90..90) and lng (number, -180..180), both required, no other key, else 400 invalid_request reason invalid_point. area = the smallest active area of the driver's zones that contains the point (smallest = lowest areaRank, then the smallest bounding box); containing = every matching area, smallest first. No area: 200 with area null and containing [] (not 404). The server never stores the point, never logs it at any level and never calls Google for it.",
+    "put": "PUT /driver/preferred-areas { areaIds: string[] } → Driver (Idempotency-Key, like PUT /driver/home-area): every id must be an active area of one of his zones (else 400 invalid_request reason area_not_found, details [\"areaId:<id>\"]); duplicates are dropped, the order is kept; more than preferredAreasMax ids after that is 400 invalid_request reason too_many_areas; [] clears the list. The body holds area ids only: no address text, no point.",
+    "addressInput": "The search field also takes a full address. The app geocodes it with the existing address service (POST /locations/autocomplete, then /locations/geocode if no position) and calls POST /driver/areas/at { lat, lng }; only the areaId is saved. Street, number and the point are never stored. Address search starts at addressMinChars characters, at most one autocomplete call per debounced search (addressDebounceMs).",
+    "order": "GET /driver/reservations?scope=open: preferred first, then the rest; each group by scheduledAt; a ride is preferred when its pickup lies inside one of Driver.preferredAreaIds (point in polygon, holes excluded). Every item carries DriverReservation.inPreferredArea true|false. The list is the same 200 rides as before (visibility unchanged), only reordered. scope=accepted is not reordered (his own rides by time) but its items carry inPreferredArea too.",
+    "visibility": "Preferred areas never widen or narrow who sees a ride: that stays bookLater.listTo (homeNear included, which measures Driver.homeArea, a point). PUT /driver/home-area stays (Rule 21); from v0.18.172 the driver app's house icon opens the area picker instead of calling it.",
+    "driverView": "Driver.preferredAreaIds (string[]) and Driver.preferredAreas (Area[], names in the caller's language) in every driver view, the admin's GET /admin/drivers/{driverId} included.",
+    "admin": "GET /admin/areas?zoneId=&q=&cursor= (zones.read) → AdminAreaPage; PATCH /admin/areas/{areaId} { active?, nameOverride? } (zones.edit, audit line) → AdminArea. A zone-scoped admin sees only his zones (403 zone_out_of_scope). An inactive area is never found by the driver's search or /driver/areas/at and stops counting for the order; a driver's saved id stays. The setting preferredAreasMax is in Dispatch > Reservations (settings.edit, publish settings.publish). Texts in area c70.",
+    "sources": {
+      "SE": "SCB RegSO 2025 (CC0): the 26 kommuner of Stockholms län as the union of their RegSO; the 11 stadsdelsområden of Stockholms stad (Norra innerstaden, Kungsholmen, Södermalm, Järva, Bromma, Hässelby-Vällingby, Enskede-Årsta-Vantör, Skarpnäck, Farsta, Hägersten-Älvsjö, Skärholmen) as the union of the RegSO tagged to each district name (names are facts, not licensed data). No Stockholms stad / Dataportalen boundary file.",
+      "FR": "IGN ADMIN EXPRESS COG CARTO (Licence Ouverte 2.0 / Etalab): the Île-de-France communes, the 20 Paris arrondissements, the city of Paris and the 8 départements.",
+      "osm": "No OSM (owner 2026-11-25)."
+    },
+    "outlineNote": {
+      "en": "Stockholm district outlines are derived from SCB statistical areas and are approximate; they only change the order of booked rides, never who may see a ride.",
+      "fr": "Les contours des districts de Stockholm sont dérivés des zones statistiques de SCB et sont approximatifs ; ils changent seulement l'ordre des courses programmées, jamais qui peut voir une course.",
+      "sv": "Stockholms stadsdelsområden är härledda från SCB:s statistikområden och är ungefärliga; de ändrar bara ordningen på bokade resor, aldrig vem som får se en resa."
+    },
+    "attribution": {
+      "en": "Map areas: Sweden © SCB (Statistics Sweden), CC0. France © IGN – ADMIN EXPRESS, Licence Ouverte 2.0.",
+      "fr": "Zones de la carte : Suède © SCB (Statistiques Suède), CC0. France © IGN – ADMIN EXPRESS, Licence Ouverte 2.0.",
+      "sv": "Kartområden: Sverige © SCB (Statistiska centralbyrån), CC0. Frankrike © IGN – ADMIN EXPRESS, Licence Ouverte 2.0."
+    },
+    "driver": "Driver app: the house icon on Bokade resor opens the picker titled Favoritområden / Zones favorites / Favourite areas (owner 2026-11-28) with a count badge; a search field for an area name or an address (areas first, then addresses); multi-select; Spara (n) only when changed; Rensa; empty state 'Du får bokade resor i hela zonen'; the list rows of preferred rides show 'I ditt område'. Order comes from the server (no client sort). Address text and point are dropped at once, never stored on the phone.",
+    "rider": "Rider app: not affected (no rider schema or path changes).",
+    "seed": "Server: the area rows ship in the server image (data/areas, manifest.json with each file's sha256 and the row count per country) and are upserted at boot right after migrate (same MIGRATE_ON_START gate, advisory lock, skipped when the manifest hash is already in area_seed_runs). The seed never changes active or name_override (admin's) and never deletes a row (Rule 21). A wrong checksum or count stops the start."
   }
 }
