@@ -278,17 +278,25 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
 
   /** BQ-S10 round 2 (supervisor SF-A1): zones whose rider document (the Share trip and pickup entrance chips switches) could not be read. */
   const riderUnread = new Set<string>();
+  /**
+   * G2 follow-up (reviewer NO-GO on #408 at a74b69dc): zones whose pickupPin.required was read from the server by the
+   * last successful Dispatch read (or set by a Dispatch publish). A Settings publish writes the rider features.pin only
+   * for these; otherwise it is not known and the server's value stays (never false by default).
+   */
+  let pinKnown = new Set<string>();
 
   async function readDispatch(fallback: unknown): Promise<DispatchBook> {
     const book = normalizeDispatchBook(fallback);
     const live = { ...book.live };
     const drivers = new Map<string, Doc | null>();
     const riders = new Map<string, Doc | null>();
+    const pinRead = new Set<string>();
     await Promise.all(readScopes().map(async (id) => {
       // One read first tells whether the server knows the zone at all.
       const rules = await draft("dispatch", id, true);
       const driver = unknownZones.has(id) ? null : await draft("driver_app_config", id, true);
       drivers.set(id, driver?.document ?? null);
+      if (typeof (driver?.document?.["pickupPin"] as { required?: unknown } | undefined)?.required === "boolean") pinRead.add(id);
       // One rider document read serves v0.18.115 BQ-V21 (the pickup entrance chips switch, Dispatch › Rides) and
       // v0.18.116 BQ-S10 (the Share trip switch, Dispatch › Safety). Read on its own (never marks the zone unknown); a
       // zone without one, or a failed read, keeps the rules' own values.
@@ -345,6 +353,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
     const next = { ...book, live, draft: { ...book.draft, ...draftsOf }, ...tools, approvals: [], cancelChecks: {}, ...(versions.length ? { versions } : {}) };
     slices.set(DISPATCH_KEY, next);
     baseline.dispatch = next;
+    pinKnown = pinRead;
     return next;
   }
 
@@ -725,6 +734,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       drafts.delete(key("dispatch", id));
       const owned = dispatchOwnedFor(!riderUnread.has(id));
       await publishAppParts(id, owned, state, id, before);
+      pinKnown.add(id); // G2 follow-up: this publish wrote the zone's PIN, so the page now knows it.
       for (const zone of await followers(id, "dispatch")) await publishAppParts(zone, owned, state, id, before);
     }
     baseline.dispatch = book;
@@ -749,7 +759,8 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
         const apps = await Promise.all((["rider_app_config", "driver_app_config"] as const).map((doc) => draft(doc, id, true).catch(() => null)));
         if (apps.some((app) => app?.usesStandard === true)) viaStandardNames.push(zoneById(id)?.name ?? id);
       }
-      await publishAppParts(id, { ...OWNED.settings, riderAlways: [...RIDER_ALWAYS] }, state, id, stateWith({ config: baseline.config.has(id) ? baseline.config.get(id) : baseline.configStart }), { viaStandard });
+      // G2 follow-up: features.pin only when this zone's pickupPin.required is known (Dispatch read it); else left as is.
+      await publishAppParts(id, pinKnown.has(id) ? { ...OWNED.settings, riderAlways: [...RIDER_ALWAYS] } : OWNED.settings, state, id, stateWith({ config: baseline.config.has(id) ? baseline.config.get(id) : baseline.configStart }), { viaStandard });
       baseline.config.set(id, structuredClone(value));
     }
     // G3: say which zones of a chosen Standard keep their own app settings (their drivers do not get this change).
