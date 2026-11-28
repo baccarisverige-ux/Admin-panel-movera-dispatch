@@ -74,7 +74,9 @@ function edited(book: DispatchBook, patch: (zone: ReturnType<typeof liveRules>) 
 }
 
 test("the Dispatch publish leaves booking.pickupSpots out when the rider document was not read (the rest of booking stays)", () => {
-  assert.deepEqual(dispatchOwnedFor(true), OWNED.dispatch);
+  // G2: every Dispatch publish also writes the rider features.pin (from pickupPin.required).
+  assert.deepEqual(dispatchOwnedFor(true), { ...OWNED.dispatch, riderAlways: ["features.pin"] });
+  assert.deepEqual(dispatchOwnedFor(false).riderAlways, ["features.pin"]);
   const unread = dispatchOwnedFor(false);
   assert.ok(unread.rider.includes("booking"), "the other booking parts (stops, pickup move, shortest ride) are still published");
   assert.deepEqual(unread.riderServerKeeps, ["booking.pickupSpots"]);

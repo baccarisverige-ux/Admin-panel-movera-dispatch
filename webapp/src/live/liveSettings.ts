@@ -19,6 +19,8 @@ import { appConfigState, driverAppConfig, riderAppConfig } from "../config/appCo
 import {
   OWNED,
   dispatchOwnedFor,
+  RIDER_ALWAYS,
+  writePaths,
   keepPaths,
   type OwnedParts,
   SettingsChanged,
@@ -543,7 +545,10 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
       const built = serverKeeps.length ? keepPaths(build(source, state) as unknown as Doc, current ? was : null, serverKeeps) : (build(source, state) as unknown as Doc);
       // Live sweep 2026-11-02 H1: with the state before the edit, only the fields the admin changed are written over
       // the server's document; fields the page does not show (booking horizon, rest minutes…) stay the server's.
-      const document = current ? patchChanged(current.document, was, built, keys) : { ...built, ...("zoneId" in built && !countryOfStandard(id) ? { zoneId: id } : {}) };
+      const patched = current ? patchChanged(current.document, was, built, keys) : { ...built, ...("zoneId" in built && !countryOfStandard(id) ? { zoneId: id } : {}) };
+      // G2: features.pin (and any riderAlways path) is written on every publish, so a stale server value is corrected.
+      const always = doc === "rider_app_config" ? owned.riderAlways ?? [] : [];
+      const document = current && always.length ? writePaths(patched, built, always) : patched;
       const live = current ? await liveDocumentOf(http, doc, id) : null;
       await savePublishLive(http, doc, id, current, document, live, save?.saveId ? saveNote(save.saveId, current?.usesStandard === true) : undefined);
       drafts.delete(key(doc, id));
@@ -744,7 +749,7 @@ export function createLiveSettings(http: ConfigHttp, now: () => string = () => n
         const apps = await Promise.all((["rider_app_config", "driver_app_config"] as const).map((doc) => draft(doc, id, true).catch(() => null)));
         if (apps.some((app) => app?.usesStandard === true)) viaStandardNames.push(zoneById(id)?.name ?? id);
       }
-      await publishAppParts(id, OWNED.settings, state, id, stateWith({ config: baseline.config.has(id) ? baseline.config.get(id) : baseline.configStart }), { viaStandard });
+      await publishAppParts(id, { ...OWNED.settings, riderAlways: [...RIDER_ALWAYS] }, state, id, stateWith({ config: baseline.config.has(id) ? baseline.config.get(id) : baseline.configStart }), { viaStandard });
       baseline.config.set(id, structuredClone(value));
     }
     // G3: say which zones of a chosen Standard keep their own app settings (their drivers do not get this change).

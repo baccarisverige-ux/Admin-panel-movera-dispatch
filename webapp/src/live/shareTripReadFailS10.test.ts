@@ -72,7 +72,9 @@ function edited(book: DispatchBook, patch: (zone: ReturnType<typeof liveRules>) 
 }
 
 test("the Dispatch publish keys leave shareTrip out when the rider document was not read", () => {
-  assert.deepEqual(dispatchOwnedFor(true), OWNED.dispatch);
+  // G2: every Dispatch publish also writes the rider features.pin (from pickupPin.required).
+  assert.deepEqual(dispatchOwnedFor(true), { ...OWNED.dispatch, riderAlways: ["features.pin"] });
+  assert.deepEqual(dispatchOwnedFor(false).riderAlways, ["features.pin"]);
   assert.ok(!dispatchOwnedFor(false).rider.includes("shareTrip"));
   // v0.18.144: Live location lives in the same rider document, so it is left out too.
   // v0.18.155: the driver profile switches live in the same rider document, so they are left out too; v0.18.158: the rider crash reports switch too.

@@ -258,7 +258,33 @@ export const OWNED: Record<"dispatch" | "settings" | "content", { rider: string[
 };
 
 /** The parts of the rider and driver documents one publish writes; `riderServerKeeps` (dotted paths inside them) stay the server's. */
-export type OwnedParts = { rider: string[]; driver: string[]; riderServerKeeps?: string[] };
+export type OwnedParts = { rider: string[]; driver: string[]; riderServerKeeps?: string[]; riderAlways?: string[] };
+
+/**
+ * G2 (Rules audits/impact/trip-pin-check-2026-11-27.md; Fable NO-GO on #408): dotted paths of the rider document that
+ * every Dispatch and Settings publish writes from the admin's built document, also when unchanged, so a stale server
+ * value is corrected. `features.pin` mirrors the zone's pickupPin.required (read from the driver document, so it is
+ * also written when the rider read failed). The old Settings "pin" switch is kept (Rule 21) but no longer decides it.
+ */
+export const RIDER_ALWAYS = ["features.pin"] as const;
+
+/** `document` with each dotted path in `paths` set to its value in `built` (parents made when missing). */
+export function writePaths(document: Doc, built: Doc, paths: readonly string[]): Doc {
+  const next: Doc = structuredClone(document);
+  for (const path of paths) {
+    const parts = path.split(".");
+    const last = parts.pop()!;
+    let into: Doc = next;
+    let from: unknown = built;
+    for (const part of parts) {
+      if (!isPlain(into[part])) into[part] = {};
+      into = into[part] as Doc;
+      from = isPlain(from) ? from[part] : undefined;
+    }
+    if (isPlain(from) && last in from) into[last] = structuredClone(from[last]);
+  }
+  return next;
+}
 
 /**
  * BQ-S10 round 2 (supervisor SF-A1): the parts a Dispatch publish of one zone writes. The Share trip switch (S10) and
@@ -268,7 +294,7 @@ export type OwnedParts = { rider: string[]; driver: string[]; riderServerKeeps?:
  * back on. (S10 admin rebase over V21: before, pickupSpots was still published after a failed read.)
  */
 export function dispatchOwnedFor(riderRead: boolean): OwnedParts {
-  return riderRead ? OWNED.dispatch : { ...OWNED.dispatch, rider: OWNED.dispatch.rider.filter((key) => key !== "shareTrip" && key !== "liveLocation" && key !== "driverProfile" && key !== "crashReports"), riderServerKeeps: ["booking.pickupSpots"] };
+  return riderRead ? { ...OWNED.dispatch, riderAlways: [...RIDER_ALWAYS] } : { ...OWNED.dispatch, riderAlways: [...RIDER_ALWAYS], rider: OWNED.dispatch.rider.filter((key) => key !== "shareTrip" && key !== "liveLocation" && key !== "driverProfile" && key !== "crashReports"), riderServerKeeps: ["booking.pickupSpots"] };
 }
 
 /**
