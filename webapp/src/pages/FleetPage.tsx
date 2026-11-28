@@ -18,6 +18,8 @@ import { Cards } from "../reports/ui";
 import { CATEGORY_LABELS, VEHICLE_RULES_KEY, carCountryOf, carDocs, effectiveVehicleRules, emptyVehicleRules, fits, liveCarDocs, photosOf, shouldHold, type VehicleRules } from "../vehicles/rules";
 import { ONBOARDING_SETTINGS_KEY, emptySettingsBook, normalizeSettingsBook } from "../drivers/onboardingSettings";
 import { OnboardingSettingsEditor } from "../drivers/OnboardingSettingsEditor";
+import CarCataloguePanel from "../vehicles/CarCataloguePanel";
+import { useLiveSessionMaybe } from "../live/LiveSessionContext";
 import { DataTable } from "../ui/DataTable";
 import { tr, trn, trx } from "../i18n";
 import { categoryName } from "../riders/profile";
@@ -55,6 +57,7 @@ export function FleetPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { agent } = useSession();
+  const liveSession = useLiveSessionMaybe();
   const scope = useMarketScope();
   const vehicles = useRecords("vehicles", null);
   const drivers = useRecords("drivers", null);
@@ -173,6 +176,8 @@ export function FleetPage() {
           </div>
         </header>
         <OnboardingSettingsEditor key={scope.market.id} country={scope.market.id} part="vehicles" cars={rows.filter((row) => carCountryOf(row.record, live) === scope.market.id).map((row) => ({ year: row.profile.year, seats: row.profile.seats, fuel: row.profile.fuel, category: row.profile.category }))} liveFitCounts={vehicleRuleFitCounts(rows.filter((row) => carCountryOf(row.record, live) === scope.market.id).map((row) => row.record))} />
+        {/* v0.18.178 (contract.json#carCatalogue.admin, c73): the makes and models the driver app offers; ?catalogue= prefills Add make. */}
+        <CarCataloguePanel canEdit={liveSession?.can("vehicles.edit") ?? false} prefill={params.get("catalogue") ?? ""} />
       </div>
     );
   }

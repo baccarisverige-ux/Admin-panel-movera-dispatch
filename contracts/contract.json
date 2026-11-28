@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.172",
+  "version": "0.18.178",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -12223,5 +12223,25 @@
     "driver": "Driver app: the house icon on Bokade resor opens the picker titled Favoritområden / Zones favorites / Favourite areas (owner 2026-11-28) with a count badge; a search field for an area name or an address (areas first, then addresses); multi-select; Spara (n) only when changed; Rensa; empty state 'Du får bokade resor i hela zonen'; the list rows of preferred rides show 'I ditt område'. Order comes from the server (no client sort). Address text and point are dropped at once, never stored on the phone.",
     "rider": "Rider app: not affected (no rider schema or path changes).",
     "seed": "Server: the area rows ship in the server image (data/areas, manifest.json with each file's sha256 and the row count per country) and are upserted at boot right after migrate (same MIGRATE_ON_START gate, advisory lock, skipped when the manifest hash is already in area_seed_runs). The seed never changes active or name_override (admin's) and never deletes a row (Rule 21). A wrong checksum or count stops the start."
+  },
+  "carCatalogue": {
+    "since": "0.18.178",
+    "note": "v0.18.178 (car make/model picker; owner 2026-11-28 \"car make/model picker on driver 'Lägg till bil' = common SE+FR taxi cars, searchable, admin can add more, 'Annat' lets driver type\", \"the TYPED text is saved as is\"; Rules plan/PLAN-0.18.178-car-catalogue.md; Rule 0; X-Api-Version stays `0.5`; additive, optional; server migration 0145): the catalogue is a help to pick; make/model are always the stored strings; makeId/modelId null means the driver typed it (Annat). The server never refuses a car because it is not in the list. No enum.",
+    "ids": "Text ids, fixed in the seed file (never computed at boot, never changed by a rename): makeId = slug(make) (NFKD, accents removed, lower case, '+' is read as ' plus ', every run of characters other than a-z0-9 becomes '-' (no '-' at either end), e.g. Škoda -> skoda, Mercedes-Benz -> mercedes-benz); modelId = makeId + '.' + slug(model) (e.g. volkswagen.id-4). An admin-added row gets 'a-' + a random UUID. Pattern ^[a-z0-9][a-z0-9.-]{0,79}$.",
+    "driverRead": "GET /driver/car-catalogue (driver auth) -> CarCatalogue { version, attribution, makes: [ { makeId, name, models: [ { modelId, name } ] } ] }: only rows that are not hidden, makes and models sorted by name (accents kept). version grows on every admin change; the answer carries ETag \"<version>\" and If-None-Match answers 304, so the app keeps a cached copy. If the call fails the app's fields work as plain text (never blocks adding a car).",
+    "vehicleIds": "VehicleRequest.makeId / modelId and Vehicle.makeId / modelId are optional (null or missing = typed by hand = 'other'). POST /driver/vehicles with a makeId: it must exist (hidden rows count, an old app cache) else 400 invalid_request reason unknown_make; the stored make string becomes the catalogue name (uniform spelling). A modelId must belong to that make, else 400 invalid_request reason unknown_model; it needs a makeId. With no ids the typed make/model are stored as today (trimmed, 1-80 characters).",
+    "adminVehicle": "PATCH /admin/vehicles/{vehicleId} also takes makeId / modelId (nullable). Changing make by hand without sending makeId in the same call clears make_id AND model_id (the text is no longer the catalogue's); changing only model clears model_id.",
+    "admin": "GET /admin/car-catalogue (drivers.read): every make with its models, hidden rows included, each with source eea | admin and hidden. POST /admin/car-catalogue/makes { name } and POST /admin/car-catalogue/makes/{makeId}/models { name } (vehicles.edit, audit): a name that already exists under the same parent (case- and accent-insensitive, hidden rows included) is 409 conflict reason make_exists / model_exists with details [id, hidden or shown], nothing is created. PATCH /admin/car-catalogue/makes/{makeId} and /admin/car-catalogue/models/{modelId} { name?, hidden? } (vehicles.edit, audit). A rename changes the catalogue only: the make/model strings stored on existing cars are never changed. No DELETE (Rule 21: hide, never delete).",
+    "seed": "The starter rows (40 makes, 317 models, source eea) ship in the server image (data/car-catalogue) and are loaded at boot after migrate with INSERT ... ON CONFLICT (id) DO NOTHING: a re-seed only adds ids it has never seen and never writes name or hidden of an existing row, so an admin rename or hide is never undone.",
+    "search": "Apps match the search accent- and case-insensitively on the name (skoda finds Škoda).",
+    "pickerClose": "Driver picker (owner 2026-11-28): closing the sheet (✕, swipe down, back) or keyboard Klar while the list shows at least one match changes nothing (the field keeps its previous value and ids). Only when NOTHING matches is the typed text saved as is (ids null). Empty search + close = unchanged. A catalogue row is chosen only by tapping it. The bottom row 'Annat – skriv själv' (empty search) / 'Använd ”{query}”' (with text) is always there.",
+    "attribution": {
+      "en": "Contains data from the European Environment Agency (EEA), CO2 monitoring of new passenger cars, CC BY 4.0.",
+      "fr": "Contient des données de l'Agence européenne pour l'environnement (AEE), suivi du CO2 des voitures neuves, CC BY 4.0.",
+      "sv": "Innehåller data från Europeiska miljöbyrån (EEA), CO2-övervakning av nya personbilar, CC BY 4.0."
+    },
+    "source": "EEA 'Monitoring of CO2 emissions from passenger cars' (2010-2025), licence on the EEA page: 'License CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Copyright holder: Directorate-General for Climate Action (DG-CLIMA).' (read 2026-11-28). Movera editorial short list of common SE/FR taxi and VTC cars.",
+    "driver": "Driver app: Märke and Modell on both add-car screens (fleet Lägg till bil and onboarding Lägg till fordon) open the picker; the onboarding draft keeps makeId/modelId and sends them.",
+    "rider": "Rider app not affected: it shows the make/model strings it already receives; makeId/modelId are not sent to riders."
   }
 }

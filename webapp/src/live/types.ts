@@ -173,6 +173,9 @@ export type Vehicle = {
   requiredDocuments?: string[];
   /** v0.18.0: the car's fuel. */
   fuel?: "petrol" | "diesel" | "hybrid" | "electric";
+  /** v0.18.178 (contract.json#carCatalogue): the catalogue rows picked; null = typed by the driver (Annat); absent from an older server. */
+  makeId?: string | null;
+  modelId?: string | null;
   /** v0.18.3 (R2): "<category>:<problem>" while the car breaks the country's rules; Approve is 409 vehicle_rules_not_met. */
   ruleProblems?: string[];
   /** v0.18.5 (owner G2-D5.3): the ride categories and extras this car fits now; the admin gives some of them on approval. */

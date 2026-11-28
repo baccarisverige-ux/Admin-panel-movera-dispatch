@@ -107,6 +107,8 @@ export type DemoRecord = {
   liveVehicleStatus?: string;
   /** v0.18.161 (carZones.noCountry): the server sent Vehicle.country null: a data error shown in red. */
   liveNoCountry?: true;
+  /** v0.18.178 (contract.json#carCatalogue): Vehicle.makeId null, the make was typed by the driver (Annat). */
+  liveMakeTyped?: true;
   /** Live cars (v0.18.5 G2-D5.3): Vehicle.fitCategories, the categories the admin may give on approval. */
   liveFitCategories?: string[];
   /** Live riders: the server's rating, wallet and unpaid fees (AdminRider). */

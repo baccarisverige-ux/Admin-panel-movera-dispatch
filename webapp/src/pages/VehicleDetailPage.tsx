@@ -187,6 +187,8 @@ export function VehicleDetailPage() {
         <span className="vh-car-icon" aria-hidden="true"><CarFront size={30} /></span>
         <span className="vh-hero-text">
           <b>{record.make ?? tr("Vehicle")} {record.model ?? ""} · {profile.year}</b>
+          {/* v0.18.178 (c73): the driver typed the make (not from the catalogue): shortcut to add it. */}
+          {record.liveMakeTyped ? <small data-testid="vehicle-typed">{tr("Typed by driver")} · <Link to={`/vehicles?view=rules&catalogue=${encodeURIComponent(record.make ?? "")}`}>{tr("Add to catalogue")}</Link></small> : null}
           <small>{trn("{0} seats · {1} · {2}", profile.seats, fuelText, profile.fleetId || record.fleetId ? tr("Fleet {0}", [fleetName(profile.fleetId || record.fleetId || "")]) : tr("Independent"))}</small>
           <span>{trn("Driver {0}", driver ? <Link to={`/drivers/${driver.id}`}>{driver.name}</Link> : tr("not linked"))}</span>
         </span>

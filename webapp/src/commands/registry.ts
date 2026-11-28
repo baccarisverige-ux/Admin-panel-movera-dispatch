@@ -446,6 +446,9 @@ const RAW_COMMANDS: CommandSpec[] = [
   { id: "admin.vehicle.view", label: "Vehicles view", reason: false, permission: "drivers.read" },
   { id: "admin.vehicle.photo", label: "Review a vehicle photo", reason: false, permission: "vehicles.edit" },
   { id: "admin.vehicle.rules", label: "Save vehicle rules", reason: true, permission: "vehicles.edit" },
+  // v0.18.178 (contract.json#carCatalogue.admin, c73): Fleet › Vehicle rules › Car catalogue.
+  { id: "admin.vehicle.catalogueAdd", label: "Add make", reason: false, permission: "vehicles.edit" },
+  { id: "admin.vehicle.catalogueHide", label: "Hide", reason: false, permission: "vehicles.edit" },
   { id: "admin.onboarding.view", label: "Onboarding view", reason: false, permission: "drivers.read" },
   { id: "admin.onboarding.rules", label: "Save onboarding steps", reason: true, permission: "drivers.activate" },
   // v0.17.0 §25 (owner items 10, 11, 14, 15): the country's onboarding settings document, published.
