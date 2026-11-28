@@ -9705,4 +9705,16 @@
 ["Favourite areas per driver","Favourite areas per driver"],
 ["Favourite areas per driver, at most","Favourite areas per driver, at most"],
 ["Drivers pick favourite areas in Booked rides; rides there are listed first. It never changes who sees a ride.","Drivers pick favourite areas in Booked rides; rides there are listed first. It never changes who sees a ride."],
-["areas","areas"]]
+["areas","areas"],
+["Car catalogue","Car catalogue"],
+["Add make","Add make"],
+["Add model","Add model"],
+["Typed by driver","Typed by driver"],
+["Add to catalogue","Add to catalogue"],
+["Search makes","Search makes"],
+["EEA","EEA"],
+["Added by admin","Added by admin"],
+["Already in the catalogue.","Already in the catalogue."],
+["Already in the catalogue, hidden: use Show.","Already in the catalogue, hidden: use Show."],
+["You need the right to edit vehicles.","You need the right to edit vehicles."],
+["This entry no longer exists.","This entry no longer exists."]]

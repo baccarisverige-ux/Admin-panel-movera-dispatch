@@ -25,7 +25,7 @@ const max = (doc: Record<string, unknown>) => (doc["reservations"] as Record<str
 const sodermalm: AdminArea = { areaId: "SE-SDO-SODERMALM", name: "Södermalm", officialName: "Södermalm", nameOverride: null, kind: "stadsdelsomrade", zoneId: "Z001", country: "SE", parentName: "Stockholm", derived: true, source: "SCB RegSO 2025", licence: "CC0", sourceYear: 2025, active: true };
 
 test("the admin carries contract 0.18.172 with the area routes and permissions", () => {
-  assert.equal(C.version, "0.18.172");
+  assert.equal(C.version, "0.18.178");
   assert.equal(CONTRACT_VERSION, C.version);
   assert.equal(C.configDefaults.reservations.preferredAreasMax, 10);
   assert.match(C.preferredAreas.admin, /zones\.read/);

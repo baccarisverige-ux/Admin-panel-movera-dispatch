@@ -1,0 +1,167 @@
+{
+  "note": "v0.18.178 (contract.json#carCatalogue): a sample GET /driver/car-catalogue answer (3 of the 40 seed makes, a few models each) and the vehicle cases.",
+  "catalogue": {
+    "version": 1,
+    "attribution": "Contains data from the European Environment Agency (EEA), CO2 monitoring of new passenger cars, CC BY 4.0.",
+    "makes": [
+      {
+        "makeId": "skoda",
+        "name": "Škoda",
+        "models": [
+          {
+            "modelId": "skoda.enyaq",
+            "name": "Enyaq"
+          },
+          {
+            "modelId": "skoda.octavia",
+            "name": "Octavia"
+          },
+          {
+            "modelId": "skoda.superb",
+            "name": "Superb"
+          }
+        ]
+      },
+      {
+        "makeId": "volkswagen",
+        "name": "Volkswagen",
+        "models": [
+          {
+            "modelId": "volkswagen.golf",
+            "name": "Golf"
+          },
+          {
+            "modelId": "volkswagen.id-4",
+            "name": "ID.4"
+          },
+          {
+            "modelId": "volkswagen.passat",
+            "name": "Passat"
+          },
+          {
+            "modelId": "volkswagen.touran",
+            "name": "Touran"
+          }
+        ]
+      },
+      {
+        "makeId": "volvo",
+        "name": "Volvo",
+        "models": [
+          {
+            "modelId": "volvo.v60",
+            "name": "V60"
+          },
+          {
+            "modelId": "volvo.v90",
+            "name": "V90"
+          },
+          {
+            "modelId": "volvo.xc60",
+            "name": "XC60"
+          }
+        ]
+      }
+    ]
+  },
+  "slugCases": [
+    [
+      "Škoda",
+      "skoda"
+    ],
+    [
+      "Mercedes-Benz",
+      "mercedes-benz"
+    ],
+    [
+      "Lynk & Co",
+      "lynk-co"
+    ],
+    [
+      "Prius+",
+      "prius-plus"
+    ],
+    [
+      "ID.4",
+      "id-4"
+    ],
+    [
+      "Citroën",
+      "citroen"
+    ]
+  ],
+  "vehicleCases": [
+    {
+      "name": "picked from the list",
+      "request": {
+        "make": "vw",
+        "model": "golf",
+        "makeId": "volkswagen",
+        "modelId": "volkswagen.golf"
+      },
+      "stored": {
+        "make": "Volkswagen",
+        "model": "Golf",
+        "makeId": "volkswagen",
+        "modelId": "volkswagen.golf"
+      }
+    },
+    {
+      "name": "typed by hand (Annat)",
+      "request": {
+        "make": " Zeekr ",
+        "model": "001"
+      },
+      "stored": {
+        "make": "Zeekr",
+        "model": "001",
+        "makeId": null,
+        "modelId": null
+      }
+    },
+    {
+      "name": "unknown makeId",
+      "request": {
+        "make": "X",
+        "model": "Y",
+        "makeId": "no-such-make"
+      },
+      "error": {
+        "status": 400,
+        "reason": "unknown_make"
+      }
+    },
+    {
+      "name": "model of another make",
+      "request": {
+        "make": "Volvo",
+        "model": "Golf",
+        "makeId": "volvo",
+        "modelId": "volkswagen.golf"
+      },
+      "error": {
+        "status": 400,
+        "reason": "unknown_model"
+      }
+    }
+  ],
+  "search": [
+    [
+      "skoda",
+      [
+        "Škoda"
+      ]
+    ],
+    [
+      "VO",
+      [
+        "Volkswagen",
+        "Volvo"
+      ]
+    ],
+    [
+      "zeekr",
+      []
+    ]
+  ]
+}

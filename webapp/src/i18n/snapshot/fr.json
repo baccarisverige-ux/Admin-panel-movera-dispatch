@@ -9705,4 +9705,16 @@
 ["Favourite areas per driver","Zones favorites par chauffeur"],
 ["Favourite areas per driver, at most","Zones favorites par chauffeur, au plus"],
 ["Drivers pick favourite areas in Booked rides; rides there are listed first. It never changes who sees a ride.","Les chauffeurs choisissent des zones favorites dans Courses programmées ; les courses de ces zones s'affichent en premier. Cela ne change jamais qui voit une course."],
-["areas","zones"]]
+["areas","zones"],
+["Car catalogue","Catalogue des voitures"],
+["Add make","Ajouter une marque"],
+["Add model","Ajouter un modèle"],
+["Typed by driver","Saisi par le chauffeur"],
+["Add to catalogue","Ajouter au catalogue"],
+["Search makes","Rechercher des marques"],
+["EEA","AEE"],
+["Added by admin","Ajouté par l'admin"],
+["Already in the catalogue.","Déjà dans le catalogue."],
+["Already in the catalogue, hidden: use Show.","Déjà dans le catalogue, masqué : utilisez Afficher."],
+["You need the right to edit vehicles.","Vous avez besoin du droit de modifier les véhicules."],
+["This entry no longer exists.","Cette entrée n'existe plus."]]

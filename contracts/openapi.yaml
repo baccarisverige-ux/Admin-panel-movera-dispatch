@@ -1,11 +1,11 @@
-# Movera API v0.18.172 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
+# Movera API v0.18.178 — generated from contract.json (+ CONTRACT.md §7). PROPOSED; no backend exists.
 openapi: 3.1.0
 info:
   title: Movera API
-  version: 0.18.172
+  version: 0.18.178
   description: '**Proposed contract — no backend exists yet.** One future backend serves the Rider (Flutter), Driver (Flutter)
     and Admin (React/TS) apps. Source of truth for names, enums, transitions, realtime and errors is `contract.json` + `CONTRACT.md`
-    v0.18.172 in this folder; this file must agree with them.
+    v0.18.178 in this folder; this file must agree with them.
 
 
     Wire rules: ids match `^[A-Za-z0-9_-]{1,64}$`; times are RFC 3339 UTC with `Z`; durations are integer seconds; money is
@@ -84,7 +84,7 @@ tags:
 - name: Admin · Finance
 x-contract:
   name: movera
-  version: 0.18.172
+  version: 0.18.178
   source: contract.json
 paths:
   /auth/otp/request:
@@ -12074,7 +12074,10 @@ paths:
         has no endpoint. PATCH /admin/vehicles/{vehicleId} { expectedVersion, make?, model?, year?, color?, plate?, seats?,
         fuel?, categoryIds? } (vehicles.edit) → Vehicle. The car after the change must fit every one of its categories (driverOnboarding.vehicleRules:
         400 invalid_request, reason category_not_allowed, details "<category>:<problem>"); a plate another car has is 409
-        conflict, reason plate_taken. A driver who has the car picked keeps only the categories the car still has.'
+        conflict, reason plate_taken. A driver who has the car picked keeps only the categories the car still has. v0.18.178
+        (contract.json#carCatalogue): PATCH /admin/vehicles/{vehicleId} also takes makeId / modelId (nullable). Changing make
+        by hand without sending makeId in the same call clears make_id AND model_id (the text is no longer the catalogue''s);
+        changing only model clears model_id.'
       tags:
       - Admin · People
       x-actor:
@@ -21922,6 +21925,322 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /driver/car-catalogue:
+    get:
+      operationId: getDriverCarCatalogue
+      summary: The car makes and models the driver can pick from
+      description: 'v0.18.178 (contract.json#carCatalogue): GET /driver/car-catalogue (driver auth) -> CarCatalogue { version,
+        attribution, makes: [ { makeId, name, models: [ { modelId, name } ] } ] }: only rows that are not hidden, makes and
+        models sorted by name (accents kept). version grows on every admin change; the answer carries ETag "<version>" and
+        If-None-Match answers 304, so the app keeps a cached copy. If the call fails the app''s fields work as plain text
+        (never blocks adding a car). Apps match the search accent- and case-insensitively on the name (skoda finds Škoda).'
+      tags:
+      - Driver · Account
+      x-actor:
+      - driver
+      parameters:
+      - name: If-None-Match
+        in: header
+        required: false
+        schema:
+          type: string
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarCatalogue'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '304':
+          description: Not modified (If-None-Match equals the current version's ETag).
+  /admin/car-catalogue:
+    get:
+      operationId: adminGetCarCatalogue
+      summary: The car catalogue, hidden rows included
+      description: 'v0.18.178 (contract.json#carCatalogue): GET /admin/car-catalogue (drivers.read): every make with its models,
+        hidden rows included, each with source eea | admin and hidden. POST /admin/car-catalogue/makes { name } and POST /admin/car-catalogue/makes/{makeId}/models
+        { name } (vehicles.edit, audit): a name that already exists under the same parent (case- and accent-insensitive, hidden
+        rows included) is 409 conflict reason make_exists / model_exists with details [id, hidden or shown], nothing is created.
+        PATCH /admin/car-catalogue/makes/{makeId} and /admin/car-catalogue/models/{modelId} { name?, hidden? } (vehicles.edit,
+        audit). A rename changes the catalogue only: the make/model strings stored on existing cars are never changed. No
+        DELETE (Rule 21: hide, never delete).'
+      tags:
+      - Admin · People
+      x-actor:
+      - admin
+      x-permission: drivers.read
+      parameters:
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCarCatalogue'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /admin/car-catalogue/makes:
+    post:
+      operationId: adminAddCarMake
+      summary: Add a make to the car catalogue
+      description: 'v0.18.178 (contract.json#carCatalogue): GET /admin/car-catalogue (drivers.read): every make with its models,
+        hidden rows included, each with source eea | admin and hidden. POST /admin/car-catalogue/makes { name } and POST /admin/car-catalogue/makes/{makeId}/models
+        { name } (vehicles.edit, audit): a name that already exists under the same parent (case- and accent-insensitive, hidden
+        rows included) is 409 conflict reason make_exists / model_exists with details [id, hidden or shown], nothing is created.
+        PATCH /admin/car-catalogue/makes/{makeId} and /admin/car-catalogue/models/{modelId} { name?, hidden? } (vehicles.edit,
+        audit). A rename changes the catalogue only: the make/model strings stored on existing cars are never changed. No
+        DELETE (Rule 21: hide, never delete).'
+      tags:
+      - Admin · People
+      x-actor:
+      - admin
+      x-permission: vehicles.edit
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCarNameCommand'
+      responses:
+        '201':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCarMake'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /admin/car-catalogue/makes/{makeId}/models:
+    post:
+      operationId: adminAddCarModel
+      summary: Add a model to a make
+      description: 'v0.18.178 (contract.json#carCatalogue): GET /admin/car-catalogue (drivers.read): every make with its models,
+        hidden rows included, each with source eea | admin and hidden. POST /admin/car-catalogue/makes { name } and POST /admin/car-catalogue/makes/{makeId}/models
+        { name } (vehicles.edit, audit): a name that already exists under the same parent (case- and accent-insensitive, hidden
+        rows included) is 409 conflict reason make_exists / model_exists with details [id, hidden or shown], nothing is created.
+        PATCH /admin/car-catalogue/makes/{makeId} and /admin/car-catalogue/models/{modelId} { name?, hidden? } (vehicles.edit,
+        audit). A rename changes the catalogue only: the make/model strings stored on existing cars are never changed. No
+        DELETE (Rule 21: hide, never delete).'
+      tags:
+      - Admin · People
+      x-actor:
+      - admin
+      x-permission: vehicles.edit
+      parameters:
+      - name: makeId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9.-]{0,79}$
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCarNameCommand'
+      responses:
+        '201':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCarModel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /admin/car-catalogue/makes/{makeId}:
+    patch:
+      operationId: adminUpdateCarMake
+      summary: Rename, hide or show a make (no delete)
+      description: 'v0.18.178 (contract.json#carCatalogue): GET /admin/car-catalogue (drivers.read): every make with its models,
+        hidden rows included, each with source eea | admin and hidden. POST /admin/car-catalogue/makes { name } and POST /admin/car-catalogue/makes/{makeId}/models
+        { name } (vehicles.edit, audit): a name that already exists under the same parent (case- and accent-insensitive, hidden
+        rows included) is 409 conflict reason make_exists / model_exists with details [id, hidden or shown], nothing is created.
+        PATCH /admin/car-catalogue/makes/{makeId} and /admin/car-catalogue/models/{modelId} { name?, hidden? } (vehicles.edit,
+        audit). A rename changes the catalogue only: the make/model strings stored on existing cars are never changed. No
+        DELETE (Rule 21: hide, never delete).'
+      tags:
+      - Admin · People
+      x-actor:
+      - admin
+      x-permission: vehicles.edit
+      parameters:
+      - name: makeId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9.-]{0,79}$
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCarUpdateCommand'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCarMake'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /admin/car-catalogue/models/{modelId}:
+    patch:
+      operationId: adminUpdateCarModel
+      summary: Rename, hide or show a model (no delete)
+      description: 'v0.18.178 (contract.json#carCatalogue): GET /admin/car-catalogue (drivers.read): every make with its models,
+        hidden rows included, each with source eea | admin and hidden. POST /admin/car-catalogue/makes { name } and POST /admin/car-catalogue/makes/{makeId}/models
+        { name } (vehicles.edit, audit): a name that already exists under the same parent (case- and accent-insensitive, hidden
+        rows included) is 409 conflict reason make_exists / model_exists with details [id, hidden or shown], nothing is created.
+        PATCH /admin/car-catalogue/makes/{makeId} and /admin/car-catalogue/models/{modelId} { name?, hidden? } (vehicles.edit,
+        audit). A rename changes the catalogue only: the make/model strings stored on existing cars are never changed. No
+        DELETE (Rule 21: hide, never delete).'
+      tags:
+      - Admin · People
+      x-actor:
+      - admin
+      x-permission: vehicles.edit
+      parameters:
+      - name: modelId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9.-]{0,79}$
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/RequestId'
+      - $ref: '#/components/parameters/ApiVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCarUpdateCommand'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Request-Id:
+              description: Echo of the request id (server-generated if absent).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCarModel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
 components:
   securitySchemes:
     bearerAuth:
@@ -24705,6 +25024,23 @@ components:
           - type: 'null'
           description: 'v0.18.161 (adminListFilters.carZones): the car''s country: its fleet''s country, else its driver''s
             country, else null (shown as unknown, never guessed). Admin views only; absent from an older server.'
+        makeId:
+          oneOf:
+          - type: string
+            pattern: ^[a-z0-9][a-z0-9.-]{0,79}$
+          - type: 'null'
+          description: 'v0.18.178 (contract.json#carCatalogue): null or missing = typed by hand (Annat). VehicleRequest.makeId
+            / modelId and Vehicle.makeId / modelId are optional (null or missing = typed by hand = ''other''). POST /driver/vehicles
+            with a makeId: it must exist (hidden rows count, an old app cache) else 400 invalid_request reason unknown_make;
+            the stored make string becomes the catalogue name (uniform spelling). A modelId must belong to that make, else
+            400 invalid_request reason unknown_model; it needs a makeId. With no ids the typed make/model are stored as today
+            (trimmed, 1-80 characters).'
+        modelId:
+          oneOf:
+          - type: string
+            pattern: ^[a-z0-9][a-z0-9.-]{0,79}$
+          - type: 'null'
+          description: 'v0.18.178 (contract.json#carCatalogue): null or missing = typed by hand (Annat).'
     DriverAccountType:
       type: string
       enum:
@@ -32791,7 +33127,10 @@ components:
             v0.18.93 reasons: driver_away_from_pickup (409, the driver''s no-show while the waiting clock is stopped), invalid_auto_arrive_distance
             (400, contract.json#autoArrive.settings.validation). v0.18.108 reason: not_at_stop (409 invalid_transition, the
             driver''s stop tap or back tap farther than allowed from the stop; contract.json#autoArrive.stops.tap / back).
-            v0.18.109 reason: fleet_other_country (409 conflict, the driver''s country is not the fleet''s; contract.json#driverOnboarding.fleetInvitations.oneCountry).'
+            v0.18.109 reason: fleet_other_country (409 conflict, the driver''s country is not the fleet''s; contract.json#driverOnboarding.fleetInvitations.oneCountry).
+            v0.18.174 (contract.json#priceChangeAsk): price_changed_ask (409 conflict, POST /trips and POST /trips/{tripId}/reschedule
+            with agreedQuoteId): 409 conflict: the fresh price is higher than the agreed one and the rider has not accepted
+            it; ask with the fresh quote''s price, then send again with priceAccepted true.'
         details:
           type: array
           items:
@@ -33467,7 +33806,13 @@ components:
     CreateTripRequest:
       type: object
       description: 'Request a quoted trip. No expectedVersion: the trip does not exist yet; Idempotency-Key dedupes. v0.6.0:
-        babySeats, childSeats, airportPickup, airportDropoff and fixedRouteId repeat the quote''s (else 400 quote_mismatch).'
+        babySeats, childSeats, airportPickup, airportDropoff and fixedRouteId repeat the quote''s (else 400 quote_mismatch).
+        v0.18.174 (contract.json#priceChangeAsk): CreateTripRequest and RescheduleCommand take optional agreedQuoteId (the
+        quote whose price the rider last saw) and optional priceAccepted (boolean, the rider said yes to the fresh price;
+        only meaningful with agreedQuoteId). No money field is added: a body with any other field (total, price, fareMinor
+        ...) is still 400 invalid_request invalid_body. The price booked is always the fresh quote row (quoteId), never a
+        client amount. CreateTripRequest and RescheduleCommand carrying any of these fields is 400 invalid_request invalid_body
+        (the schema forbids them), so a forged price is never read.'
       required:
       - quoteId
       - categoryId
@@ -33540,6 +33885,41 @@ components:
           - $ref: '#/components/schemas/Id'
           description: 'v0.6.0: one of the zone''s fixed routes; for a route of the quoted category the fixed_route line replaces
             the ride part, otherwise the category is priced normally.'
+        agreedQuoteId:
+          allOf:
+          - $ref: '#/components/schemas/Id'
+          description: 'v0.18.174 (contract.json#priceChangeAsk): the quote whose price the rider last saw. The agreed quote
+            is read by id WITHOUT the expiry or used checks (it has normally expired by booking time, which is why the app
+            priced again); only the fresh quote must be valid. An agreed quote of another rider, or of another category /
+            kind, is 400 invalid_request quote_mismatch. A MISSING agreed quote (deleted by quote cleanup, unknown id) counts
+            as a rise: 409 price_changed_ask unless priceAccepted is true; never a silent booking on a price that cannot be
+            compared. A request WITHOUT agreedQuoteId is booked exactly as before (fresh quote, no rise check) and never gets
+            price_changed_ask. quote_mismatch keeps its meaning (route / extras do not match the quote).'
+        priceAccepted:
+          type: boolean
+          description: 'v0.18.174 (contract.json#priceChangeAsk): the rider accepted the fresh (higher) price; a yes/no only,
+            never an amount. Only meaningful with agreedQuoteId. With agreedQuoteId the server compares total_minor of the
+            fresh quote (quoteId) with the agreed quote on minor units: fresh < agreed or equal → booked at the fresh total;
+            fresh > agreed and priceAccepted is not true → 409 conflict reason price_changed_ask, nothing booked, the fresh
+            quote stays unused; fresh > agreed with priceAccepted true → booked at the fresh total.'
+      not:
+        anyOf:
+        - required:
+          - total
+        - required:
+          - totalMinor
+        - required:
+          - amount
+        - required:
+          - amountMinor
+        - required:
+          - price
+        - required:
+          - priceMinor
+        - required:
+          - fare
+        - required:
+          - fareMinor
     UpdateTripRequest:
       type: object
       description: 'Route change (needs routeQuoteId from /route-quote) and/or payment method change. v0.18.9: 2. Rider confirms:
@@ -33908,8 +34288,15 @@ components:
       properties:
         make:
           type: string
+          minLength: 1
+          maxLength: 80
+          description: 'v0.18.178 (contract.json#carCatalogue): Always the stored string (1-80 characters, trimmed); the catalogue
+            name when makeId is sent.'
         model:
           type: string
+          minLength: 1
+          maxLength: 80
+          description: 'v0.18.178 (contract.json#carCatalogue): Always the stored string (1-80 characters, trimmed).'
         year:
           type: integer
           minimum: 1950
@@ -33946,6 +34333,23 @@ components:
           - hybrid
           - electric
           description: 'v0.18.0: the car''s fuel (contract.json#driverOnboarding.settings.fuels).'
+        makeId:
+          oneOf:
+          - type: string
+            pattern: ^[a-z0-9][a-z0-9.-]{0,79}$
+          - type: 'null'
+          description: 'v0.18.178 (contract.json#carCatalogue): null or missing = typed by hand (Annat). VehicleRequest.makeId
+            / modelId and Vehicle.makeId / modelId are optional (null or missing = typed by hand = ''other''). POST /driver/vehicles
+            with a makeId: it must exist (hidden rows count, an old app cache) else 400 invalid_request reason unknown_make;
+            the stored make string becomes the catalogue name (uniform spelling). A modelId must belong to that make, else
+            400 invalid_request reason unknown_model; it needs a makeId. With no ids the typed make/model are stored as today
+            (trimmed, 1-80 characters).'
+        modelId:
+          oneOf:
+          - type: string
+            pattern: ^[a-z0-9][a-z0-9.-]{0,79}$
+          - type: 'null'
+          description: 'v0.18.178 (contract.json#carCatalogue): null or missing = typed by hand (Annat).'
       description: 'v0.18.0: v0.18.0 (owner item 11: "Make them real (Recommended)"): POST /driver/vehicles is checked against
         settings.vehicles of the fleet''s country. Each categoryId must fit: the category on, year ≥ minYear, seats ≥ minSeats,
         fuel in fuels; else 400 invalid_request, reason category_not_allowed, details "<category>:<problem>" with problem
@@ -36315,6 +36719,23 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CategoryId'
+        makeId:
+          oneOf:
+          - type: string
+            pattern: ^[a-z0-9][a-z0-9.-]{0,79}$
+          - type: 'null'
+          description: 'v0.18.178 (contract.json#carCatalogue): null or missing = typed by hand (Annat). VehicleRequest.makeId
+            / modelId and Vehicle.makeId / modelId are optional (null or missing = typed by hand = ''other''). POST /driver/vehicles
+            with a makeId: it must exist (hidden rows count, an old app cache) else 400 invalid_request reason unknown_make;
+            the stored make string becomes the catalogue name (uniform spelling). A modelId must belong to that make, else
+            400 invalid_request reason unknown_model; it needs a makeId. With no ids the typed make/model are stored as today
+            (trimmed, 1-80 characters).'
+        modelId:
+          oneOf:
+          - type: string
+            pattern: ^[a-z0-9][a-z0-9.-]{0,79}$
+          - type: 'null'
+          description: 'v0.18.178 (contract.json#carCatalogue): null or missing = typed by hand (Annat).'
     AdminVehicleDriverCommand:
       type: object
       description: 'POST /admin/vehicles/{vehicleId}/driver { expectedVersion, driverId: Id | null } (vehicles.edit) → Vehicle.
@@ -40158,7 +40579,12 @@ components:
         POST /driver/reservations/{tripId}/keep { keep }); Yes keeps it (rider told reservation_driver_found), No or no answer
         within changeAnswerMin (default 15) puts it back on the list (transition release, push reservation_changed) and the
         ride is planned again (bookLater.plan). Later → 409 conflict, reason change_too_late. Not a scheduled trip, or not
-        before pickup → 409 not_a_reservation.'
+        before pickup → 409 not_a_reservation. v0.18.174 (contract.json#priceChangeAsk): CreateTripRequest and RescheduleCommand
+        take optional agreedQuoteId (the quote whose price the rider last saw) and optional priceAccepted (boolean, the rider
+        said yes to the fresh price; only meaningful with agreedQuoteId). No money field is added: a body with any other field
+        (total, price, fareMinor ...) is still 400 invalid_request invalid_body. The price booked is always the fresh quote
+        row (quoteId), never a client amount. CreateTripRequest and RescheduleCommand carrying any of these fields is 400
+        invalid_request invalid_body (the schema forbids them), so a forged price is never read.'
       required:
       - quoteId
       - expectedVersion
@@ -40168,6 +40594,41 @@ components:
         expectedVersion:
           type: integer
           minimum: 1
+        agreedQuoteId:
+          allOf:
+          - $ref: '#/components/schemas/Id'
+          description: 'v0.18.174 (contract.json#priceChangeAsk): the quote whose price the rider last saw. The agreed quote
+            is read by id WITHOUT the expiry or used checks (it has normally expired by booking time, which is why the app
+            priced again); only the fresh quote must be valid. An agreed quote of another rider, or of another category /
+            kind, is 400 invalid_request quote_mismatch. A MISSING agreed quote (deleted by quote cleanup, unknown id) counts
+            as a rise: 409 price_changed_ask unless priceAccepted is true; never a silent booking on a price that cannot be
+            compared. A request WITHOUT agreedQuoteId is booked exactly as before (fresh quote, no rise check) and never gets
+            price_changed_ask. quote_mismatch keeps its meaning (route / extras do not match the quote).'
+        priceAccepted:
+          type: boolean
+          description: 'v0.18.174 (contract.json#priceChangeAsk): the rider accepted the fresh (higher) price; a yes/no only,
+            never an amount. Only meaningful with agreedQuoteId. With agreedQuoteId the server compares total_minor of the
+            fresh quote (quoteId) with the agreed quote on minor units: fresh < agreed or equal → booked at the fresh total;
+            fresh > agreed and priceAccepted is not true → 409 conflict reason price_changed_ask, nothing booked, the fresh
+            quote stays unused; fresh > agreed with priceAccepted true → booked at the fresh total.'
+      not:
+        anyOf:
+        - required:
+          - total
+        - required:
+          - totalMinor
+        - required:
+          - amount
+        - required:
+          - amountMinor
+        - required:
+          - price
+        - required:
+          - priceMinor
+        - required:
+          - fare
+        - required:
+          - fareMinor
     AdminReservationCommand:
       type: object
       description: 'v0.18.17: reason is required for unassign.'
@@ -44438,4 +44899,195 @@ components:
             minLength: 1
             maxLength: 120
           - type: 'null'
+      additionalProperties: false
+    CarModel:
+      type: object
+      description: 'v0.18.178 (contract.json#carCatalogue): Text ids, fixed in the seed file (never computed at boot, never
+        changed by a rename): makeId = slug(make) (NFKD, accents removed, lower case, ''+'' is read as '' plus '', every run
+        of characters other than a-z0-9 becomes ''-'' (no ''-'' at either end), e.g. Škoda -> skoda, Mercedes-Benz -> mercedes-benz);
+        modelId = makeId + ''.'' + slug(model) (e.g. volkswagen.id-4). An admin-added row gets ''a-'' + a random UUID. Pattern
+        ^[a-z0-9][a-z0-9.-]{0,79}$.'
+      required:
+      - modelId
+      - name
+      properties:
+        modelId:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9.-]{0,79}$
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+      additionalProperties: false
+    CarMake:
+      type: object
+      description: 'v0.18.178 (contract.json#carCatalogue): Text ids, fixed in the seed file (never computed at boot, never
+        changed by a rename): makeId = slug(make) (NFKD, accents removed, lower case, ''+'' is read as '' plus '', every run
+        of characters other than a-z0-9 becomes ''-'' (no ''-'' at either end), e.g. Škoda -> skoda, Mercedes-Benz -> mercedes-benz);
+        modelId = makeId + ''.'' + slug(model) (e.g. volkswagen.id-4). An admin-added row gets ''a-'' + a random UUID. Pattern
+        ^[a-z0-9][a-z0-9.-]{0,79}$.'
+      required:
+      - makeId
+      - name
+      - models
+      properties:
+        makeId:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9.-]{0,79}$
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/CarModel'
+      additionalProperties: false
+    CarCatalogue:
+      type: object
+      description: 'v0.18.178 (contract.json#carCatalogue): GET /driver/car-catalogue (driver auth) -> CarCatalogue { version,
+        attribution, makes: [ { makeId, name, models: [ { modelId, name } ] } ] }: only rows that are not hidden, makes and
+        models sorted by name (accents kept). version grows on every admin change; the answer carries ETag "<version>" and
+        If-None-Match answers 304, so the app keeps a cached copy. If the call fails the app''s fields work as plain text
+        (never blocks adding a car).'
+      required:
+      - version
+      - attribution
+      - makes
+      properties:
+        version:
+          type: integer
+          minimum: 0
+          description: Grows on every admin change; also sent as ETag.
+        attribution:
+          type: string
+          description: Shown in the driver picker. Contains data from the European Environment Agency (EEA), CO2 monitoring
+            of new passenger cars, CC BY 4.0.
+        makes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CarMake'
+      additionalProperties: false
+    AdminCarModel:
+      type: object
+      description: 'v0.18.178 (contract.json#carCatalogue): GET /admin/car-catalogue (drivers.read): every make with its models,
+        hidden rows included, each with source eea | admin and hidden. POST /admin/car-catalogue/makes { name } and POST /admin/car-catalogue/makes/{makeId}/models
+        { name } (vehicles.edit, audit): a name that already exists under the same parent (case- and accent-insensitive, hidden
+        rows included) is 409 conflict reason make_exists / model_exists with details [id, hidden or shown], nothing is created.
+        PATCH /admin/car-catalogue/makes/{makeId} and /admin/car-catalogue/models/{modelId} { name?, hidden? } (vehicles.edit,
+        audit). A rename changes the catalogue only: the make/model strings stored on existing cars are never changed. No
+        DELETE (Rule 21: hide, never delete).'
+      required:
+      - modelId
+      - name
+      - hidden
+      - source
+      properties:
+        modelId:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9.-]{0,79}$
+        name:
+          type: string
+        hidden:
+          type: boolean
+        source:
+          type: string
+          enum:
+          - eea
+          - admin
+        updatedAt:
+          $ref: '#/components/schemas/Timestamp'
+      additionalProperties: false
+    AdminCarMake:
+      type: object
+      description: 'v0.18.178 (contract.json#carCatalogue): GET /admin/car-catalogue (drivers.read): every make with its models,
+        hidden rows included, each with source eea | admin and hidden. POST /admin/car-catalogue/makes { name } and POST /admin/car-catalogue/makes/{makeId}/models
+        { name } (vehicles.edit, audit): a name that already exists under the same parent (case- and accent-insensitive, hidden
+        rows included) is 409 conflict reason make_exists / model_exists with details [id, hidden or shown], nothing is created.
+        PATCH /admin/car-catalogue/makes/{makeId} and /admin/car-catalogue/models/{modelId} { name?, hidden? } (vehicles.edit,
+        audit). A rename changes the catalogue only: the make/model strings stored on existing cars are never changed. No
+        DELETE (Rule 21: hide, never delete).'
+      required:
+      - makeId
+      - name
+      - hidden
+      - source
+      - models
+      properties:
+        makeId:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9.-]{0,79}$
+        name:
+          type: string
+        hidden:
+          type: boolean
+        source:
+          type: string
+          enum:
+          - eea
+          - admin
+        updatedAt:
+          $ref: '#/components/schemas/Timestamp'
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminCarModel'
+      additionalProperties: false
+    AdminCarCatalogue:
+      type: object
+      description: 'v0.18.178 (contract.json#carCatalogue): GET /admin/car-catalogue (drivers.read): every make with its models,
+        hidden rows included, each with source eea | admin and hidden. POST /admin/car-catalogue/makes { name } and POST /admin/car-catalogue/makes/{makeId}/models
+        { name } (vehicles.edit, audit): a name that already exists under the same parent (case- and accent-insensitive, hidden
+        rows included) is 409 conflict reason make_exists / model_exists with details [id, hidden or shown], nothing is created.
+        PATCH /admin/car-catalogue/makes/{makeId} and /admin/car-catalogue/models/{modelId} { name?, hidden? } (vehicles.edit,
+        audit). A rename changes the catalogue only: the make/model strings stored on existing cars are never changed. No
+        DELETE (Rule 21: hide, never delete).'
+      required:
+      - version
+      - attribution
+      - makes
+      properties:
+        version:
+          type: integer
+          minimum: 0
+        attribution:
+          type: string
+        makes:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminCarMake'
+      additionalProperties: false
+    AdminCarNameCommand:
+      type: object
+      description: 'v0.18.178 (contract.json#carCatalogue): GET /admin/car-catalogue (drivers.read): every make with its models,
+        hidden rows included, each with source eea | admin and hidden. POST /admin/car-catalogue/makes { name } and POST /admin/car-catalogue/makes/{makeId}/models
+        { name } (vehicles.edit, audit): a name that already exists under the same parent (case- and accent-insensitive, hidden
+        rows included) is 409 conflict reason make_exists / model_exists with details [id, hidden or shown], nothing is created.
+        PATCH /admin/car-catalogue/makes/{makeId} and /admin/car-catalogue/models/{modelId} { name?, hidden? } (vehicles.edit,
+        audit). A rename changes the catalogue only: the make/model strings stored on existing cars are never changed. No
+        DELETE (Rule 21: hide, never delete).'
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+      additionalProperties: false
+    AdminCarUpdateCommand:
+      type: object
+      description: 'v0.18.178 (contract.json#carCatalogue): GET /admin/car-catalogue (drivers.read): every make with its models,
+        hidden rows included, each with source eea | admin and hidden. POST /admin/car-catalogue/makes { name } and POST /admin/car-catalogue/makes/{makeId}/models
+        { name } (vehicles.edit, audit): a name that already exists under the same parent (case- and accent-insensitive, hidden
+        rows included) is 409 conflict reason make_exists / model_exists with details [id, hidden or shown], nothing is created.
+        PATCH /admin/car-catalogue/makes/{makeId} and /admin/car-catalogue/models/{modelId} { name?, hidden? } (vehicles.edit,
+        audit). A rename changes the catalogue only: the make/model strings stored on existing cars are never changed. No
+        DELETE (Rule 21: hide, never delete).'
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        hidden:
+          type: boolean
       additionalProperties: false

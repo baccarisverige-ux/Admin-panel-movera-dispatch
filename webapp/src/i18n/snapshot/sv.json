@@ -9705,4 +9705,16 @@
 ["Favourite areas per driver","Favoritområden per förare"],
 ["Favourite areas per driver, at most","Favoritområden per förare, högst"],
 ["Drivers pick favourite areas in Booked rides; rides there are listed first. It never changes who sees a ride.","Förare väljer favoritområden i Bokade resor; resor där visas först. Det ändrar aldrig vem som ser en resa."],
-["areas","områden"]]
+["areas","områden"],
+["Car catalogue","Bilkatalog"],
+["Add make","Lägg till märke"],
+["Add model","Lägg till modell"],
+["Typed by driver","Inskrivet av föraren"],
+["Add to catalogue","Lägg till i katalogen"],
+["Search makes","Sök märken"],
+["EEA","EEA"],
+["Added by admin","Tillagt av admin"],
+["Already in the catalogue.","Finns redan i katalogen."],
+["Already in the catalogue, hidden: use Show.","Finns redan i katalogen, dold: använd Visa."],
+["You need the right to edit vehicles.","Du behöver rätten att ändra fordon."],
+["This entry no longer exists.","Den här raden finns inte längre."]]
