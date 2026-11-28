@@ -19,7 +19,7 @@ export const enC69GoogleRoadLines = {
   "Quotes per day cannot be above the daily limit.": "Quotes per day cannot be above the daily limit.",
   "Only an admin who covers every country can change the Google budget (403 not_all_countries).": "Only an admin who covers every country can change the Google budget (403 not_all_countries).",
   "The server refused these numbers: quotes per day cannot be above the daily limit (400 invalid_budget).": "The server refused these numbers: quotes per day cannot be above the daily limit (400 invalid_budget).",
-  "Google Routes daily limit reached — prices use the estimate until tomorrow.": "Google Routes daily limit reached — prices use the estimate until tomorrow.",
-  "Google road lines used their daily share — lines are approximate until tomorrow.": "Google road lines used their daily share — lines are approximate until tomorrow.",
-  "Today {0}: {1} of {2} Google calls used.": "Today {0}: {1} of {2} Google calls used.",
+  "Google Routes daily limit reached ({0} calls): prices and road lines are estimated until midnight Pacific time": "Google Routes daily limit reached ({0} calls): prices and road lines are estimated until midnight Pacific time",
+  "Google road lines used their daily share ({0} calls): driver lines are estimated until midnight Pacific time": "Google road lines used their daily share ({0} calls): driver lines are estimated until midnight Pacific time",
+  "Today {0}: {1} price calls, {2} road-line calls (all countries)": "Today {0}: {1} price calls, {2} road-line calls (all countries)",
 } as const;

@@ -50,12 +50,12 @@ export function budgetErrorText(error: unknown): string {
 
 /**
  * The server's alert system_health:google_routes_budget:<CC> (contract.json#googleRoadLines.budgetAlert): the server
- * sends these English templates, the admin shows them in its language.
+ * sends these English templates (movera-server src/alerts/detector.ts:537-538 at dce1fe39), the admin shows them in its language.
  */
 export const GOOGLE_BUDGET_ALERT_PREFIX = "system_health:google_routes_budget:";
 export const GOOGLE_BUDGET_ALERT_TEXTS = [
-  "Google Routes daily limit reached — prices use the estimate until tomorrow.",
-  "Google road lines used their daily share — lines are approximate until tomorrow.",
-  "Today {0}: {1} of {2} Google calls used.",
+  "Google Routes daily limit reached ({0} calls): prices and road lines are estimated until midnight Pacific time",
+  "Google road lines used their daily share ({0} calls): driver lines are estimated until midnight Pacific time",
+  "Today {0}: {1} price calls, {2} road-line calls (all countries)",
 ] as const;
 export const isGoogleBudgetAlert = (id: string): boolean => id.startsWith(GOOGLE_BUDGET_ALERT_PREFIX);

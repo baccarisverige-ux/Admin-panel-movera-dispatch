@@ -9682,6 +9682,6 @@
 ["Quotes per day cannot be above the daily limit.","Offerter per dag kan inte vara över den dagliga gränsen."],
 ["Only an admin who covers every country can change the Google budget (403 not_all_countries).","Endast en admin som täcker alla länder kan ändra Google-budgeten (403 not_all_countries)."],
 ["The server refused these numbers: quotes per day cannot be above the daily limit (400 invalid_budget).","Servern avvisade siffrorna: offerter per dag kan inte vara över den dagliga gränsen (400 invalid_budget)."],
-["Google Routes daily limit reached — prices use the estimate until tomorrow.","Google Routes dagliga gräns nådd — priserna använder uppskattningen till i morgon."],
-["Google road lines used their daily share — lines are approximate until tomorrow.","Vägarna från Google har använt sin dagliga andel — linjerna är ungefärliga till i morgon."],
-["Today {0}: {1} of {2} Google calls used.","Idag {0}: {1} av {2} Google-anrop använda."]]
+["Google Routes daily limit reached ({0} calls): prices and road lines are estimated until midnight Pacific time","Google Routes dagliga gräns nådd ({0} anrop): priser och vägar uppskattas till midnatt Stillahavstid"],
+["Google road lines used their daily share ({0} calls): driver lines are estimated until midnight Pacific time","Vägarna från Google har använt sin dagliga andel ({0} anrop): förarens linjer uppskattas till midnatt Stillahavstid"],
+["Today {0}: {1} price calls, {2} road-line calls (all countries)","Idag {0}: {1} prisanrop, {2} väganrop (alla länder)"]]

@@ -100,3 +100,22 @@ test("the admin makes no Google call", () => {
     assert.doesNotMatch(src, /googleapis\.com|routes\.googleapis|computeRoutes/, f);
   }
 });
+
+/** The live server's exact strings: movera-server src/alerts/detector.ts:537 (title) and :538 (detail) at dce1fe39 (#345). */
+const SERVER_BUDGET_ALERT_STRINGS = [
+  "Google Routes daily limit reached ({0} calls): prices and road lines are estimated until midnight Pacific time", // detector.ts:537 critical
+  "Google road lines used their daily share ({0} calls): driver lines are estimated until midnight Pacific time", // detector.ts:537 warning
+  "Today {0}: {1} price calls, {2} road-line calls (all countries)", // detector.ts:538 detail
+];
+
+test("the admin's budget-alert keys equal the server strings, translated in sv and fr with every placeholder", () => {
+  assert.deepEqual([...GOOGLE_BUDGET_ALERT_TEXTS], SERVER_BUDGET_ALERT_STRINGS);
+  for (const k of SERVER_BUDGET_ALERT_STRINGS) {
+    assert.equal((en as Record<string, string>)[k], k);
+    for (const d of [sv, fr] as Record<string, string>[]) {
+      const v = d[k]!;
+      assert.ok(v && v !== k, k);
+      for (const ph of k.match(/\{\d\}/g)!) assert.ok(v.includes(ph), `${ph} in ${v}`);
+    }
+  }
+});
