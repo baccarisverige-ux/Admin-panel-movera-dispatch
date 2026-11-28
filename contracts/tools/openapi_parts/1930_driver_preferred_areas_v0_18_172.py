@@ -38,10 +38,10 @@ op("get", "/driver/areas/search", "searchDriverAreas", "Search the areas of the 
    params=[{"name": "q", "in": "query", "required": False, "schema": s(maxLength=80)},
            {"name": "limit", "in": "query", "required": False, "schema": i(minimum=1, maximum=_PA["searchLimit"])}],
    ok=(200, "AreaList"), desc=_V172 + _PA["search"])
-op("get", "/driver/areas/at", "driverAreaAt", "The smallest area of the driver's zones that holds a point", ["driver"], "Driver · Account",
-   params=[{"name": "lat", "in": "query", "required": True, "schema": n(minimum=-90, maximum=90)},
-           {"name": "lng", "in": "query", "required": True, "schema": n(minimum=-180, maximum=180)}],
-   ok=(200, "AreaAt"), desc=_V172 + _PA["at"] + " " + _PA["addressInput"])
+S["AreaAtCommand"] = obj(OrderedDict([("lat", n(minimum=-90, maximum=90)), ("lng", n(minimum=-180, maximum=180))]), ["lat", "lng"],
+    _V172 + "The point in the body, never in the URL (GM 2026-11-28); never stored, never logged.", addl=False)
+op("post", "/driver/areas/at", "driverAreaAt", "The smallest area of the driver's zones that holds a point", ["driver"], "Driver · Account",
+   body="AreaAtCommand", ok=(200, "AreaAt"), read_only=True, desc=_V172 + _PA["at"] + " " + _PA["addressInput"])
 op("put", "/driver/preferred-areas", "setDriverPreferredAreas", "Save the driver's preferred areas", ["driver"], "Driver · Account",
    body="PreferredAreasCommand", ok=(200, "Driver"), mutation=True, desc=_V172 + _PA["put"] + " " + _PA["visibility"])
 S["AdminArea"] = obj(OrderedDict([

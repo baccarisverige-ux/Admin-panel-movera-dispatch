@@ -21711,39 +21711,33 @@ paths:
         '503':
           $ref: '#/components/responses/Unavailable'
   /driver/areas/at:
-    get:
+    post:
       operationId: driverAreaAt
       summary: The smallest area of the driver's zones that holds a point
-      description: 'v0.18.172 (contract.json#preferredAreas): GET /driver/areas/at?lat=&lng= → { area: Area | null, containing:
-        Area[] }: lat (number, -90..90) and lng (number, -180..180), both required, else 400 invalid_request reason invalid_point.
-        area = the smallest active area of the driver''s zones that contains the point (smallest = lowest areaRank, then the
-        smallest bounding box); containing = every matching area, smallest first. No area: 200 with area null and containing
-        [] (not 404). The server never stores the point, never logs it at any level and never calls Google for it. The search
-        field also takes a full address. The app geocodes it with the existing address service (POST /locations/autocomplete,
-        then /locations/geocode if no position) and calls GET /driver/areas/at; only the areaId is saved. Street, number and
-        the point are never stored. Address search starts at addressMinChars characters, at most one autocomplete call per
-        debounced search (addressDebounceMs).'
+      description: 'v0.18.172 (contract.json#preferredAreas): POST /driver/areas/at { lat, lng } → { area: Area | null, containing:
+        Area[] } (a read; the point travels in the body, never in the URL, GM 2026-11-28): lat (number, -90..90) and lng (number,
+        -180..180), both required, no other key, else 400 invalid_request reason invalid_point. area = the smallest active
+        area of the driver''s zones that contains the point (smallest = lowest areaRank, then the smallest bounding box);
+        containing = every matching area, smallest first. No area: 200 with area null and containing [] (not 404). The server
+        never stores the point, never logs it at any level and never calls Google for it. The search field also takes a full
+        address. The app geocodes it with the existing address service (POST /locations/autocomplete, then /locations/geocode
+        if no position) and calls POST /driver/areas/at { lat, lng }; only the areaId is saved. Street, number and the point
+        are never stored. Address search starts at addressMinChars characters, at most one autocomplete call per debounced
+        search (addressDebounceMs).'
       tags:
       - Driver · Account
       x-actor:
       - driver
+      x-read-only: true
       parameters:
-      - name: lat
-        in: query
-        required: true
-        schema:
-          type: number
-          minimum: -90
-          maximum: 90
-      - name: lng
-        in: query
-        required: true
-        schema:
-          type: number
-          minimum: -180
-          maximum: 180
       - $ref: '#/components/parameters/RequestId'
       - $ref: '#/components/parameters/ApiVersion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AreaAtCommand'
       responses:
         '200':
           description: OK
@@ -44298,11 +44292,12 @@ components:
       additionalProperties: false
     AreaAt:
       type: object
-      description: 'v0.18.172 (contract.json#preferredAreas): GET /driver/areas/at?lat=&lng= → { area: Area | null, containing:
-        Area[] }: lat (number, -90..90) and lng (number, -180..180), both required, else 400 invalid_request reason invalid_point.
-        area = the smallest active area of the driver''s zones that contains the point (smallest = lowest areaRank, then the
-        smallest bounding box); containing = every matching area, smallest first. No area: 200 with area null and containing
-        [] (not 404). The server never stores the point, never logs it at any level and never calls Google for it.'
+      description: 'v0.18.172 (contract.json#preferredAreas): POST /driver/areas/at { lat, lng } → { area: Area | null, containing:
+        Area[] } (a read; the point travels in the body, never in the URL, GM 2026-11-28): lat (number, -90..90) and lng (number,
+        -180..180), both required, no other key, else 400 invalid_request reason invalid_point. area = the smallest active
+        area of the driver''s zones that contains the point (smallest = lowest areaRank, then the smallest bounding box);
+        containing = every matching area, smallest first. No area: 200 with area null and containing [] (not 404). The server
+        never stores the point, never logs it at any level and never calls Google for it.'
       required:
       - area
       - containing
@@ -44332,6 +44327,23 @@ components:
             type: string
             pattern: ^[A-Z0-9-]{3,40}$
           maxItems: 30
+      additionalProperties: false
+    AreaAtCommand:
+      type: object
+      description: 'v0.18.172 (contract.json#preferredAreas): The point in the body, never in the URL (GM 2026-11-28); never
+        stored, never logged.'
+      required:
+      - lat
+      - lng
+      properties:
+        lat:
+          type: number
+          minimum: -90
+          maximum: 90
+        lng:
+          type: number
+          minimum: -180
+          maximum: 180
       additionalProperties: false
     AdminArea:
       type: object
