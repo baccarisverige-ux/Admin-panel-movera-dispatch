@@ -12224,6 +12224,33 @@
     "rider": "Rider app: not affected (no rider schema or path changes).",
     "seed": "Server: the area rows ship in the server image (data/areas, manifest.json with each file's sha256 and the row count per country) and are upserted at boot right after migrate (same MIGRATE_ON_START gate, advisory lock, skipped when the manifest hash is already in area_seed_runs). The seed never changes active or name_override (admin's) and never deletes a row (Rule 21). A wrong checksum or count stops the start."
   },
+  "priceChangeAsk": {
+    "since": "0.18.174",
+    "note": "v0.18.174 (owner 2026-11-28 'When price more allways show', 'No popup, book lower', F1 'Yes, book'; Rules plan/PLAN-0.18.174-price-change-tolerance.md): when the price at booking differs from the one the rider saw, ANY rise (even 1 minor unit) is asked, a drop or the same price books silently at the fresh server price. No tolerance and no setting (priceChangeAskAbovePct was dropped by the owner and is not a key).",
+    "request": "CreateTripRequest and RescheduleCommand take optional agreedQuoteId (the quote whose price the rider last saw) and optional priceAccepted (boolean, the rider said yes to the fresh price; only meaningful with agreedQuoteId). No money field is added: a body with any other field (total, price, fareMinor ...) is still 400 invalid_request invalid_body. The price booked is always the fresh quote row (quoteId), never a client amount.",
+    "noClientAmount": {
+      "fields": [
+        "total",
+        "totalMinor",
+        "amount",
+        "amountMinor",
+        "price",
+        "priceMinor",
+        "fare",
+        "fareMinor"
+      ],
+      "rule": "CreateTripRequest and RescheduleCommand carrying any of these fields is 400 invalid_request invalid_body (the schema forbids them), so a forged price is never read."
+    },
+    "rule": "With agreedQuoteId the server compares total_minor of the fresh quote (quoteId) with the agreed quote on minor units: fresh < agreed or equal → booked at the fresh total; fresh > agreed and priceAccepted is not true → 409 conflict reason price_changed_ask, nothing booked, the fresh quote stays unused; fresh > agreed with priceAccepted true → booked at the fresh total.",
+    "agreedQuote": "The agreed quote is read by id WITHOUT the expiry or used checks (it has normally expired by booking time, which is why the app priced again); only the fresh quote must be valid. An agreed quote of another rider, or of another category / kind, is 400 invalid_request quote_mismatch. A MISSING agreed quote (deleted by quote cleanup, unknown id) counts as a rise: 409 price_changed_ask unless priceAccepted is true; never a silent booking on a price that cannot be compared.",
+    "oldApps": "A request WITHOUT agreedQuoteId is booked exactly as before (fresh quote, no rise check) and never gets price_changed_ask. quote_mismatch keeps its meaning (route / extras do not match the quote).",
+    "reasons": {
+      "price_changed_ask": "409 conflict: the fresh price is higher than the agreed one and the rider has not accepted it; ask with the fresh quote's price, then send again with priceAccepted true."
+    },
+    "rider": "Rider app: one shared popup PriceUpdatedDialog (owner FINAL design v8, black and white, white card): small recalculate icon + title 'Prix recalculé' / 'Priset har räknats om' / 'Price recalculated', one grey line, the price only in the black button 'Réserver {category} · {price}', ✕ closes (= the old 'Pas maintenant'). Shown only on a rise, never on a drop. After ✕ the list shows the new price and the next tap books it with no second popup (owner F1).",
+    "driver": "Driver app: not affected; the offer and the cash sheet show the trip's fare_minor (the fresh server quote), as before.",
+    "admin": "Admin: not affected; no setting, no new page; the Trips page shows the stored fare as before."
+  },
   "carCatalogue": {
     "since": "0.18.178",
     "note": "v0.18.178 (car make/model picker; owner 2026-11-28 \"car make/model picker on driver 'Lägg till bil' = common SE+FR taxi cars, searchable, admin can add more, 'Annat' lets driver type\", \"the TYPED text is saved as is\"; Rules plan/PLAN-0.18.178-car-catalogue.md; Rule 0; X-Api-Version stays `0.5`; additive, optional; server migration 0145): the catalogue is a help to pick; make/model are always the stored strings; makeId/modelId null means the driver typed it (Annat). The server never refuses a car because it is not in the list. No enum.",

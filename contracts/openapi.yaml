@@ -33127,7 +33127,10 @@ components:
             v0.18.93 reasons: driver_away_from_pickup (409, the driver''s no-show while the waiting clock is stopped), invalid_auto_arrive_distance
             (400, contract.json#autoArrive.settings.validation). v0.18.108 reason: not_at_stop (409 invalid_transition, the
             driver''s stop tap or back tap farther than allowed from the stop; contract.json#autoArrive.stops.tap / back).
-            v0.18.109 reason: fleet_other_country (409 conflict, the driver''s country is not the fleet''s; contract.json#driverOnboarding.fleetInvitations.oneCountry).'
+            v0.18.109 reason: fleet_other_country (409 conflict, the driver''s country is not the fleet''s; contract.json#driverOnboarding.fleetInvitations.oneCountry).
+            v0.18.174 (contract.json#priceChangeAsk): price_changed_ask (409 conflict, POST /trips and POST /trips/{tripId}/reschedule
+            with agreedQuoteId): 409 conflict: the fresh price is higher than the agreed one and the rider has not accepted
+            it; ask with the fresh quote''s price, then send again with priceAccepted true.'
         details:
           type: array
           items:
@@ -33803,7 +33806,13 @@ components:
     CreateTripRequest:
       type: object
       description: 'Request a quoted trip. No expectedVersion: the trip does not exist yet; Idempotency-Key dedupes. v0.6.0:
-        babySeats, childSeats, airportPickup, airportDropoff and fixedRouteId repeat the quote''s (else 400 quote_mismatch).'
+        babySeats, childSeats, airportPickup, airportDropoff and fixedRouteId repeat the quote''s (else 400 quote_mismatch).
+        v0.18.174 (contract.json#priceChangeAsk): CreateTripRequest and RescheduleCommand take optional agreedQuoteId (the
+        quote whose price the rider last saw) and optional priceAccepted (boolean, the rider said yes to the fresh price;
+        only meaningful with agreedQuoteId). No money field is added: a body with any other field (total, price, fareMinor
+        ...) is still 400 invalid_request invalid_body. The price booked is always the fresh quote row (quoteId), never a
+        client amount. CreateTripRequest and RescheduleCommand carrying any of these fields is 400 invalid_request invalid_body
+        (the schema forbids them), so a forged price is never read.'
       required:
       - quoteId
       - categoryId
@@ -33876,6 +33885,41 @@ components:
           - $ref: '#/components/schemas/Id'
           description: 'v0.6.0: one of the zone''s fixed routes; for a route of the quoted category the fixed_route line replaces
             the ride part, otherwise the category is priced normally.'
+        agreedQuoteId:
+          allOf:
+          - $ref: '#/components/schemas/Id'
+          description: 'v0.18.174 (contract.json#priceChangeAsk): the quote whose price the rider last saw. The agreed quote
+            is read by id WITHOUT the expiry or used checks (it has normally expired by booking time, which is why the app
+            priced again); only the fresh quote must be valid. An agreed quote of another rider, or of another category /
+            kind, is 400 invalid_request quote_mismatch. A MISSING agreed quote (deleted by quote cleanup, unknown id) counts
+            as a rise: 409 price_changed_ask unless priceAccepted is true; never a silent booking on a price that cannot be
+            compared. A request WITHOUT agreedQuoteId is booked exactly as before (fresh quote, no rise check) and never gets
+            price_changed_ask. quote_mismatch keeps its meaning (route / extras do not match the quote).'
+        priceAccepted:
+          type: boolean
+          description: 'v0.18.174 (contract.json#priceChangeAsk): the rider accepted the fresh (higher) price; a yes/no only,
+            never an amount. Only meaningful with agreedQuoteId. With agreedQuoteId the server compares total_minor of the
+            fresh quote (quoteId) with the agreed quote on minor units: fresh < agreed or equal → booked at the fresh total;
+            fresh > agreed and priceAccepted is not true → 409 conflict reason price_changed_ask, nothing booked, the fresh
+            quote stays unused; fresh > agreed with priceAccepted true → booked at the fresh total.'
+      not:
+        anyOf:
+        - required:
+          - total
+        - required:
+          - totalMinor
+        - required:
+          - amount
+        - required:
+          - amountMinor
+        - required:
+          - price
+        - required:
+          - priceMinor
+        - required:
+          - fare
+        - required:
+          - fareMinor
     UpdateTripRequest:
       type: object
       description: 'Route change (needs routeQuoteId from /route-quote) and/or payment method change. v0.18.9: 2. Rider confirms:
@@ -40535,7 +40579,12 @@ components:
         POST /driver/reservations/{tripId}/keep { keep }); Yes keeps it (rider told reservation_driver_found), No or no answer
         within changeAnswerMin (default 15) puts it back on the list (transition release, push reservation_changed) and the
         ride is planned again (bookLater.plan). Later → 409 conflict, reason change_too_late. Not a scheduled trip, or not
-        before pickup → 409 not_a_reservation.'
+        before pickup → 409 not_a_reservation. v0.18.174 (contract.json#priceChangeAsk): CreateTripRequest and RescheduleCommand
+        take optional agreedQuoteId (the quote whose price the rider last saw) and optional priceAccepted (boolean, the rider
+        said yes to the fresh price; only meaningful with agreedQuoteId). No money field is added: a body with any other field
+        (total, price, fareMinor ...) is still 400 invalid_request invalid_body. The price booked is always the fresh quote
+        row (quoteId), never a client amount. CreateTripRequest and RescheduleCommand carrying any of these fields is 400
+        invalid_request invalid_body (the schema forbids them), so a forged price is never read.'
       required:
       - quoteId
       - expectedVersion
@@ -40545,6 +40594,41 @@ components:
         expectedVersion:
           type: integer
           minimum: 1
+        agreedQuoteId:
+          allOf:
+          - $ref: '#/components/schemas/Id'
+          description: 'v0.18.174 (contract.json#priceChangeAsk): the quote whose price the rider last saw. The agreed quote
+            is read by id WITHOUT the expiry or used checks (it has normally expired by booking time, which is why the app
+            priced again); only the fresh quote must be valid. An agreed quote of another rider, or of another category /
+            kind, is 400 invalid_request quote_mismatch. A MISSING agreed quote (deleted by quote cleanup, unknown id) counts
+            as a rise: 409 price_changed_ask unless priceAccepted is true; never a silent booking on a price that cannot be
+            compared. A request WITHOUT agreedQuoteId is booked exactly as before (fresh quote, no rise check) and never gets
+            price_changed_ask. quote_mismatch keeps its meaning (route / extras do not match the quote).'
+        priceAccepted:
+          type: boolean
+          description: 'v0.18.174 (contract.json#priceChangeAsk): the rider accepted the fresh (higher) price; a yes/no only,
+            never an amount. Only meaningful with agreedQuoteId. With agreedQuoteId the server compares total_minor of the
+            fresh quote (quoteId) with the agreed quote on minor units: fresh < agreed or equal → booked at the fresh total;
+            fresh > agreed and priceAccepted is not true → 409 conflict reason price_changed_ask, nothing booked, the fresh
+            quote stays unused; fresh > agreed with priceAccepted true → booked at the fresh total.'
+      not:
+        anyOf:
+        - required:
+          - total
+        - required:
+          - totalMinor
+        - required:
+          - amount
+        - required:
+          - amountMinor
+        - required:
+          - price
+        - required:
+          - priceMinor
+        - required:
+          - fare
+        - required:
+          - fareMinor
     AdminReservationCommand:
       type: object
       description: 'v0.18.17: reason is required for unassign.'
