@@ -129,10 +129,8 @@ export function driverRecord(driver: Driver, live?: LiveDriverRow): DemoRecord {
       // BQ-A07: why the server set him offline (only while offline; the live row wins when it says he is back).
       ...((live?.onlineStatus ?? driver.onlineStatus) === "offline" && driver.offlineReason ? { offlineReason: driver.offlineReason, ...(driver.offlineNote ? { offlineNote: driver.offlineNote } : {}), ...(driver.offlineAt ? { offlineAt: driver.offlineAt } : {}) } : {}),
       ...(driver.performance ? { performance: performanceFacts(driver.performance) } : {}),
-      // v0.18.172 (contract.json#preferredAreas.driverView): the areas the driver prefers (names only).
-      ...(Array.isArray((driver as { preferredAreas?: unknown }).preferredAreas) ? { preferredAreas: ((driver as unknown as { preferredAreas: { areaId: string; name: string }[] }).preferredAreas).map((a) => ({ areaId: a.areaId, name: a.name })) } : {}),
-      // v0.18.17 (owner BL-Q4): the home area the driver set (who sees "home nearby" booked rides).
-      ...((driver as { homeArea?: { lat: number; lng: number; label?: string } }).homeArea ? { homeArea: (driver as unknown as { homeArea: { lat: number; lng: number; label?: string } }).homeArea } : {}),
+      // v0.18.17 (owner BL-Q4): the home area the driver set; v0.18.172 (preferredAreas.driverView): his favourite areas (names), on the same line (who sees "home nearby" booked rides).
+      ...((driver as { homeArea?: { lat: number; lng: number; label?: string } }).homeArea ? { homeArea: (driver as unknown as { homeArea: { lat: number; lng: number; label?: string } }).homeArea } : {}), ...(Array.isArray((driver as { preferredAreas?: unknown }).preferredAreas) ? { preferredAreas: ((driver as unknown as { preferredAreas: { areaId: string; name: string }[] }).preferredAreas).map((a) => ({ areaId: a.areaId, name: a.name })) } : {}),
     },
   };
 }
