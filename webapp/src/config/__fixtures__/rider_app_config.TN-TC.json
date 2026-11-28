@@ -112,7 +112,7 @@
   "features": {
     "scheduledRides": true,
     "wallet": true,
-    "pin": true,
+    "pin": false,
     "shareTrip": true
   },
   "shareTrip": {
