@@ -379,4 +379,5 @@ export const frA7QR: Record<keyof typeof enA7QR, string> = {
   "Running late to a reservation pickup": "En retard pour une prise en charge réservée",
   "Running now": "En cours",
   "Runs for{0}": "Dure{0}",
+  "Rider's choice": "Choix du client",
 };

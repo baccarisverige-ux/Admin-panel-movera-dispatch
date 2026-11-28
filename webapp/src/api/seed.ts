@@ -180,7 +180,8 @@ export type LiveTripFacts = {
     /** v0.18.93 (job C9, contract.json#autoArrive): automatic or tapped arrival, the stopped clock while away, the finished stops (all from the server). */
     arrivedBy?: "auto" | "tap" | null; awaySince?: string | null; pausedSeconds?: number; pauseCount?: number } | null;
   /** v0.18.8 (G6): the rider PIN when the trip needs one (the admin reads it to the driver on the phone). */
-  pin: { code: string | null; verified: boolean; attempts: number | null; blocked: boolean } | null;
+  /** v0.18.175 (contract.json#pinPerZone.pinSource): source = why the trip needs a PIN (zone | rider | both; "zone" from an older server). */
+  pin: { code: string | null; verified: boolean; attempts: number | null; blocked: boolean; source: "zone" | "rider" | "both" } | null;
   /** The cancel as the server recorded it: who, the reason code, the fee, whether it is paid / owed / waived, which rule set it, and the driver's share. */
   /** v0.18.9 (G7): the server's ride check, the latest route change (with the driver's money) and the admin flag. */
   rideCheck?: { checkId: string; trigger: string; askedAt: string; answerBy: string; answers: { rider?: string; driver?: string }; alertedAt: string | null } | null;
@@ -252,6 +253,8 @@ export type LiveRiderFacts = {
   outstandingByCurrency: { amountMinor: number; currency: string }[];
   /** v0.18.28 (fix job 6, owner Q4): the wallet balances, one per currency (never added together). */
   walletByCurrency?: { amountMinor: number; currency: string }[];
+  /** v0.18.175 (contract.json#pinPerZone.riderChoice): the rider's own "PIN on all my rides" (null from an older server). */
+  pinAlways?: boolean | null;
 };
 
 /** A trip row: a DemoRecord whose status is a contract TripStatus. */

@@ -1,6 +1,6 @@
 {
   "contract": "movera",
-  "version": "0.18.172",
+  "version": "0.18.175",
   "note": "Canonical cross-app contract for Rider, Driver and Admin. Frontend-only today; a future single backend implements it. Every app ships an identical copy under contracts/ and runs contract tests against it.",
   "wire": {
     "ids": {
@@ -12223,5 +12223,87 @@
     "driver": "Driver app: the house icon on Bokade resor opens the picker titled Favoritområden / Zones favorites / Favourite areas (owner 2026-11-28) with a count badge; a search field for an area name or an address (areas first, then addresses); multi-select; Spara (n) only when changed; Rensa; empty state 'Du får bokade resor i hela zonen'; the list rows of preferred rides show 'I ditt område'. Order comes from the server (no client sort). Address text and point are dropped at once, never stored on the phone.",
     "rider": "Rider app: not affected (no rider schema or path changes).",
     "seed": "Server: the area rows ship in the server image (data/areas, manifest.json with each file's sha256 and the row count per country) and are upserted at boot right after migrate (same MIGRATE_ON_START gate, advisory lock, skipped when the manifest hash is already in area_seed_runs). The seed never changes active or name_override (admin's) and never deletes a row (Rule 21). A wrong checksum or count stops the start."
+  },
+  "priceChangeAsk": {
+    "since": "0.18.174",
+    "note": "v0.18.174 (owner 2026-11-28 'When price more allways show', 'No popup, book lower', F1 'Yes, book'; Rules plan/PLAN-0.18.174-price-change-tolerance.md): when the price at booking differs from the one the rider saw, ANY rise (even 1 minor unit) is asked, a drop or the same price books silently at the fresh server price. No tolerance and no setting (priceChangeAskAbovePct was dropped by the owner and is not a key).",
+    "request": "CreateTripRequest and RescheduleCommand take optional agreedQuoteId (the quote whose price the rider last saw) and optional priceAccepted (boolean, the rider said yes to the fresh price; only meaningful with agreedQuoteId). No money field is added: a body with any other field (total, price, fareMinor ...) is still 400 invalid_request invalid_body. The price booked is always the fresh quote row (quoteId), never a client amount.",
+    "noClientAmount": {
+      "fields": [
+        "total",
+        "totalMinor",
+        "amount",
+        "amountMinor",
+        "price",
+        "priceMinor",
+        "fare",
+        "fareMinor"
+      ],
+      "rule": "CreateTripRequest and RescheduleCommand carrying any of these fields is 400 invalid_request invalid_body (the schema forbids them), so a forged price is never read."
+    },
+    "rule": "With agreedQuoteId the server compares total_minor of the fresh quote (quoteId) with the agreed quote on minor units: fresh < agreed or equal → booked at the fresh total; fresh > agreed and priceAccepted is not true → 409 conflict reason price_changed_ask, nothing booked, the fresh quote stays unused; fresh > agreed with priceAccepted true → booked at the fresh total.",
+    "agreedQuote": "The agreed quote is read by id WITHOUT the expiry or used checks (it has normally expired by booking time, which is why the app priced again); only the fresh quote must be valid. An agreed quote of another rider, or of another category / kind, is 400 invalid_request quote_mismatch. A MISSING agreed quote (deleted by quote cleanup, unknown id) counts as a rise: 409 price_changed_ask unless priceAccepted is true; never a silent booking on a price that cannot be compared.",
+    "oldApps": "A request WITHOUT agreedQuoteId is booked exactly as before (fresh quote, no rise check) and never gets price_changed_ask. quote_mismatch keeps its meaning (route / extras do not match the quote).",
+    "reasons": {
+      "price_changed_ask": "409 conflict: the fresh price is higher than the agreed one and the rider has not accepted it; ask with the fresh quote's price, then send again with priceAccepted true."
+    },
+    "rider": "Rider app: one shared popup PriceUpdatedDialog (owner FINAL design v8, black and white, white card): small recalculate icon + title 'Prix recalculé' / 'Priset har räknats om' / 'Price recalculated', one grey line, the price only in the black button 'Réserver {category} · {price}', ✕ closes (= the old 'Pas maintenant'). Shown only on a rise, never on a drop. After ✕ the list shows the new price and the next tap books it with no second popup (owner F1).",
+    "driver": "Driver app: not affected; the offer and the cash sheet show the trip's fare_minor (the fresh server quote), as before.",
+    "admin": "Admin: not affected; no setting, no new page; the Trips page shows the stored fare as before."
+  },
+  "pinPerZone": {
+    "since": "0.18.175",
+    "note": "v0.18.175 (owner 2026-11-28 'PIN per zone - Fix now', 'Rider also can chose pin from his account and must show driver when in car trip and driver can't start drive without enter the pin', Safety PIN row always shows, texts OK, 'the driver must enter the PIN ON THE TRIP SHEET, Start impossible without it'; Rules plan/PLAN-0.18.175-pin-per-zone.md): the rider app's PIN switch follows each zone, and the rider can ask for a PIN on all his own rides. X-Api-Version stays 0.5; additive, optional; server migration 0144 (riders.pin_always).",
+    "riderConfigFeature": "GET /rider/config always serves features.pin = the zone's live DriverAppConfig.pickupPin.required (its own driver document, else its country Standard's, else configDefaults.pickupPin.required = false); with ?draft=1 for a preview admin the driver DRAFT when there is one. The same function as POST /trips uses, so features.pin and a new trip's zone PIN never differ. The rider document's own features.pin is ignored on read (kept as stored, Rule 21). A driver_app_config publish does not wake the rider config stream: the rider app learns a new value at its next config read (a booked trip keeps its own pinRequired).",
+    "riderChoice": "RiderProfile (Rider) gains safety { pinAlways: boolean } (always sent on GET / PATCH /rider/profile and the admin rider view; default false; not masked). PATCH /rider/profile accepts safety { pinAlways } with expectedVersion as today (version + 1); a non-boolean is 400 invalid_body. The change is audited (admin_audit rider.safety_changed, adminId null, detail { pinAlways: { from, to } }).",
+    "bookingRule": "At POST /trips the trip stores pinRequired = zone pickupPin.required OR rider.safety.pinAlways, read at booking time in the booking transaction; a later change of either never changes a booked trip. maxAttempts / lockMinutes are the zone's (defaults 5 / 5 min when the zone switch is off). Everything after booking (the code, GET /trips/{tripId}/pin, 409 pin_required on board / start, the admin unlock, a new PIN on a driver change) is unchanged: it keys on Trip.pinRequired.",
+    "pinSource": "TripProjection.pinSource: 'zone' | 'rider' | 'both', only when pinRequired (rider and admin views; taken out of the driver's view and stream). Kept in booking_rules.pin.source; a trip booked before v0.18.175 with pinRequired reads 'zone'.",
+    "sources": [
+      "zone",
+      "rider",
+      "both"
+    ],
+    "rider": "Safety > PIN row always shows (owner 2026-11-28; replaces the v0.18.171 #716 hiding when the area is off). The PIN page shows the switch 'PIN on all my rides' bound to safety.pinAlways, with the help line; when features.pin is true the area note shows under it. The status label is On when features.pin OR pinAlways, else Off. The trip screens show the code from TripProjection.pickupPin as before.",
+    "driver": "Driver app (owner 2026-11-28 'on the trip sheet'): on the arrived / waiting sheet, when the trip needs a PIN and it is not verified yet, an inline PIN field sits above the Start slide; the slide is disabled with the hint driverTypeCodeFirst until POST /trips/{tripId}/pin/verify answered OK, then the slide boards and starts as usual. The pop-up sheet stays as the fallback for a 409 pin_required the phone did not expect. The slide no longer says 'Resan har startat' before the trip has started.",
+    "admin": "Admin: Rider page Safety line 'PIN on all rides: On / Off' (read-only; the admin does not change the rider's choice). Trip page: 'Why: Zone / Rider's choice / Both' next to 'PIN verified'. Settings > rider switches 'PIN' stays, read-only, relabelled; it decides nothing since v0.18.175 (Dispatch > Zone > Safety 'Rider PIN before Start' decides).",
+    "oldApps": "Same features.pin key and type; Rider.safety and TripProjection.pinSource are new optional fields older apps ignore. An older rider app cannot turn pinAlways on; its trips follow the zone.",
+    "texts": {
+      "riderSwitch": {
+        "sv": "PIN på alla mina resor",
+        "fr": "PIN sur tous mes trajets",
+        "en": "PIN on all my rides"
+      },
+      "riderSwitchHelp": {
+        "sv": "Föraren måste skriva in din kod innan resan startar. Visa koden för föraren i bilen.",
+        "fr": "Le chauffeur doit saisir votre code avant de démarrer. Montrez le code au chauffeur à bord.",
+        "en": "The driver must enter your code before the trip starts. Show the code to the driver in the car."
+      },
+      "riderAreaNote": {
+        "sv": "Det här området kräver alltid en PIN.",
+        "fr": "Cette zone demande toujours un PIN.",
+        "en": "This area always asks for a PIN."
+      },
+      "driverTypeCodeFirst": {
+        "sv": "Skriv resenärens kod först",
+        "fr": "Saisissez d'abord le code du passager",
+        "en": "Enter the rider's code first",
+        "status": "WAITS FOR OWNER OK (sv/fr/en)"
+      },
+      "adminRiderLine": {
+        "sv": "PIN på alla resor",
+        "fr": "PIN sur tous les trajets",
+        "en": "PIN on all rides"
+      },
+      "adminTripWhy": {
+        "sv": "Varför: Område / Kundens val / Båda",
+        "fr": "Pourquoi : Zone / Choix du client / Les deux",
+        "en": "Why: Zone / Rider's choice / Both"
+      },
+      "adminOldSwitch": {
+        "sv": "PIN (gammal — ställs per område i Dispatch › Säkerhet)",
+        "fr": "PIN (ancien — réglé par zone dans Dispatch › Sécurité)",
+        "en": "PIN (old — set per zone in Dispatch › Safety)"
+      }
+    }
   }
 }

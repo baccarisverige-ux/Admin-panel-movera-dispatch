@@ -30,12 +30,12 @@ export const SETTINGS_INFO: Readonly<Record<string, SettingInfoText>> = {
     "Off: no rider sees the wallet (unless a zone override turns it on); On: the wallet shows.",
   ),
   "config.switch.pin": t(
-    "Turns the PIN feature on or off in the rider app.",
+    "Decides nothing since v0.18.175. The rider app follows each zone's 'Rider PIN before Start' (Dispatch › Zone › Safety), and a rider can ask for a PIN on all his own rides.",
     RIDER,
-    "On or off.",
+    "Read-only.",
     "On.",
-    "Off: the rider app shows no PIN.",
-    "Off: no PIN at pickup; On: riders can use the PIN.",
+    "Nothing: the zone's 'Rider PIN before Start' and the rider's own choice decide.",
+    "No effect either way; kept so nothing is deleted (Rule 21).",
   ),
   "config.switch.shareTrip": t(
     "Turns Share trip on or off in the rider app.",

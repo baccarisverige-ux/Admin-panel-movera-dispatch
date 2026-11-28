@@ -377,4 +377,5 @@ export const enA7QR = {
   "Running late to a reservation pickup": "Running late to a reservation pickup",
   "Running now": "Running now",
   "Runs for{0}": "Runs for{0}",
+  "Rider's choice": "Rider's choice",
 } as const;

@@ -107,6 +107,11 @@ function SwitchRow({ item, onChange }: { item: { id: string; label: string; on: 
     // BQ-S10 (contract v0.18.116): Share trip is set per zone in Dispatch › Safety; read-only here.
     return <p className="check-row op-help" data-testid={`config-switch-moved-${item.id}`}>{trn("{0}: set per zone in Dispatch › Safety. {1}", trx(item.label), <Link to="/dispatch?tab=safety">{tr("Edit in Dispatch")}</Link>)}</p>;
   }
+  if (item.id === "pin") {
+    // v0.18.175 (contract.json#pinPerZone.admin; owner OK the label 2026-11-28): kept and shown (Rule 21), read-only; it
+    // decides nothing. Each zone's "Rider PIN before Start" (Dispatch › Safety) decides, plus the rider's own choice.
+    return <p className="check-row op-help" data-testid="config-switch-old-pin">{tr("PIN (old — set per zone in Dispatch › Safety)")} <Link to="/dispatch?tab=safety">{tr("Edit in Dispatch")}</Link><SettingInfo id="config.switch.pin" label={tr("PIN (old — set per zone in Dispatch › Safety)")} /></p>;
+  }
   if (PAYMENT_SWITCHES.has(item.id)) {
     return <p className="check-row op-help" data-testid={`config-switch-moved-${item.id}`}>{trn("{0}: set per country in Payment methods and languages. {1}", trx(item.label), <a href="#country-apps" onClick={(event) => { event.preventDefault(); document.getElementById("country-apps")?.scrollIntoView({ block: "start" }); }}>{tr("Edit per country")}</a>)}</p>;
   }

@@ -478,4 +478,6 @@ export const frA6OP: Record<keyof typeof enA6OP, string> = {
   "Put fleet owner on hold": "Mettre le propriétaire de flotte en attente",
   "Put rider on hold": "Mettre le passager en attente",
   "Put vehicle on hold": "Mettre le véhicule en attente",
+  "PIN (old — set per zone in Dispatch › Safety)": "PIN (ancien — réglé par zone dans Dispatch › Sécurité)",
+  "PIN on all rides: {0}": "PIN sur tous les trajets : {0}",
 };

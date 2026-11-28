@@ -478,4 +478,6 @@ export const svA6OP: Record<keyof typeof enA6OP, string> = {
   "Put fleet owner on hold": "Pausa flottägaren",
   "Put rider on hold": "Pausa resenären",
   "Put vehicle on hold": "Pausa fordonet",
+  "PIN (old — set per zone in Dispatch › Safety)": "PIN (gammal — ställs per område i Dispatch › Säkerhet)",
+  "PIN on all rides: {0}": "PIN på alla resor: {0}",
 };

@@ -379,4 +379,5 @@ export const svA7QR: Record<keyof typeof enA7QR, string> = {
   "Running late to a reservation pickup": "Försenad till en bokad upphämtning",
   "Running now": "Pågår nu",
   "Runs for{0}": "Pågår i{0}",
+  "Rider's choice": "Kundens val",
 };

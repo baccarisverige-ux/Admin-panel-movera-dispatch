@@ -1,0 +1,13 @@
+{
+  "since": "0.18.175",
+  "note": "contract.json#pinPerZone: features.pin = the zone's pickupPin.required (own driver document, else the country Standard's, else false); Trip.pinRequired = zone OR rider.safety.pinAlways; pinSource zone | rider | both.",
+  "cases": [
+    {"name": "own driver doc on, Standard off", "zoneOwn": true, "standard": false, "riderDocFeaturesPin": true, "pinAlways": false, "featuresPin": true, "pinRequired": true, "pinSource": "zone"},
+    {"name": "no own driver doc, Standard off (stale rider features.pin ignored)", "zoneOwn": null, "standard": false, "riderDocFeaturesPin": true, "pinAlways": false, "featuresPin": false, "pinRequired": false, "pinSource": null},
+    {"name": "own off, Standard on", "zoneOwn": false, "standard": true, "riderDocFeaturesPin": false, "pinAlways": false, "featuresPin": false, "pinRequired": false, "pinSource": null},
+    {"name": "no own, Standard on", "zoneOwn": null, "standard": true, "riderDocFeaturesPin": false, "pinAlways": false, "featuresPin": true, "pinRequired": true, "pinSource": "zone"},
+    {"name": "no driver doc anywhere", "zoneOwn": null, "standard": null, "riderDocFeaturesPin": true, "pinAlways": false, "featuresPin": false, "pinRequired": false, "pinSource": null},
+    {"name": "zone off, rider on", "zoneOwn": false, "standard": null, "riderDocFeaturesPin": false, "pinAlways": true, "featuresPin": false, "pinRequired": true, "pinSource": "rider"},
+    {"name": "zone on, rider on", "zoneOwn": true, "standard": null, "riderDocFeaturesPin": false, "pinAlways": true, "featuresPin": true, "pinRequired": true, "pinSource": "both"}
+  ]
+}

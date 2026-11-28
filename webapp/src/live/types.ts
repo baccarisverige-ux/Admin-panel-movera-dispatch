@@ -286,6 +286,8 @@ export type Trip = {
   pinAttempts?: number;
   /** v0.18.8 round 1: 3 × maxAttempts wrong tries in all; only an admin unlock (POST /admin/trips/{id}/pin/unlock) clears it. */
   pinBlocked?: boolean;
+  /** v0.18.175 (contract.json#pinPerZone.pinSource): why the trip needs a PIN; only with pinRequired. */
+  pinSource?: "zone" | "rider" | "both";
   /** v0.18.9 (G7, contract.json#onTrip): the server's ride check asked to both sides, the latest route change, the admin flag. */
   rideCheck?: TripRideCheck;
   routeChange?: TripRouteChange;
@@ -355,6 +357,8 @@ export type Rider = {
   wallets?: LiveMoney[];
   language?: string;
   deletionRequestedAt?: string;
+  /** v0.18.175 (contract.json#pinPerZone.riderChoice): the rider's own PIN choice. */
+  safety?: { pinAlways: boolean };
 };
 
 /** GET /admin/payments (PaymentIntent; the cash week adds cashCollected and walletApplied). */

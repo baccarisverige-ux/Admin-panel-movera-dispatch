@@ -520,6 +520,8 @@ export function RiderDetailPage() {
           <div className="rd-overview">
             <section className="fd-box">
               <h3>{tr("Trusted contacts")}</h3>
+              {/* v0.18.175 (contract.json#pinPerZone.riderChoice): read-only; the rider turns it on or off in his app. */}
+              {liveData ? <p data-testid="rider-pin-always">{trn("PIN on all rides: {0}", liveRiderOf(rider)?.pinAlways === true ? tr("On") : liveRiderOf(rider)?.pinAlways === false ? tr("Off") : tr("Not connected yet"))}</p> : null}
               {profile.trustedContacts.length === 0 ? <p className="state-line">{tr("The rider shares trips with nobody.")}</p> : <ul className="rd-ledger">{profile.trustedContacts.map((item) => <li key={item.name}><b>{item.name}</b><span>{item.relation}</span></li>)}</ul>}
               <h4>{tr("Safety incidents")}</h4>
               {incidents.length === 0 ? <p className="state-line">{tr("No incident.")}</p> : <ul className="rd-ledger">{incidents.map((item) => <li key={item.id}><Link to={`/incidents/${item.id}`}>{item.id}</Link><span>{statusLabelOf(item.status)}</span></li>)}</ul>}

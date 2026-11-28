@@ -12,7 +12,7 @@ const C = JSON.parse(readFileSync(new URL("../../../contracts/contract.json", im
 const OPENAPI = readFileSync(new URL("../../../contracts/openapi.yaml", import.meta.url), "utf8");
 
 test("the admin carries contract 0.18.171", () => {
-  assert.equal(C.version, "0.18.172");
+  assert.equal(C.version, "0.18.175");
   assert.equal(CONTRACT_VERSION, C.version);
 });
 
