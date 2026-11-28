@@ -50,7 +50,8 @@ const pinOf = (doc: Doc | undefined) => (doc?.["features"] as { pin?: boolean } 
 async function settingsPublish(s: ReturnType<typeof server>, readDispatch: boolean) {
   const settings = createLiveSettings(s.http, () => "2026-11-28T10:00:00Z");
   const start = emptyConfig();
-  if (readDispatch) await settings.readSlice(DISPATCH_KEY, emptyDispatchBook()).catch(() => undefined);
+  if (readDispatch) { try { await settings.readSlice(DISPATCH_KEY, emptyDispatchBook()); } catch { // a failed Dispatch read is one of the cases
+  } }
   await settings.readSlice("config", start);
   const value = { ...start, published: { ...start.published, switches: start.published.switches.map((item) => (item.app === "rider" && item.id === "wallet" ? { ...item, on: false } : item)) } };
   s.calls.length = 0;
