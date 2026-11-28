@@ -744,9 +744,10 @@ test("checker #204 HIGH 1: a Dispatch draft saved before Publish still reaches t
   assert.equal((driverNow!["drivingLimits"] as { restMinutes: number }).restMinutes, 30);
 });
 
+// G2 (trip-pin-check 2026-11-27): features.pin now follows Dispatch pickupPin.required, so this uses the wallet switch.
 test("checker #204 HIGH 2: a Settings publish reaches every target, also one published to after another", async () => {
   const { emptyConfig } = await import("../config/book.ts");
-  const doc = (id: string) => ({ ...sample("rider_app_config"), zoneId: id, features: { ...(sample("rider_app_config")["features"] as Doc), pin: true, serverOnly: "keep" }, booking: { maxStops: 3, bookingHorizonDays: 21, maxPickupMoveMeters: 200 } });
+  const doc = (id: string) => ({ ...sample("rider_app_config"), zoneId: id, features: { ...(sample("rider_app_config")["features"] as Doc), wallet: true, serverOnly: "keep" }, booking: { maxStops: 3, bookingHorizonDays: 21, maxPickupMoveMeters: 200 } });
   const server = fakeServer({
     "rider_app_config:Z001": { version: 2, liveVersion: 2, usesStandard: false, document: doc("Z001") },
     "rider_app_config:Z002": { version: 2, liveVersion: 2, usesStandard: false, document: doc("Z002") },
@@ -756,12 +757,12 @@ test("checker #204 HIGH 2: a Settings publish reaches every target, also one pub
   const settings = createLiveSettings(server.http, () => "2026-11-02T10:00:00Z");
   const start = emptyConfig();
   await settings.readSlice("config", start);
-  const value = { ...start, published: { ...start.published, switches: start.published.switches.map((item) => (item.app === "rider" && item.id === "pin" ? { ...item, on: false } : item)) } };
+  const value = { ...start, published: { ...start.published, switches: start.published.switches.map((item) => (item.app === "rider" && item.id === "wallet" ? { ...item, on: false } : item)) } };
   for (const scope of ["Z001", "Z002"]) await settings.command("admin.config.publish", { targetId: "configuration", value, scope });
   for (const id of ["Z001", "Z002"]) {
     const put = server.calls.find((c) => c.method === "PUT" && c.path.endsWith("/rider_app_config") && (c.body as { zoneId?: string }).zoneId === id);
     assert.ok(put, `${id} gets the change`);
-    assert.equal(((put!.body as { document: Doc }).document["features"] as { pin: boolean }).pin, false);
+    assert.equal(((put!.body as { document: Doc }).document["features"] as { wallet: boolean }).wallet, false);
     assert.equal(((put!.body as { document: Doc }).document["features"] as { serverOnly?: string }).serverOnly, "keep", `${id}: a feature the page does not know stays`);
     assert.equal(((put!.body as { document: Doc }).document["booking"] as { bookingHorizonDays: number }).bookingHorizonDays, 21, `${id}: not a Settings field`);
   }

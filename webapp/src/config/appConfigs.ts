@@ -352,7 +352,9 @@ export function riderAppConfig(zoneId: string, state: AppConfigState) {
     features: {
       scheduledRides: scheduledRides(base),
       wallet: switchOn(base, "rider", "wallet") && featureOn(base, "wallet", zoneId, "rider", state.now),
-      pin: switchOn(base, "rider", "pin"),
+      // G2 (trip-pin-check 2026-11-27): the same as the zone's Dispatch "Rider PIN before Start" switch, like shareTrip.
+      // The old Settings switch (switchOn(base, "rider", "pin")) stays in the book but no longer decides it.
+      pin: base.zone.pickupPin.required,
       // v0.18.116: the older field says the same as the per-zone switch (the server serves it that way too).
       shareTrip: shareTrip(base.zone).on,
     },
