@@ -1,5 +1,5 @@
 import { liveLocationOf } from "./rules/liveLocation";
-import { liveTrafficOf, RECALL_RANGES } from "./rules/liveTraffic";
+import { clampCallsPerTrip, liveTrafficOf, RECALL_RANGES, ROAD_LINES_MAX_CALLS, roadLinesOf } from "./rules/liveTraffic";
 import { RideCheckCard } from "./RideCheckCard";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
@@ -319,7 +319,7 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
   return (
     <div className="dx-cards">
       {/* v0.18.163 (contract.json#liveTraffic.setting / recall; owner 2026-11-25 "Google trafic réel"): the one place of this setting. */}
-      <Card title={tr("Live traffic (Google)")} info="dispatch.zone.liveTraffic" tone="blue" icon={<Car size={18} />} help={tr("Trip times with today's traffic from Google, for prices, offers and the trip's ETA. Off: a straight-line estimate. Usual value: on in Sweden and France.")} off={!liveTrafficOf(zone, countryId).on} aside={<Switch label={tr("Live traffic (Google)")} on={liveTrafficOf(zone, countryId).on} disabled={disabled} onChange={(on) => set({ liveTraffic: { ...liveTrafficOf(zone, countryId), on } })} />}>
+      <Card title={tr("Live traffic (Google)")} info="dispatch.zone.liveTraffic" tone="green" icon={<Car size={18} />} help={tr("Trip times with today's traffic from Google, for prices, offers and the trip's ETA. Off: a straight-line estimate. Usual value: on in Sweden and France.")} off={!liveTrafficOf(zone, countryId).on} aside={<Switch label={tr("Live traffic (Google)")} on={liveTrafficOf(zone, countryId).on} disabled={disabled} onChange={(on) => set({ liveTraffic: { ...liveTrafficOf(zone, countryId), on } })} />}>
         <Row info="dispatch.zone.liveTrafficOffRoute" label={tr("Ask Google again when the driver leaves the route")}>
           <Num label={tr("Off the route from")} value={liveTrafficOf(zone, countryId).offRouteMeters} unit="m" min={RECALL_RANGES.offRouteMeters[0]} max={RECALL_RANGES.offRouteMeters[1]} disabled={disabled || !liveTrafficOf(zone, countryId).on} onChange={(offRouteMeters) => set({ liveTraffic: { ...liveTrafficOf(zone, countryId), offRouteMeters: Math.round(offRouteMeters) } })} />
           <Num label={tr("for more than")} value={liveTrafficOf(zone, countryId).offRouteSeconds} unit="s" min={RECALL_RANGES.offRouteSeconds[0]} max={RECALL_RANGES.offRouteSeconds[1]} disabled={disabled || !liveTrafficOf(zone, countryId).on} onChange={(offRouteSeconds) => set({ liveTraffic: { ...liveTrafficOf(zone, countryId), offRouteSeconds: Math.round(offRouteSeconds) } })} />
@@ -327,6 +327,14 @@ function Rides({ zone, onChange, disabled, airport, symbol, countryId, zoneName,
         <Row info="dispatch.zone.liveTrafficBehind" label={tr("Ask Google again when the driver is late")}>
           <Num label={tr("Behind the planned arrival by more than")} value={liveTrafficOf(zone, countryId).behindMinutes} unit="min" min={RECALL_RANGES.behindMinutes[0]} max={RECALL_RANGES.behindMinutes[1]} disabled={disabled || !liveTrafficOf(zone, countryId).on} onChange={(behindMinutes) => set({ liveTraffic: { ...liveTrafficOf(zone, countryId), behindMinutes: Math.round(behindMinutes) } })} />
         </Row>
+        {/* v0.18.171 (contract.json#googleRoadLines.setting; owner 2026-11-27 "Google on key screens"): road lines and the per-trip cap (1..4, the quote included). */}
+        <Row info="dispatch.zone.liveTrafficRoadLines" label={tr("Google road lines")}>
+          <Switch label={tr("Google road lines")} on={roadLinesOf(liveTrafficOf(zone, countryId)).on} disabled={disabled || !liveTrafficOf(zone, countryId).on} onChange={(on) => set({ liveTraffic: { ...liveTrafficOf(zone, countryId), roadLines: { ...roadLinesOf(liveTrafficOf(zone, countryId)), on } } })} />
+        </Row>
+        <Row info="dispatch.zone.liveTrafficCallsPerTrip" label={tr("Max Google calls per trip")}>
+          <Num label={tr("Max Google calls per trip")} value={roadLinesOf(liveTrafficOf(zone, countryId)).maxCallsPerTrip} min={ROAD_LINES_MAX_CALLS[0]} max={ROAD_LINES_MAX_CALLS[1]} disabled={disabled || !liveTrafficOf(zone, countryId).on} onChange={(n) => set({ liveTraffic: { ...liveTrafficOf(zone, countryId), roadLines: { ...roadLinesOf(liveTrafficOf(zone, countryId)), maxCallsPerTrip: clampCallsPerTrip(n) } } })} />
+        </Row>
+        <small className="as-help" data-testid="dx-road-lines-note">{tr("The price counts as 1 of these calls. 4 is the most; you can only lower it.")}</small>
         <small className="as-help" data-testid="dx-live-traffic-note">{tr("About 2 Google calls per trip: the price, then the drive to the pickup. If Google does not answer, trip times are estimated and admins get an alert.")}</small>
       </Card>
 

@@ -22,7 +22,7 @@ function schemaBlock(name: string): string {
 }
 
 test("the admin pins the contract it carries (0.18.88; L78 landed in 0.18.78)", () => {
-  assert.equal(C.version, "0.18.166");
+  assert.equal(C.version, "0.18.171");
   assert.equal(CONTRACT_VERSION, C.version);
 });
 

@@ -91,6 +91,7 @@ import { enC64LiveTraffic } from "./en/c64-live-traffic.ts";
 import { enC65FrDocuments } from "./en/c65-fr-documents.ts";
 import { enC66VehiclesByFleet } from "./en/c66-vehicles-by-fleet.ts";
 import { enC67SignupV2 } from "./en/c67-signup-v2.ts";
+import { enC69GoogleRoadLines } from "./en/c69-google-road-lines.ts";
 
 /** English, the source language: every key is the English text itself. Generated from the tr()/trn() calls; fr.ts and sv.ts must have the same keys. */
 /** Split by area (base job, rule 25) into ./en/*.ts with no text change; add a key to the area file it belongs to (see the PR note). */
@@ -188,6 +189,7 @@ export const en = {
   ...enC65FrDocuments,
   ...enC66VehiclesByFleet,
   ...enC67SignupV2,
+  ...enC69GoogleRoadLines,
 } as const;
 
 export type MessageKey = keyof typeof en;
